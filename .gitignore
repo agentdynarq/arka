@@ -1,0 +1,51 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# turborepo
+.turbo/
+
+# environment. never commit a real one
+.env
+.env.*
+!.env.example
+
+# secrets and keys
+*.pem
+*.key
+*.p12
+secrets/
+
+# test and coverage
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# local data
+*.sqlite
+*.sqlite3
+pgdata/
+redisdata/
+
+# editors and os
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# submission artifact, rebuilt on demand
+arka-submission.zip
