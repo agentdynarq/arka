@@ -1,4 +1,4 @@
-# Arka — agent instructions
+# Arka: agent instructions
 
 This file auto-loads for every Claude Code session in this repository. It is self-contained on purpose:
 both team members work from it, on different machines, with no shared setup.
@@ -89,9 +89,10 @@ you need something changed outside it, ask rather than edit.
 
 Shared files with a single owner, to stop the two agents colliding:
 
-- `docker-compose.yml`, root `package.json`, `pnpm-workspace.yaml`, `turbo.json`, `.github/workflows/` — Keshan only
-- `scripts/` — Hasitha only
-- `packages/contracts` — either, but tell the other person first. It is the contract that lets both
+- **Keshan only:** `docker-compose.yml`, root `package.json`, `pnpm-workspace.yaml`, `turbo.json`,
+  `.github/workflows/`
+- **Hasitha only:** `scripts/`
+- **Either, but tell the other person first:** `packages/contracts`. It is the contract that lets both
   lanes work without talking, so silent changes to it break the other person's build.
 
 ## Conventions

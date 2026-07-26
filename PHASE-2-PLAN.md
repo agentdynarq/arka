@@ -1,4 +1,4 @@
-# Arka — Phase 2 (Rebuild) plan
+# Arka: Phase 2 (Rebuild) plan
 
 Re-cut on 26 July 2026 against the released Phase 2 brief. Supersedes the pre-brief plan.
 
