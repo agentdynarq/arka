@@ -1,0 +1,28 @@
+{
+  "name": "@arka/gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Edge API gateway. Terminates the customer boundary and pins every customer to exactly one Cell through the Cell Router. Nothing behind the gateway is reachable directly.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node --experimental-strip-types dist/main.js",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit",
+    "pretest": "tsc -p tsconfig.json",
+    "test": "node --experimental-strip-types --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@arka/contracts": "workspace:*",
+    "@arka/workload-auth": "workspace:*",
+    "@nestjs/common": "^11.1.0",
+    "@nestjs/core": "^11.1.0",
+    "@nestjs/platform-express": "^11.1.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^7.0.0"
+  }
+}
