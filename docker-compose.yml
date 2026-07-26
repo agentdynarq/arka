@@ -1,0 +1,90 @@
+# Two independent Cells. Each gets its own Postgres, its own Redis, and its own
+# Docker network. Neither service list nor either network references the other
+# Cell, so there is no route between them to misconfigure. See docs/adr/0001.
+
+services:
+  cell1-postgres:
+    image: postgres:16-alpine
+    container_name: arka-cell1-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${CELL1_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${CELL1_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${CELL1_POSTGRES_DB}
+    ports:
+      - "${CELL1_POSTGRES_PORT}:5432"
+    volumes:
+      - cell1-pgdata:/var/lib/postgresql/data
+    networks:
+      - cell1
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CELL1_POSTGRES_USER} -d ${CELL1_POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  cell1-redis:
+    image: redis:7-alpine
+    container_name: arka-cell1-redis
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${CELL1_REDIS_PASSWORD}"]
+    ports:
+      - "${CELL1_REDIS_PORT}:6379"
+    volumes:
+      - cell1-redisdata:/data
+    networks:
+      - cell1
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${CELL1_REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  cell2-postgres:
+    image: postgres:16-alpine
+    container_name: arka-cell2-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${CELL2_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${CELL2_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${CELL2_POSTGRES_DB}
+    ports:
+      - "${CELL2_POSTGRES_PORT}:5432"
+    volumes:
+      - cell2-pgdata:/var/lib/postgresql/data
+    networks:
+      - cell2
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CELL2_POSTGRES_USER} -d ${CELL2_POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  cell2-redis:
+    image: redis:7-alpine
+    container_name: arka-cell2-redis
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${CELL2_REDIS_PASSWORD}"]
+    ports:
+      - "${CELL2_REDIS_PORT}:6379"
+    volumes:
+      - cell2-redisdata:/data
+    networks:
+      - cell2
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${CELL2_REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+networks:
+  cell1:
+    name: arka-cell1-net
+  cell2:
+    name: arka-cell2-net
+
+volumes:
+  cell1-pgdata:
+  cell1-redisdata:
+  cell2-pgdata:
+  cell2-redisdata:
