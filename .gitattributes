@@ -1,0 +1,19 @@
+# Normalise line endings in the repository so two machines with different
+# defaults do not produce whole-file diffs on every merge.
+* text=auto eol=lf
+
+# Shell scripts must keep LF even on Windows checkouts, or they fail in containers.
+*.sh text eol=lf
+
+# Binary, never normalise or diff.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+
+# Generated. Collapse in pull request diffs.
+pnpm-lock.yaml linguist-generated=true -diff
