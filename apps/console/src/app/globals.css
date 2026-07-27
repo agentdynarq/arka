@@ -1,0 +1,178 @@
+:root {
+  color-scheme: light;
+  --arka-ink: #14181f;
+  --arka-bg: #f2f3f5;
+  --arka-panel: #ffffff;
+  --arka-accent: #8a3b12;
+  --arka-accent-dark: #5f2a0d;
+  --arka-border: #d7dee2;
+  --arka-error: #9b2c2c;
+  --arka-healthy: #0a7c46;
+  --arka-degraded: #b9770e;
+  --arka-quarantined: #9b2c2c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--arka-bg);
+  color: var(--arka-ink);
+}
+
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin: 0 0 4px;
+}
+
+.subtitle {
+  color: #5b6472;
+  font-size: 0.9rem;
+  margin: 0 0 24px;
+}
+
+.error {
+  background: #fdf0f0;
+  border: 1px solid #f0caca;
+  color: var(--arka-error);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+}
+
+.cell-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.cell-card {
+  background: var(--arka-panel);
+  border: 1px solid var(--arka-border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.cell-card .cell-id {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: white;
+}
+
+.status-badge.healthy {
+  background: var(--arka-healthy);
+}
+
+.status-badge.degraded {
+  background: var(--arka-degraded);
+}
+
+.status-badge.quarantined {
+  background: var(--arka-quarantined);
+}
+
+.meta {
+  font-size: 0.8rem;
+  color: #5b6472;
+  margin-top: 8px;
+}
+
+.actions {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.actions input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--arka-border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+button {
+  padding: 8px 14px;
+  background: var(--arka-accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--arka-accent-dark);
+}
+
+button:disabled {
+  background: #b3a099;
+  cursor: not-allowed;
+}
+
+button.secondary {
+  background: transparent;
+  border: 1px solid var(--arka-border);
+  color: var(--arka-ink);
+}
+
+.pending-note {
+  font-size: 0.8rem;
+  color: var(--arka-degraded);
+  font-weight: 600;
+}
+
+section.panel {
+  background: var(--arka-panel);
+  border: 1px solid var(--arka-border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+section.panel h2 {
+  font-size: 1.1rem;
+  margin: 0 0 12px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--arka-border);
+}
+
+td.hash {
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: #5b6472;
+}

@@ -1,6 +1,14 @@
 # Two independent Cells. Each gets its own Postgres, its own Redis, and its own
 # Docker network. Neither service list nor either network references the other
 # Cell, so there is no route between them to misconfigure. See docs/adr/0001.
+#
+# A third Postgres backs the control plane (Recovery Console): quarantine
+# state and the operator audit trail, never customer data, so it lives in its
+# own database rather than any Cell's, per docs/ARCHITECTURE.md section 1.
+# It is on its own network too. Nothing here grants it a route into a Cell;
+# @arka/recovery reaches Cell Postgres/Redis the same way any host process
+# does, via the published ports below, which is a one-way "observe" read,
+# not a network path a Cell could use back.
 
 services:
   cell1-postgres:
@@ -77,14 +85,37 @@ services:
       timeout: 5s
       retries: 10
 
+  control-plane-postgres:
+    image: postgres:16-alpine
+    container_name: arka-control-plane-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${CONTROL_PLANE_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${CONTROL_PLANE_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${CONTROL_PLANE_POSTGRES_DB}
+    ports:
+      - "${CONTROL_PLANE_POSTGRES_PORT}:5432"
+    volumes:
+      - control-plane-pgdata:/var/lib/postgresql/data
+    networks:
+      - control-plane
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CONTROL_PLANE_POSTGRES_USER} -d ${CONTROL_PLANE_POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 networks:
   cell1:
     name: arka-cell1-net
   cell2:
     name: arka-cell2-net
+  control-plane:
+    name: arka-control-plane-net
 
 volumes:
   cell1-pgdata:
   cell1-redisdata:
   cell2-pgdata:
   cell2-redisdata:
+  control-plane-pgdata:

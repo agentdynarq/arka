@@ -1,0 +1,26 @@
+{
+  "name": "@arka/console",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Operator-facing app. Screen W5 (Recovery Console health map and quarantine with dual approval) wired end to end against @arka/recovery-app.",
+  "scripts": {
+    "dev": "next dev -p 3200",
+    "build": "next build",
+    "start": "next start -p 3200",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'no unit tests yet: this app is a thin client over apps/recovery, covered by that app'\"'\"'s http integration tests'",
+    "lint": "echo 'no lint configured yet'"
+  },
+  "dependencies": {
+    "next": "^15.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "typescript": "^5.7.3"
+  }
+}
