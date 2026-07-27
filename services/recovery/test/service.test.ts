@@ -5,6 +5,8 @@ import { InMemoryQuarantineStore } from '../src/memory-quarantine-store.ts'
 import { InMemoryAuditTrailStore } from '../src/memory-audit-trail-store.ts'
 import { RecoveryError } from '../src/types.ts'
 import type { CellEndpoint, CellHealthChecker, CellHealthObservation } from '../src/cell-health.ts'
+import type { LedgerIntegrityChecker } from '../src/ledger-integrity.ts'
+import type { IntegrityEvidence } from '@arka/ledger'
 
 class FakeHealthChecker implements CellHealthChecker {
   readonly #healthyByCell: Map<string, boolean>
@@ -23,16 +25,40 @@ class FakeHealthChecker implements CellHealthChecker {
   }
 }
 
+/** Never touches Postgres: RecoveryService's own logic (which Cell, refusing an unknown one) is what's under test here. */
+class FakeIntegrityChecker implements LedgerIntegrityChecker {
+  readonly #cleanByCell: Map<string, boolean>
+  calls: CellEndpoint[] = []
+
+  constructor(cleanByCell = new Map<string, boolean>()) {
+    this.#cleanByCell = cleanByCell
+  }
+
+  async verify(endpoint: CellEndpoint, options?: { upTo?: number }): Promise<IntegrityEvidence> {
+    this.calls.push(endpoint)
+    const clean = this.#cleanByCell.get(endpoint.cellId) ?? true
+    return {
+      cellId: endpoint.cellId,
+      verifiedAt: new Date().toISOString(),
+      upTo: options?.upTo ?? null,
+      result: clean
+        ? { ok: true, records: 3, rootHash: 'root-hash' }
+        : { ok: false, records: 3, rootHash: null, brokenAt: 1, reason: 'hash mismatch' },
+    }
+  }
+}
+
 const ENDPOINTS: CellEndpoint[] = [
   { cellId: 'cell-1', postgresUrl: 'postgres://fake', redisUrl: 'redis://fake' },
   { cellId: 'cell-2', postgresUrl: 'postgres://fake', redisUrl: 'redis://fake' },
 ]
 
-function buildService(healthyByCell = new Map<string, boolean>()) {
+function buildService(healthyByCell = new Map<string, boolean>(), integrityChecker = new FakeIntegrityChecker()) {
   return new RecoveryService({
     quarantineStore: new InMemoryQuarantineStore(),
     auditTrailStore: new InMemoryAuditTrailStore(),
     healthChecker: new FakeHealthChecker(healthyByCell),
+    integrityChecker,
     cellEndpoints: ENDPOINTS,
   })
 }
@@ -172,6 +198,51 @@ describe('RecoveryService: live Cell health (FR-21)', () => {
     const map = await recovery.healthMap()
     assert.equal(map.find((c) => c.cellId === 'cell-1')?.status, 'quarantined')
     assert.equal(map.find((c) => c.cellId === 'cell-2')?.status, 'healthy')
+  })
+})
+
+describe('RecoveryService: on-demand ledger integrity verification with export (FR-23)', () => {
+  test('verifying a configured Cell returns its evidence', async () => {
+    const recovery = buildService()
+    const evidence = await recovery.verifyIntegrity('cell-1')
+    assert.equal(evidence.cellId, 'cell-1')
+    assert.equal(evidence.result.ok, true)
+  })
+
+  test('a broken chain reports where, not merely that', async () => {
+    const recovery = buildService(undefined, new FakeIntegrityChecker(new Map([['cell-1', false]])))
+    const evidence = await recovery.verifyIntegrity('cell-1')
+    assert.equal(evidence.result.ok, false)
+    assert.equal(evidence.result.brokenAt, 1)
+  })
+
+  test('verifying an unconfigured Cell is rejected rather than silently checking nothing', async () => {
+    const recovery = buildService()
+    await assert.rejects(
+      () => recovery.verifyIntegrity('cell-9'),
+      (e: unknown) => e instanceof RecoveryError && e.code === 'CELL_NOT_FOUND'
+    )
+  })
+
+  test('verification is not gated on quarantine: P3 relies on checking a quarantined Cell', async () => {
+    const recovery = buildService()
+    await recovery.requestQuarantine('cell-1', 'reason', 'operator-1')
+    await recovery.approveQuarantine('cell-1', 'operator-2')
+
+    const evidence = await recovery.verifyIntegrity('cell-1')
+    assert.equal(evidence.result.ok, true)
+  })
+
+  test('verifying every Cell in one call covers each configured endpoint exactly once', async () => {
+    const checker = new FakeIntegrityChecker()
+    const recovery = buildService(undefined, checker)
+    const evidence = await recovery.verifyAllIntegrity()
+
+    assert.deepEqual(
+      evidence.map((e) => e.cellId).sort(),
+      ['cell-1', 'cell-2']
+    )
+    assert.equal(checker.calls.length, 2)
   })
 })
 

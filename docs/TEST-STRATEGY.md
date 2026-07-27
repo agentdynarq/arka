@@ -22,6 +22,14 @@ project rests on:
 2. An operator sees a degraded Cell, quarantines it under dual approval, and the other Cell keeps
    serving.
 
+Implemented as real Playwright suites in `e2e/`, against `apps/web` and `apps/console` in a real
+browser, built fresh and run against the full stack: `docker compose up` plus every app process. Not
+a mock of the stack and not a relabelled integration test. Journey 2's "the other Cell keeps serving"
+claim is checked the same way it was first verified manually (see `../arka-ops/LOG.md`, 29 July):
+through `apps/gateway`'s write-check endpoint, since that is the actual enforcement point
+(`docs/ARCHITECTURE.md` section 1), not a screen of its own. Run with `pnpm test:e2e`, or as CI job
+`e2e` in `.github/workflows/ci.yml`.
+
 ## What gets tested hardest
 
 `packages/ledger-core` carries the invariants everything else depends on. It has zero runtime
@@ -74,14 +82,19 @@ document.
 
 Every gate blocks the merge. A gate that warns is not a gate.
 
-| Gate | Fails the build when |
-|---|---|
-| Typecheck | Any TypeScript error, no `any` escapes in `packages/` |
-| Lint and format | Style drift |
-| Unit and integration tests | Any failure |
-| Coverage | `packages/ledger-core` below 100% branch coverage |
-| Secret scan | Any credential-shaped string in the diff |
-| Dependency audit | Any known high or critical vulnerability |
+| Gate | Fails the build when | Wired in CI |
+|---|---|---|
+| Typecheck | Any TypeScript error, no `any` escapes in `packages/` | Yes, job `typecheck-and-test` |
+| Unit and integration tests | Any failure | Yes, job `typecheck-and-test` |
+| Coverage | `packages/ledger-core` below 100% branch coverage | Yes, `pnpm coverage` in job `typecheck-and-test` |
+| Dependency audit | Any known high or critical vulnerability | Yes, job `dependency-audit`, `pnpm audit --audit-level high` |
+| Secret scan | Any credential-shaped string in the diff | Yes, job `secret-scan`, gitleaks |
+| End to end | Either critical journey breaking through a real browser | Yes, job `e2e` |
+| Lint and format | Style drift | Not yet. Every package's `lint` script is a stated stub, not silently skipped |
+
+Lint is the one gate in this table not actually enforced. Naming it as deferred here is the same
+discipline as the deferred FR list in `PHASE-2-PLAN.md`: a gap that is named is a scope decision, one
+that is not named is a surprise for whoever finds it.
 
 ## Test data
 

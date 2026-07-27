@@ -1,7 +1,8 @@
 /**
  * The Recovery Console's control plane. Owns FR-21 (live Cell health),
- * FR-22 (quarantine with dual approval) and FR-25 (the append-only operator
- * audit trail). Framework-free: `apps/recovery` is a thin HTTP adapter over
+ * FR-22 (quarantine with dual approval), FR-23 (on-demand ledger integrity
+ * verification with export) and FR-25 (the append-only operator audit
+ * trail). Framework-free: `apps/recovery` is a thin HTTP adapter over
  * `RecoveryService`, and the Postgres adapters are thin implementations of
  * each store port.
  */
@@ -42,3 +43,6 @@ export { PgAuditTrailStore } from './pg-audit-trail-store.ts'
 export type { CellEndpoint, CellHealthChecker } from './cell-health.ts'
 export { InfrastructureCellHealthChecker } from './cell-health.ts'
 export { isRedisReachable } from './redis-health.ts'
+
+export type { LedgerIntegrityChecker } from './ledger-integrity.ts'
+export { PgLedgerIntegrityChecker } from './ledger-integrity.ts'

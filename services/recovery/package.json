@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "The Recovery Console's control plane. Live Cell health (FR-21), quarantine with dual approval (FR-22), and the append-only operator audit trail (FR-25).",
+  "description": "The Recovery Console's control plane. Live Cell health (FR-21), quarantine with dual approval (FR-22), on-demand ledger integrity verification with export (FR-23), and the append-only operator audit trail (FR-25).",
   "exports": {
     ".": "./src/index.ts"
   },

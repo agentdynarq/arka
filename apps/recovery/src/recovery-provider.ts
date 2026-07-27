@@ -1,4 +1,10 @@
-import { RecoveryService, PgQuarantineStore, PgAuditTrailStore, InfrastructureCellHealthChecker } from '@arka/recovery'
+import {
+  RecoveryService,
+  PgQuarantineStore,
+  PgAuditTrailStore,
+  InfrastructureCellHealthChecker,
+  PgLedgerIntegrityChecker,
+} from '@arka/recovery'
 import type { CellEndpoint } from '@arka/recovery'
 
 /** The control plane's own Postgres. Falls back to the local `docker compose` port. */
@@ -50,6 +56,7 @@ export function buildRecoveryService(): RecoveryService {
     quarantineStore: new PgQuarantineStore(connectionString),
     auditTrailStore: new PgAuditTrailStore(connectionString),
     healthChecker: new InfrastructureCellHealthChecker(),
+    integrityChecker: new PgLedgerIntegrityChecker(),
     cellEndpoints: cellEndpoints(),
   })
   return instance

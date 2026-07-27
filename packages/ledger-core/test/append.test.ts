@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { appendBlock } from '../src/chain.ts'
 import { GENESIS_PREV_HASH } from '../src/hash.ts'
 import { LedgerError } from '../src/types.ts'
+import type { Entry } from '../src/types.ts'
 import { at, transfer } from './helpers.ts'
 
 describe('appendBlock: every block balances', () => {
@@ -108,6 +109,28 @@ describe('appendBlock: amounts are positive bigint minor units', () => {
     const huge = 9_007_199_254_740_993n // Number.MAX_SAFE_INTEGER + 2
     const block = appendBlock(null, transfer('a', 'b', huge), at(0))
     assert.equal(block.entries[0]!.amount, huge)
+  })
+})
+
+describe('appendBlock: direction', () => {
+  test('rejects a direction that is neither debit nor credit', () => {
+    assert.throws(
+      () =>
+        appendBlock(
+          null,
+          [
+            // A caller reaching this package from untyped JavaScript is the
+            // realistic route for a malformed direction to arrive, same
+            // reasoning as the float-amount guard above: the check is a
+            // runtime guard, not only a type, so it needs its own test to
+            // reach the branch a type system alone would exclude.
+            { account: 'a', direction: 'sideways' as unknown as Entry['direction'], amount: 100n },
+            { account: 'b', direction: 'credit', amount: 100n },
+          ],
+          at(0)
+        ),
+      (e: unknown) => e instanceof LedgerError && e.code === 'INVALID_DIRECTION'
+    )
   })
 })
 

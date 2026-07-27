@@ -23,6 +23,25 @@ body {
   color: var(--arka-ink);
 }
 
+.console-nav {
+  display: flex;
+  gap: 20px;
+  padding: 14px 24px;
+  background: var(--arka-panel);
+  border-bottom: 1px solid var(--arka-border);
+}
+
+.console-nav a {
+  color: var(--arka-ink);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.console-nav a:hover {
+  color: var(--arka-accent);
+}
+
 .page {
   max-width: 960px;
   margin: 0 auto;
@@ -106,12 +125,28 @@ h1 {
   gap: 8px;
 }
 
-.actions input {
+.actions input,
+.actions select {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid var(--arka-border);
   border-radius: 6px;
   font-size: 0.9rem;
+}
+
+.link-button {
+  display: inline-block;
+  padding: 8px 14px;
+  background: var(--arka-accent);
+  color: white;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.link-button:hover {
+  background: var(--arka-accent-dark);
 }
 
 button {
