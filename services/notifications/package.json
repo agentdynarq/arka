@@ -1,0 +1,29 @@
+{
+  "name": "@arka/notifications",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Notifications for one Cell. Owns FR-19 (transaction alerts) and FR-20 (security alerts). The first real consumer of @arka/events' same-transaction outbox guarantee.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "build": "echo 'no build step: consumed as source via workspace TS paths'",
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'no lint configured yet'"
+  },
+  "dependencies": {
+    "@arka/events": "workspace:*",
+    "@arka/ledger": "workspace:*",
+    "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.20.0",
+    "typescript": "^7.0.0"
+  }
+}

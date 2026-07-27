@@ -10,6 +10,7 @@ import {
   PgAccountOpeningStore,
 } from '@arka/identity'
 import { PaymentsService, PgIdempotencyStore, PgLimitsStore } from '@arka/payments'
+import { NotificationsService, PgNotificationStore } from '@arka/notifications'
 
 /**
  * `DATABASE_URL` is the name `docs/ARCHITECTURE.md` section 3 already gives
@@ -26,17 +27,18 @@ interface Built {
   readonly accounts: AccountsService
   readonly ledger: LedgerService
   readonly payments: PaymentsService
+  readonly notifications: NotificationsService
 }
 
 let built: Built | null = null
 
 /**
  * The one instance of each service for this Cell, composed together in a
- * single process. See docs/adr/0006 for why: Identity, Accounts and Payments
- * are separate, independently-testable packages, this is only where they run
- * for Phase 2. Built from real Postgres-backed stores, constructed exactly
- * once, and handed out from the same cache rather than each caller building
- * its own copy.
+ * single process. See docs/adr/0006 for why: Identity, Accounts, Ledger,
+ * Payments and Notifications are separate, independently-testable packages,
+ * this is only where they run for Phase 2. Built from real Postgres-backed
+ * stores, constructed exactly once, and handed out from the same cache
+ * rather than each caller building its own copy.
  */
 function build(): Built {
   if (built) return built
@@ -65,7 +67,9 @@ function build(): Built {
     qrSigningKey: process.env.QR_SIGNING_KEY ?? 'dev-only-qr-signing-key-not-for-production',
   })
 
-  built = { identity, accounts, ledger, payments }
+  const notifications = new NotificationsService({ store: new PgNotificationStore(connectionString) })
+
+  built = { identity, accounts, ledger, payments, notifications }
   return built
 }
 
@@ -83,4 +87,8 @@ export function buildLedgerService(): LedgerService {
 
 export function buildPaymentsService(): PaymentsService {
   return build().payments
+}
+
+export function buildNotificationsService(): NotificationsService {
+  return build().notifications
 }

@@ -39,8 +39,12 @@ principle as `reVerificationResult.livenessSimulated`.
 | POST | `/v1/identity/account-opening` | FR-02, provisions a real account via `AccountsService.open` |
 | POST | `/v1/identity/step-up/challenge` | FR-04, bearer-guarded. Issues a challenge for a reason (`new_payee`, `over_limit`, `unrecognised_device`) |
 | POST | `/v1/identity/step-up/verify` | FR-04, redeems the challenge with a TOTP code, returns a single-use `stepUpToken` |
-| POST | `/v1/payments/transfers` | FR-09, FR-04, screen W3. Bearer-guarded, `Idempotency-Key` required. A new payee returns `{ stepUpRequired: true }` instead of transferring; retry with `X-Step-Up-Token` once step-up completes |
+| POST | `/v1/payments/transfers` | FR-09, FR-04, screen W3. Bearer-guarded, `Idempotency-Key` required. A new payee returns `{ stepUpRequired: true }` instead of transferring; retry with `X-Step-Up-Token` once step-up completes. On success, notifies both sides (FR-19) and, for a step-up-gated transfer, raises a security alert (FR-20) |
 | GET | `/v1/accounts/:accountId/history` | FR-06, FR-08, screen W2. Bearer-guarded, rejects an account the session does not own |
+| GET | `/v1/payments/limits/:accountId` | FR-12. Bearer-guarded, ownership-checked. No step-up needed to read |
+| POST | `/v1/payments/limits/:accountId` | FR-12, FR-20. Requires `X-Step-Up-Token` (reason `over_limit`) or `428`. Raises a security alert on success |
+| GET | `/v1/notifications` | FR-19, FR-20. Bearer-guarded. The calling session's own inbox, newest first |
+| POST | `/v1/notifications/:notificationId/read` | Bearer-guarded, rejects a notification belonging to a different customer |
 
 `TransfersController` (`src/payments/transfers.controller.ts`) verifies step-up with one in-process call
 to `IdentityService.verifyStepUpToken`, not a network hop; see docs/adr/0006 for why that is fine at
@@ -52,15 +56,23 @@ request reaches `@arka/payments` or `@arka/accounts`.
 ## Tests
 
 `test/http.integration.test.ts` boots the actual compiled app and calls it over real HTTP, same pattern
-as `apps/gateway`. It overrides `IdentityService`, `AccountsService` and `PaymentsService` with
-in-memory-backed instances rather than hitting Postgres: storage correctness is already proven
-exhaustively by each service's own `pg-stores.integration.test.ts`, and running every package's
-Postgres-touching tests concurrently under `turbo run test` would race to reset the same schemas. This
-file's job is the HTTP boundary: request validation, the guard, ownership checks, and the full journeys
-wired together for real, over the network, not asserted against pieces in isolation. Covers re-verify to
-dashboard (screen W1), and the transfer-to-a-new-payee-triggers-step-up-then-succeeds round trip
-(screens W2 and W3) end to end, including a wrong-account ownership rejection on both the transfer and
-history endpoints.
+as `apps/gateway`. It overrides `IdentityService`, `AccountsService`, `PaymentsService` and
+`NotificationsService` with in-memory-backed instances rather than hitting Postgres: storage correctness
+is already proven exhaustively by each service's own `pg-stores.integration.test.ts`, and running every
+package's Postgres-touching tests concurrently under `turbo run test` would race to reset the same
+schemas. This file's job is the HTTP boundary: request validation, the guard, ownership checks, and the
+full journeys wired together for real, over the network, not asserted against pieces in isolation. 16
+tests: re-verify to dashboard (screen W1), the transfer-to-a-new-payee-triggers-step-up-then-succeeds
+round trip (screens W2 and W3), a familiar-payee transfer notifying both sender and receiver (FR-19), the
+notification inbox and its ownership check, and the daily-limit-change flow requiring step-up and raising
+a security alert (FR-12, FR-20).
+
+The login rate limiter is configured generously for this file specifically (the default, 10 per 60s, is
+correct in production and proven directly in `services/identity`'s own tests). This suite logs the same
+test user in well over ten times across its growing list of journeys, sharing one in-memory rate limiter
+for the whole file; without the override, the security control the default exists to enforce would start
+rejecting later tests in the same run, for reasons that have nothing to do with what those tests are
+actually checking.
 
 Manually verified once more beyond the automated suite: booted the real app against live Postgres,
 signed in through the actual browser UI as `alice`, sent a transfer to a brand-new payee, watched the

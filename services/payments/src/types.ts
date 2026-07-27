@@ -23,6 +23,7 @@ export interface TransferResult {
   readonly transferId: string
   readonly status: 'confirmed'
   readonly ledgerBlockSeq: number
+  readonly ledgerBlockHash: string
 }
 
 export type PaymentsErrorCode =

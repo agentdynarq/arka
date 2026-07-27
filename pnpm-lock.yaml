@@ -91,6 +91,9 @@ importers:
       '@arka/ledger':
         specifier: workspace:*
         version: link:../../services/ledger
+      '@arka/notifications':
+        specifier: workspace:*
+        version: link:../../services/notifications
       '@arka/payments':
         specifier: workspace:*
         version: link:../../services/payments
@@ -281,6 +284,28 @@ importers:
       '@arka/ledger-core':
         specifier: workspace:*
         version: link:../../packages/ledger-core
+      pg:
+        specifier: ^8.22.0
+        version: 8.22.0
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      '@types/pg':
+        specifier: ^8.20.0
+        version: 8.20.0
+      typescript:
+        specifier: ^7.0.0
+        version: 7.0.2
+
+  services/notifications:
+    dependencies:
+      '@arka/events':
+        specifier: workspace:*
+        version: link:../../packages/events
+      '@arka/ledger':
+        specifier: workspace:*
+        version: link:../ledger
       pg:
         specifier: ^8.22.0
         version: 8.22.0
