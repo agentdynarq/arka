@@ -94,10 +94,12 @@ export default function HealthMapPage() {
 
       <div className="ui-grid">
         {rows?.map(({ health, quarantine }) => (
-          <Panel key={health.cellId}>
+          <Panel key={health.cellId} data-testid="cell-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <span style={{ fontWeight: 700, fontSize: 'var(--text-lg)' }}>{health.cellId}</span>
-              <Badge tone={STATUS_TONE[health.status]}>{health.status}</Badge>
+              <span data-testid="cell-status">
+                <Badge tone={STATUS_TONE[health.status]}>{health.status}</Badge>
+              </span>
             </div>
             <div className="ui-meta">
               Checked {new Date(health.lastCheckedAt).toLocaleTimeString()}
@@ -170,7 +172,7 @@ export default function HealthMapPage() {
 
       <Panel title="Audit trail (FR-25)">
         <div style={{ overflowX: 'auto' }}>
-          <table className="ui-table">
+          <table className="ui-table" data-testid="audit-trail">
             <thead>
               <tr>
                 <th>Seq</th>

@@ -21,31 +21,31 @@ test('quarantine under dual approval, and the other Cell keeps serving', async (
 
   try {
     await page1.goto(`${BASE_URLS.console}/health-map`)
-    const cell1Card = page1.locator('.cell-card').filter({ hasText: 'cell-1' })
-    await expect(cell1Card.locator('.status-badge')).toHaveText('healthy')
+    const cell1Card = page1.getByTestId('cell-card').filter({ hasText: 'cell-1' })
+    await expect(cell1Card.getByTestId('cell-status')).toHaveText('healthy')
 
     await page1.getByLabel('Acting as operator id').fill('operator-1')
-    await cell1Card.getByPlaceholder('Reason').fill('anomalous write volume, e2e drill')
+    await cell1Card.getByLabel('Reason').fill('anomalous write volume, e2e drill')
     await cell1Card.getByRole('button', { name: 'Request quarantine' }).click()
     await expect(cell1Card.getByText(/Pending quarantine/)).toBeVisible()
 
     await page2.goto(`${BASE_URLS.console}/health-map`)
-    const cell1CardOnPage2 = page2.locator('.cell-card').filter({ hasText: 'cell-1' })
+    const cell1CardOnPage2 = page2.getByTestId('cell-card').filter({ hasText: 'cell-1' })
     await page2.getByLabel('Acting as operator id').fill('operator-2')
     await expect(cell1CardOnPage2.getByRole('button', { name: 'Approve quarantine' })).toBeVisible()
     await cell1CardOnPage2.getByRole('button', { name: 'Approve quarantine' }).click()
-    await expect(cell1CardOnPage2.locator('.status-badge')).toHaveText('quarantined')
+    await expect(cell1CardOnPage2.getByTestId('cell-status')).toHaveText('quarantined')
 
     await page1.reload()
-    const cell1CardAfter = page1.locator('.cell-card').filter({ hasText: 'cell-1' })
-    const cell2CardAfter = page1.locator('.cell-card').filter({ hasText: 'cell-2' })
-    await expect(cell1CardAfter.locator('.status-badge')).toHaveText('quarantined')
-    await expect(cell2CardAfter.locator('.status-badge')).toHaveText('healthy')
+    const cell1CardAfter = page1.getByTestId('cell-card').filter({ hasText: 'cell-1' })
+    const cell2CardAfter = page1.getByTestId('cell-card').filter({ hasText: 'cell-2' })
+    await expect(cell1CardAfter.getByTestId('cell-status')).toHaveText('quarantined')
+    await expect(cell2CardAfter.getByTestId('cell-status')).toHaveText('healthy')
 
     // `.last()`: the audit trail is append-only and may already carry entries
     // from earlier runs, so this checks the most recent matching row rather
     // than requiring there be exactly one.
-    const trailRows = page1.locator('section.panel table tbody tr')
+    const trailRows = page1.getByTestId('audit-trail').locator('tbody tr')
     await expect(trailRows.filter({ hasText: 'quarantine.requested' }).last()).toBeVisible()
     await expect(trailRows.filter({ hasText: 'quarantine.approved' }).last()).toBeVisible()
 
@@ -77,7 +77,7 @@ test('quarantine under dual approval, and the other Cell keeps serving', async (
     await page2.reload()
     await page2.getByLabel('Acting as operator id').fill('operator-2')
     await cell1CardOnPage2.getByRole('button', { name: 'Approve lift' }).click()
-    await expect(cell1CardOnPage2.locator('.status-badge')).toHaveText('healthy')
+    await expect(cell1CardOnPage2.getByTestId('cell-status')).toHaveText('healthy')
   } finally {
     await operator1.close()
     await operator2.close()
@@ -86,10 +86,10 @@ test('quarantine under dual approval, and the other Cell keeps serving', async (
 
 test('screen W6: integrity verification reports a clean chain for Cell 1', async ({ page }) => {
   await page.goto(`${BASE_URLS.console}/integrity`)
-  await expect(page.locator('.cell-grid .cell-card').first()).toBeVisible()
+  await expect(page.getByTestId('cell-card').first()).toBeVisible()
 
   await page.getByRole('button', { name: 'Run verification' }).click()
   await expect(page.getByRole('heading', { name: /Evidence: cell-/ })).toBeVisible()
-  await expect(page.locator('section.panel .status-badge')).toHaveText('clean')
+  await expect(page.getByTestId('evidence-status')).toHaveText('clean')
   await expect(page.getByRole('link', { name: 'Export evidence' })).toBeVisible()
 })

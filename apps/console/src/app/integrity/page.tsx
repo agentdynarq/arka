@@ -68,7 +68,7 @@ export default function IntegrityPage() {
 
       <div className="ui-grid">
         {overview?.map((e) => (
-          <Panel key={e.cellId}>
+          <Panel key={e.cellId} data-testid="cell-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <span style={{ fontWeight: 700, fontSize: 'var(--text-lg)' }}>{e.cellId}</span>
               <Badge tone={e.result.ok ? 'success' : 'danger'}>{e.result.ok ? 'clean' : 'broken'}</Badge>
@@ -109,7 +109,7 @@ export default function IntegrityPage() {
             <tbody>
               <tr>
                 <th>Status</th>
-                <td>
+                <td data-testid="evidence-status">
                   <Badge tone={evidence.result.ok ? 'success' : 'danger'}>{evidence.result.ok ? 'clean' : 'broken'}</Badge>
                 </td>
               </tr>
