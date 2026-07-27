@@ -1,0 +1,30 @@
+{
+  "name": "@arka/recovery",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The Recovery Console's control plane. Live Cell health (FR-21), quarantine with dual approval (FR-22), and the append-only operator audit trail (FR-25).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "build": "echo 'no build step: consumed as source via workspace TS paths'",
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'no lint configured yet'"
+  },
+  "dependencies": {
+    "@arka/ledger": "workspace:*",
+    "@arka/ledger-core": "workspace:*",
+    "ioredis": "^5.4.0",
+    "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.20.0",
+    "typescript": "^7.0.0"
+  }
+}

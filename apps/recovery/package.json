@@ -1,9 +1,9 @@
 {
-  "name": "@arka/gateway",
+  "name": "@arka/recovery-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Edge API gateway. Terminates the customer boundary and pins every customer to exactly one Cell through the Cell Router. Nothing behind the gateway is reachable directly.",
+  "description": "HTTP adapter for the Recovery Console's control plane. Thin: everything that decides whether a quarantine is legitimate lives in @arka/recovery.",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node --experimental-strip-types dist/main.js",
@@ -14,8 +14,8 @@
   },
   "dependencies": {
     "@arka/contracts": "workspace:*",
+    "@arka/ledger-core": "workspace:*",
     "@arka/recovery": "workspace:*",
-    "@arka/workload-auth": "workspace:*",
     "@nestjs/common": "^11.1.0",
     "@nestjs/core": "^11.1.0",
     "@nestjs/platform-express": "^11.1.0",
