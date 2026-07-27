@@ -96,9 +96,9 @@ export default function DashboardPage() {
         )}
 
         {dashboard.accounts.map((account) => (
-          <div key={account.accountId} className="ui-panel" style={{ marginBottom: 16, boxShadow: 'none' }}>
+          <div key={account.accountId} className="ui-panel" data-testid="balance-card" style={{ marginBottom: 16, boxShadow: 'none' }}>
             <div className="ui-meta">{account.displayName}</div>
-            <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--color-accent)' }}>
+            <div data-testid="balance-amount" style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--color-accent)' }}>
               LKR {formatMinorUnits(account.balance)}
             </div>
             <div className="ui-meta">{account.accountId}</div>

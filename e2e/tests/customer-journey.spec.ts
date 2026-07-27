@@ -37,9 +37,9 @@ test('re-verify, MFA, dashboard balance, and a transfer to an existing payee', a
   await expect(page).toHaveURL(`${BASE_URLS.web}/dashboard`)
   await expect(page.getByRole('heading', { name: 'Welcome back, alice' })).toBeVisible()
 
-  const balanceCard = page.locator('.balance-card').first()
+  const balanceCard = page.getByTestId('balance-card').first()
   await expect(balanceCard).toBeVisible()
-  const balanceBefore = await balanceCard.locator('.amount').innerText()
+  const balanceBefore = await balanceCard.getByTestId('balance-amount').innerText()
 
   await page.getByRole('button', { name: 'Send money' }).click()
   await expect(page.getByRole('heading', { name: 'Send money' })).toBeVisible()
@@ -52,6 +52,6 @@ test('re-verify, MFA, dashboard balance, and a transfer to an existing payee', a
 
   await page.getByRole('button', { name: 'Back to dashboard' }).click()
   await expect(page.getByRole('heading', { name: 'Welcome back, alice' })).toBeVisible()
-  const balanceAfter = await page.locator('.balance-card').first().locator('.amount').innerText()
+  const balanceAfter = await page.getByTestId('balance-card').first().getByTestId('balance-amount').innerText()
   expect(balanceAfter).not.toEqual(balanceBefore)
 })
