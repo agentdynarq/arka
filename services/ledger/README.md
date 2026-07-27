@@ -79,11 +79,32 @@ read(range?): Promise<Block[]>
 count(): Promise<number>
 ```
 
-`InMemoryLedgerStore` is the only implementation so far, used by tests and by the seed script. The
-Postgres adapter that will back it in a real Cell needs to enforce the same optimistic-concurrency
-contract, most naturally with a unique constraint on `(cell_id, seq)` and a conditional insert. A store
-implementation that skips this is not a correctness detail, it is the difference between "two transfers
-fired at once both land" and "one silently disappears."
+`InMemoryLedgerStore` is used by unit tests. `PgLedgerStore` is the real implementation, one instance
+per Cell, backed by that Cell's own Postgres database and its own `ledger` schema (`src/schema.sql`).
+
+### `PgLedgerStore`: the primary key is the concurrency control
+
+```ts
+new PgLedgerStore(connectionString)   // takes a connection string, not a Pool: pg stays internal
+```
+
+`seq` is the table's primary key. Two writers racing to append the next block both compute the same
+next sequence number from the head they read, so whichever `INSERT` loses the race hits a unique
+violation (Postgres error `23505`), which `append` catches and turns into `LedgerConflictError`. No
+separate "current head" row, no explicit lock, the constraint the database already enforces for free
+is the whole mechanism. `LedgerService.record` (see above) is what rebuilds and retries on that error.
+
+`at`, `prev_hash` and `hash` are stored as `text`, not `timestamptz`. The block's hash covers the exact
+string `ledger-core` was given; round-tripping through a typed timestamp column risks recovering a
+string that recomputes to a different hash than the one that sealed the block. Storing the literal
+string removes that risk rather than trusting the driver's round trip.
+
+`test/pg-store.integration.test.ts` runs against the real Cell 1 Postgres from `docker-compose.yml`.
+It skips, with a clear reason rather than a failure, when nothing is listening, so CI stays green until
+a Postgres service is added there. Bring the stack up with `docker compose up` from the repo root to
+actually exercise it, including the concurrency test, which races two real inserts against the same
+head and asserts exactly one wins.
 
 See `docs/RUNBOOK.md` P1 for how `verify()` backs the operator's integrity audit procedure, and
-`packages/ledger-core/README.md` for the primitives this service wraps.
+`packages/ledger-core/README.md` for the primitives this service wraps. `scripts/verify-ledger.ts` and
+`scripts/seed.ts` at the repo root are the CLI forms of this service.

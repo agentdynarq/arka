@@ -18,10 +18,12 @@
     "lint": "echo 'no lint configured yet'"
   },
   "dependencies": {
-    "@arka/ledger-core": "workspace:*"
+    "@arka/ledger-core": "workspace:*",
+    "pg": "^8.22.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "@types/pg": "^8.20.0",
     "typescript": "^7.0.0"
   }
 }
