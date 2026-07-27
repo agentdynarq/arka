@@ -134,8 +134,10 @@ export interface HistoryLine {
   confirmed: true
 }
 
-export function fetchHistory(accessToken: string, accountId: string): Promise<HistoryLine[]> {
-  return get(`/v1/accounts/${encodeURIComponent(accountId)}/history`, accessToken)
+/** `limit` is FR-15: low-bandwidth mode asks for only the newest few lines instead of the full history. */
+export function fetchHistory(accessToken: string, accountId: string, limit?: number): Promise<HistoryLine[]> {
+  const query = limit !== undefined ? `?limit=${limit}` : ''
+  return get(`/v1/accounts/${encodeURIComponent(accountId)}/history${query}`, accessToken)
 }
 
 export type TransferOutcome =
@@ -163,6 +165,39 @@ export interface ActionChallenge {
   actionToken: string
   reason: 'new_payee' | 'over_limit' | 'unrecognised_device'
   expiresAt: string
+}
+
+export type AgentCashDirection = 'cash_in' | 'cash_out'
+
+export interface AgentCashRequestResult {
+  requestId: string
+  expiresAt: string
+}
+
+/**
+ * FR-16, screen W4. Unauthenticated, same as the backend: no agent login
+ * system exists in this scope, and never returns the OTP, it goes to the
+ * customer's own notification inbox.
+ */
+export function requestAgentCash(
+  agentId: string,
+  agentAccountId: string,
+  customerAccountId: string,
+  direction: AgentCashDirection,
+  amountMinorUnits: string
+): Promise<AgentCashRequestResult> {
+  return post('/v1/payments/agent-cash/request', { agentId, agentAccountId, customerAccountId, direction, amount: amountMinorUnits })
+}
+
+export interface AgentCashCompleteResult {
+  transferId: string
+  status: 'confirmed'
+  ledgerBlockSeq: number
+}
+
+/** The OTP is read by the agent from what the customer tells them, never fetched by this app. */
+export function completeAgentCash(idempotencyKey: string, requestId: string, otpCode: string): Promise<AgentCashCompleteResult> {
+  return post('/v1/payments/agent-cash/complete', { requestId, otpCode }, { 'Idempotency-Key': idempotencyKey })
 }
 
 export function requestStepUpChallenge(accessToken: string, reason: ActionChallenge['reason']): Promise<ActionChallenge> {

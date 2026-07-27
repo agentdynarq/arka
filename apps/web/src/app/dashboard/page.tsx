@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { fetchDashboard, fetchHistory, formatMinorUnits, ApiError } from '@/lib/api'
 import type { Dashboard, HistoryLine } from '@/lib/api'
 import { getAccessToken, clearSession } from '@/lib/session'
+import { isLowBandwidthEnabled, LOW_BANDWIDTH_HISTORY_LIMIT } from '@/lib/low-bandwidth'
 
 /**
  * Screen W2, the end of the W1 journey too: a real dashboard, reading a real
@@ -12,12 +13,17 @@ import { getAccessToken, clearSession } from '@/lib/session'
  * ledger confirmation status per line (FR-06, FR-08). Not a placeholder: if
  * the access token is missing, expired, or belongs to a revoked session,
  * this redirects back to `/reverify` instead of rendering anything.
+ *
+ * FR-15: when low-bandwidth mode is on (set on screen W4), history asks the
+ * server for only the newest few lines instead of the full ledger, a real
+ * reduction in bytes over the wire, not a cosmetic change.
  */
 export default function DashboardPage() {
   const router = useRouter()
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const [history, setHistory] = useState<HistoryLine[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [lowBandwidth, setLowBandwidth] = useState(false)
 
   useEffect(() => {
     const accessToken = getAccessToken()
@@ -26,12 +32,17 @@ export default function DashboardPage() {
       return
     }
 
+    const lowBandwidthMode = isLowBandwidthEnabled()
+    setLowBandwidth(lowBandwidthMode)
+
     fetchDashboard(accessToken)
       .then((data) => {
         setDashboard(data)
         const firstAccount = data.accounts[0]
         if (firstAccount) {
-          return fetchHistory(accessToken, firstAccount.accountId).then(setHistory)
+          return fetchHistory(accessToken, firstAccount.accountId, lowBandwidthMode ? LOW_BANDWIDTH_HISTORY_LIMIT : undefined).then(
+            setHistory
+          )
         }
         setHistory([])
         return undefined
@@ -86,13 +97,19 @@ export default function DashboardPage() {
           </div>
         ))}
 
-        <div style={{ marginTop: 16 }}>
+        <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
           <button className="primary" onClick={() => router.push('/transfer')}>
             Send money
+          </button>
+          <button className="primary" style={{ background: 'transparent', color: 'var(--arka-accent)' }} onClick={() => router.push('/agent')}>
+            Agent cash / settings
           </button>
         </div>
 
         <h2 style={{ fontSize: '1rem', marginTop: 32, marginBottom: 8 }}>Transaction history</h2>
+        {lowBandwidth && (
+          <p className="hint">Low-bandwidth mode is on: showing your {LOW_BANDWIDTH_HISTORY_LIMIT} most recent transactions.</p>
+        )}
         {history === null && <p className="subtitle">Loading history...</p>}
         {history?.length === 0 && <p className="subtitle">No transactions yet.</p>}
         {history?.map((line) => (

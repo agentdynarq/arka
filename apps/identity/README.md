@@ -40,7 +40,7 @@ principle as `reVerificationResult.livenessSimulated`.
 | POST | `/v1/identity/step-up/challenge` | FR-04, bearer-guarded. Issues a challenge for a reason (`new_payee`, `over_limit`, `unrecognised_device`) |
 | POST | `/v1/identity/step-up/verify` | FR-04, redeems the challenge with a TOTP code, returns a single-use `stepUpToken` |
 | POST | `/v1/payments/transfers` | FR-09, FR-04, screen W3. Bearer-guarded, `Idempotency-Key` required. A new payee returns `{ stepUpRequired: true }` instead of transferring; retry with `X-Step-Up-Token` once step-up completes. On success, notifies both sides (FR-19) and, for a step-up-gated transfer, raises a security alert (FR-20) |
-| GET | `/v1/accounts/:accountId/history` | FR-06, FR-08, screen W2. Bearer-guarded, rejects an account the session does not own |
+| GET | `/v1/accounts/:accountId/history` | FR-06, FR-08, screen W2. Bearer-guarded, rejects an account the session does not own. `?limit=` (FR-15, set on screen W4) caps the response to the newest few lines, a `400` on anything not a positive integer |
 | GET | `/v1/payments/limits/:accountId` | FR-12. Bearer-guarded, ownership-checked. No step-up needed to read |
 | POST | `/v1/payments/limits/:accountId` | FR-12, FR-20. Requires `X-Step-Up-Token` (reason `over_limit`) or `428`. Raises a security alert on success |
 | GET | `/v1/notifications` | FR-19, FR-20. Bearer-guarded. The calling session's own inbox, newest first |
@@ -68,13 +68,14 @@ as `apps/gateway`. It overrides `IdentityService`, `AccountsService`, `PaymentsS
 is already proven exhaustively by each service's own `pg-stores.integration.test.ts`, and running every
 package's Postgres-touching tests concurrently under `turbo run test` would race to reset the same
 schemas. This file's job is the HTTP boundary: request validation, the guard, ownership checks, and the
-full journeys wired together for real, over the network, not asserted against pieces in isolation. 18
+full journeys wired together for real, over the network, not asserted against pieces in isolation. 20
 tests: re-verify to dashboard (screen W1), the transfer-to-a-new-payee-triggers-step-up-then-succeeds
 round trip (screens W2 and W3), a familiar-payee transfer notifying both sender and receiver (FR-19), the
 notification inbox and its ownership check, the daily-limit-change flow requiring step-up and raising a
-security alert (FR-12, FR-20), and agent cash-in with the OTP read from the customer's own notification
+security alert (FR-12, FR-20), agent cash-in with the OTP read from the customer's own notification
 inbox exactly as a real customer would (FR-16), including a wrong-OTP rejection followed by a successful
-retry with the right one.
+retry with the right one, and `?limit=` (FR-15) capping history to the newest lines while rejecting
+anything not a positive integer.
 
 The login rate limiter is configured generously for this file specifically (the default, 10 per 60s, is
 correct in production and proven directly in `services/identity`'s own tests). This suite logs the same
@@ -87,3 +88,10 @@ Manually verified once more beyond the automated suite: booted the real app agai
 signed in through the actual browser UI as `alice`, sent a transfer to a brand-new payee, watched the
 step-up modal explain why it appeared, completed it with a live TOTP code, and confirmed the dashboard's
 balance and history updated correctly afterward.
+
+Verified again for FR-15 and FR-16 together (screen W4, `apps/web/src/app/agent/page.tsx`): turned on
+low-bandwidth mode there, confirmed the dashboard immediately showed only the 10 newest lines with a
+visible "low-bandwidth mode is on" hint instead of the seeded account's full 13, then ran a real agent
+cash-in against `agent:west` and `customer:alice` (`scripts/seed.ts` now seeds both), reading the OTP
+from alice's own notification inbox exactly as a real customer would rather than a shortcut, and watched
+the balance update live.

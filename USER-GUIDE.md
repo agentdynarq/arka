@@ -93,11 +93,26 @@ The inclusion surface, for customers who cannot reach digital banking directly. 
 performs the transaction and the customer consents by OTP, so the agent never acts alone on a
 customer's account.
 
-`[FILL: exact steps]`
+1. On the "Agent cash / settings" screen, the agent enters their own ID, the agent's cash account, the
+   customer's account, a direction (cash in: the customer hands the agent physical cash; cash out: the
+   agent hands the customer physical cash), and an amount, then requests it.
+2. Nothing about the customer's money moves yet. A one-time code is sent straight to the customer's own
+   notification inbox, never shown to the agent or returned by the request.
+3. The customer reads the code out to the agent only if they agree to the transaction. The agent enters
+   it to confirm.
+4. The transfer completes immediately and appears in the customer's history with its ledger status.
+   The same code cannot be used a second time, even by a genuinely concurrent second attempt.
+
+There is no agent login in this scope: authorisation is the OTP itself, the same reason merchant QR
+acceptance (3.5) has no merchant login either.
 
 ### 3.7 Low-bandwidth mode
 
-`[FILL: how to enable, what changes]`
+A toggle on the same "Agent cash / settings" screen, off by default. Turning it on is remembered on that
+device and takes effect immediately: the dashboard's transaction history asks for only the 10 most
+recent transactions instead of the full ledger, a real reduction in what is downloaded, not only a
+visual change, and the dashboard says so plainly above the history list. Turning it off restores the
+full history on the next load.
 
 ## 4. Operator journeys
 
