@@ -15,11 +15,22 @@ export class ApiError extends Error {
   }
 }
 
-async function post<T>(path: string, body: unknown): Promise<T> {
+async function post<T>(path: string, body: unknown, headers: Record<string, string> = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify(body),
+  })
+  const data = await response.json()
+  if (!response.ok) {
+    throw new ApiError(data.code ?? 'UNKNOWN_ERROR', data.message ?? 'Request failed')
+  }
+  return data as T
+}
+
+async function get<T>(path: string, accessToken: string): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
   })
   const data = await response.json()
   if (!response.ok) {
@@ -89,4 +100,81 @@ export function formatMinorUnits(value: string): string {
   const whole = abs / 100n
   const cents = (abs % 100n).toString().padStart(2, '0')
   return `${negative ? '-' : ''}${whole}.${cents}`
+}
+
+/**
+ * Reverses `formatMinorUnits`: a decimal amount typed by a customer ("50" or
+ * "50.5") to a minor-units string ("5000", "5050"). Throws on anything that
+ * is not a plain non-negative decimal, since this is the one place client
+ * input becomes the exact string the server treats as money.
+ */
+export function toMinorUnits(decimal: string): string {
+  const trimmed = decimal.trim()
+  const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(trimmed)
+  if (!match) {
+    throw new ApiError('INVALID_AMOUNT', 'Enter an amount like 50 or 50.00')
+  }
+  const whole = match[1]!
+  const cents = (match[2] ?? '').padEnd(2, '0')
+  const minorUnits = BigInt(whole) * 100n + BigInt(cents || '0')
+  if (minorUnits <= 0n) {
+    throw new ApiError('INVALID_AMOUNT', 'Amount must be greater than zero')
+  }
+  return minorUnits.toString()
+}
+
+/** FR-06, FR-08. One line of transaction history, screen W2. */
+export interface HistoryLine {
+  seq: number
+  at: string
+  direction: 'debit' | 'credit'
+  amount: string
+  counterpartyHint: string
+  ledgerBlockHash: string
+  confirmed: true
+}
+
+export function fetchHistory(accessToken: string, accountId: string): Promise<HistoryLine[]> {
+  return get(`/v1/accounts/${encodeURIComponent(accountId)}/history`, accessToken)
+}
+
+export type TransferOutcome =
+  | { transferId: string; status: 'confirmed'; ledgerBlockSeq: number }
+  | { stepUpRequired: true; reason: 'new_payee' }
+
+/** FR-09, FR-04, screen W3. `stepUpToken` is omitted on the first attempt; supplied once step-up completes. */
+export function transfer(
+  accessToken: string,
+  idempotencyKey: string,
+  fromAccountId: string,
+  toAccountId: string,
+  amountMinorUnits: string,
+  stepUpToken?: string
+): Promise<TransferOutcome> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${accessToken}`,
+    'Idempotency-Key': idempotencyKey,
+  }
+  if (stepUpToken) headers['X-Step-Up-Token'] = stepUpToken
+  return post('/v1/payments/transfers', { fromAccountId, toAccountId, amount: amountMinorUnits }, headers)
+}
+
+export interface ActionChallenge {
+  actionToken: string
+  reason: 'new_payee' | 'over_limit' | 'unrecognised_device'
+  expiresAt: string
+}
+
+export function requestStepUpChallenge(accessToken: string, reason: ActionChallenge['reason']): Promise<ActionChallenge> {
+  return post('/v1/identity/step-up/challenge', { reason }, { Authorization: `Bearer ${accessToken}` })
+}
+
+export interface StepUpToken {
+  stepUpToken: string
+  reason: string
+  expiresAt: string
+}
+
+export function completeStepUp(actionToken: string, reason: string, totpCode: string): Promise<StepUpToken> {
+  return post('/v1/identity/step-up/verify', { actionToken, reason, totpCode })
 }

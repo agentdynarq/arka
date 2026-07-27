@@ -140,3 +140,40 @@ button.primary:disabled {
   font-weight: 700;
   color: var(--arka-accent-dark);
 }
+
+.history-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--arka-border);
+  font-size: 0.9rem;
+}
+
+.history-line:last-child {
+  border-bottom: none;
+}
+
+.history-counterparty {
+  font-weight: 600;
+}
+
+.history-amount-block {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.history-amount-out {
+  color: var(--arka-error);
+  font-weight: 600;
+}
+
+.history-amount-in {
+  color: var(--arka-accent-dark);
+  font-weight: 600;
+}
+
+.panel-wide {
+  max-width: 640px;
+}

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Customer-facing app. Screen W1 (regain access: re-verification, login, MFA) wired end to end against @arka/identity-app. W2/W3 are lane A's.",
+  "description": "Customer-facing app. Screens W1 (regain access), W2 (dashboard and history) and W3 (transfer with step-up) wired end to end against @arka/identity-app.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
