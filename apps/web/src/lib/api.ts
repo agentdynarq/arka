@@ -161,6 +161,25 @@ export function transfer(
   return post('/v1/payments/transfers', { fromAccountId, toAccountId, amount: amountMinorUnits }, headers)
 }
 
+/** FR-19, FR-20, screen W4's inbox link. A pollable inbox, not push, at Phase 2 demo scale. */
+export interface AppNotification {
+  notificationId: string
+  accountId: string | null
+  kind: 'transaction' | 'security'
+  title: string
+  message: string
+  createdAt: string
+  readAt: string | null
+}
+
+export function fetchNotifications(accessToken: string): Promise<AppNotification[]> {
+  return get('/v1/notifications', accessToken)
+}
+
+export function markNotificationRead(accessToken: string, notificationId: string): Promise<AppNotification> {
+  return post(`/v1/notifications/${encodeURIComponent(notificationId)}/read`, {}, { Authorization: `Bearer ${accessToken}` })
+}
+
 export interface ActionChallenge {
   actionToken: string
   reason: 'new_payee' | 'over_limit' | 'unrecognised_device'

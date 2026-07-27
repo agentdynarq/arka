@@ -12,10 +12,18 @@ import {
   ApiError,
 } from '@/lib/api'
 import type { CellHealthSnapshot, QuarantineStatus, AuditTrailEntry } from '@/lib/api'
+import { Main, Panel, Field, Button, Alert, Badge, Skeleton } from '@arka/ui'
+import type { BadgeTone } from '@arka/ui'
 
 interface CellRow {
   health: CellHealthSnapshot
   quarantine: QuarantineStatus
+}
+
+const STATUS_TONE: Record<CellHealthSnapshot['status'], BadgeTone> = {
+  healthy: 'success',
+  degraded: 'warning',
+  quarantined: 'danger',
 }
 
 /**
@@ -69,121 +77,132 @@ export default function HealthMapPage() {
   }
 
   return (
-    <div className="page">
-      <h1>Recovery Console</h1>
-      <p className="subtitle">Live Cell health (FR-21), quarantine with dual approval (FR-22).</p>
+    <Main size="dashboard">
+      <Panel title="Recovery Console" subtitle="Live Cell health (FR-21), quarantine with dual approval (FR-22).">
+        {error && <Alert>{error}</Alert>}
+        <div style={{ maxWidth: 360 }}>
+          <Field id="operatorId" label="Acting as operator id" value={operatorId} onChange={(e) => setOperatorId(e.target.value)} />
+        </div>
+      </Panel>
 
-      {error && <div className="error">{error}</div>}
+      {!rows && !error && (
+        <div className="ui-grid">
+          <Skeleton height="160px" />
+          <Skeleton height="160px" />
+        </div>
+      )}
 
-      <div className="actions" style={{ marginBottom: 24, maxWidth: 420 }}>
-        <label>
-          Acting as operator id
-          <input value={operatorId} onChange={(e) => setOperatorId(e.target.value)} />
-        </label>
-      </div>
-
-      {!rows && !error && <p>Loading health map...</p>}
-
-      <div className="cell-grid">
+      <div className="ui-grid">
         {rows?.map(({ health, quarantine }) => (
-          <div className="cell-card" key={health.cellId}>
-            <div className="cell-id">{health.cellId}</div>
-            <span className={`status-badge ${health.status}`}>{health.status}</span>
-            <div className="meta">
+          <Panel key={health.cellId}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <span style={{ fontWeight: 700, fontSize: 'var(--text-lg)' }}>{health.cellId}</span>
+              <Badge tone={STATUS_TONE[health.status]}>{health.status}</Badge>
+            </div>
+            <div className="ui-meta">
               Checked {new Date(health.lastCheckedAt).toLocaleTimeString()}
-              {health.latencyMs !== undefined ? ` &middot; ${health.latencyMs}ms` : ''}
+              {health.latencyMs !== undefined ? ` · ${health.latencyMs}ms` : ''}
             </div>
 
-            <div className="actions">
+            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {quarantine.state === 'none' && (
                 <>
-                  <input placeholder="Reason" value={reason} onChange={(e) => setReason(e.target.value)} />
-                  <button
+                  <Field id={`reason-${health.cellId}`} label="Reason" value={reason} onChange={(e) => setReason(e.target.value)} />
+                  <Button
+                    variant="danger"
                     disabled={busyCellId === health.cellId}
                     onClick={() => withBusy(health.cellId, () => requestQuarantine(health.cellId, reason, operatorId))}
                   >
                     Request quarantine
-                  </button>
+                  </Button>
                 </>
               )}
 
               {quarantine.state === 'pending_second_approval' && health.status !== 'quarantined' && (
                 <>
-                  <p className="pending-note">
-                    Pending quarantine, approved by: {quarantine.approvedBy.join(', ') || 'none yet'}. Needs a second,
-                    distinct operator.
+                  <p className="ui-meta" style={{ color: 'var(--color-warning)', fontWeight: 600 }}>
+                    Pending quarantine, approved by: {quarantine.approvedBy.join(', ') || 'none yet'}. Needs a second, distinct
+                    operator.
                   </p>
-                  <button
+                  <Button
+                    variant="danger"
                     disabled={busyCellId === health.cellId}
                     onClick={() => withBusy(health.cellId, () => approveQuarantine(health.cellId, operatorId))}
                   >
                     Approve quarantine
-                  </button>
+                  </Button>
                 </>
               )}
 
               {quarantine.state === 'quarantined' && (
                 <>
-                  <p className="pending-note">Quarantined. Approved by: {quarantine.approvedBy.join(', ')}.</p>
-                  <button
-                    className="secondary"
+                  <p className="ui-meta" style={{ color: 'var(--color-warning)', fontWeight: 600 }}>
+                    Quarantined. Approved by: {quarantine.approvedBy.join(', ')}.
+                  </p>
+                  <Button
+                    variant="secondary"
                     disabled={busyCellId === health.cellId}
                     onClick={() => withBusy(health.cellId, () => requestLiftQuarantine(health.cellId, operatorId))}
                   >
                     Request lift
-                  </button>
+                  </Button>
                 </>
               )}
 
               {quarantine.state === 'pending_second_approval' && health.status === 'quarantined' && (
                 <>
-                  <p className="pending-note">Pending lift. Needs a second, distinct operator to approve.</p>
-                  <button
-                    className="secondary"
+                  <p className="ui-meta" style={{ color: 'var(--color-warning)', fontWeight: 600 }}>
+                    Pending lift. Needs a second, distinct operator to approve.
+                  </p>
+                  <Button
+                    variant="secondary"
                     disabled={busyCellId === health.cellId}
                     onClick={() => withBusy(health.cellId, () => approveLiftQuarantine(health.cellId, operatorId))}
                   >
                     Approve lift
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
-          </div>
+          </Panel>
         ))}
       </div>
 
-      <section className="panel">
-        <h2>Audit trail (FR-25)</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Seq</th>
-              <th>Actor</th>
-              <th>Action</th>
-              <th>Cell</th>
-              <th>Occurred at</th>
-              <th>Hash</th>
-            </tr>
-          </thead>
-          <tbody>
-            {trail.map((entry) => (
-              <tr key={entry.id}>
-                <td>{entry.id}</td>
-                <td>{entry.actor}</td>
-                <td>{entry.action}</td>
-                <td>{entry.cellId ?? '(platform)'}</td>
-                <td>{new Date(entry.occurredAt).toLocaleString()}</td>
-                <td className="hash">{entry.hash.slice(0, 12)}...</td>
-              </tr>
-            ))}
-            {trail.length === 0 && (
+      <Panel title="Audit trail (FR-25)">
+        <div style={{ overflowX: 'auto' }}>
+          <table className="ui-table">
+            <thead>
               <tr>
-                <td colSpan={6}>No operator actions recorded yet.</td>
+                <th>Seq</th>
+                <th>Actor</th>
+                <th>Action</th>
+                <th>Cell</th>
+                <th>Occurred at</th>
+                <th>Hash</th>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </section>
-    </div>
+            </thead>
+            <tbody>
+              {trail.map((entry) => (
+                <tr key={entry.id}>
+                  <td>{entry.id}</td>
+                  <td>{entry.actor}</td>
+                  <td>{entry.action}</td>
+                  <td>{entry.cellId ?? '(platform)'}</td>
+                  <td>{new Date(entry.occurredAt).toLocaleString()}</td>
+                  <td className="ui-hash">{entry.hash.slice(0, 12)}...</td>
+                </tr>
+              ))}
+              {trail.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="ui-meta">
+                    No operator actions recorded yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </Main>
   )
 }

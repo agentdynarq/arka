@@ -13,6 +13,7 @@ import {
 } from '@/lib/api'
 import type { Dashboard, TransferOutcome } from '@/lib/api'
 import { getAccessToken, clearSession } from '@/lib/session'
+import { Main, Panel, Field, Button, Alert, Skeleton } from '@arka/ui'
 
 type Stage =
   | { name: 'form' }
@@ -57,11 +58,16 @@ export default function TransferPage() {
 
   if (!accessToken || !dashboard) {
     return (
-      <main>
-        <div className="panel">
-          <p className="subtitle">Loading...</p>
-        </div>
-      </main>
+      <Main>
+        <Panel>
+          <Skeleton height="1.4rem" width="50%" />
+          <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <Skeleton height="44px" />
+            <Skeleton height="44px" />
+            <Skeleton height="44px" />
+          </div>
+        </Panel>
+      </Main>
     )
   }
 
@@ -142,80 +148,60 @@ export default function TransferPage() {
 
   if (stage.name === 'done') {
     return (
-      <main>
-        <div className="panel">
-          <h1>Transfer confirmed</h1>
-          <p className="subtitle">Ledger block #{stage.result.ledgerBlockSeq}, confirmed immediately.</p>
-          <div className="hint">Transfer ID: {stage.result.transferId}</div>
-          <div style={{ marginTop: 24 }}>
-            <button className="primary" onClick={() => router.replace('/dashboard')}>
-              Back to dashboard
-            </button>
-          </div>
-        </div>
-      </main>
+      <Main>
+        <Panel title="Transfer confirmed" subtitle={`Ledger block #${stage.result.ledgerBlockSeq}, confirmed immediately.`}>
+          <p className="ui-meta">Transfer ID: {stage.result.transferId}</p>
+          <Button onClick={() => router.replace('/dashboard')}>Back to dashboard</Button>
+        </Panel>
+      </Main>
     )
   }
 
   if (stage.name === 'step-up') {
     return (
-      <main>
-        <div className="panel">
-          <h1>Confirm it&apos;s you</h1>
-          <p className="subtitle">
-            {stage.toAccountId} is a new payee for this account. Enter your authenticator code to confirm this transfer.
-          </p>
-          {error && <div className="error">{error}</div>}
+      <Main>
+        <Panel
+          title="Confirm it's you"
+          subtitle={`${stage.toAccountId} is a new payee for this account. Enter your authenticator code to confirm this transfer.`}
+        >
+          {error && <Alert>{error}</Alert>}
           <form onSubmit={submitStepUp}>
-            <div className="field">
-              <label htmlFor="totp">Authenticator code</label>
-              <input
-                id="totp"
-                inputMode="numeric"
-                maxLength={6}
-                value={totpCode}
-                onChange={(e) => setTotpCode(e.target.value)}
-                autoFocus
-              />
-            </div>
-            <button className="primary" type="submit" disabled={submitting}>
+            <Field
+              id="totp"
+              label="Authenticator code"
+              inputMode="numeric"
+              maxLength={6}
+              value={totpCode}
+              onChange={(e) => setTotpCode(e.target.value)}
+              autoFocus
+            />
+            <Button type="submit" disabled={submitting}>
               {submitting ? 'Verifying...' : 'Confirm transfer'}
-            </button>
+            </Button>
           </form>
-        </div>
-      </main>
+        </Panel>
+      </Main>
     )
   }
 
   return (
-    <main>
-      <div className="panel">
-        <h1>Send money</h1>
-        {fromAccount && (
-          <p className="subtitle">
-            From {fromAccount.displayName}, balance LKR {formatMinorUnits(fromAccount.balance)}
-          </p>
-        )}
-        {error && <div className="error">{error}</div>}
+    <Main>
+      <Panel
+        title="Send money"
+        subtitle={fromAccount ? `From ${fromAccount.displayName}, balance LKR ${formatMinorUnits(fromAccount.balance)}` : undefined}
+      >
+        {error && <Alert>{error}</Alert>}
         <form onSubmit={submitTransfer}>
-          <div className="field">
-            <label htmlFor="to">Pay to (account ID)</label>
-            <input id="to" value={toAccountId} onChange={(e) => setToAccountId(e.target.value)} placeholder="customer:bob" />
-          </div>
-          <div className="field">
-            <label htmlFor="amount">Amount (LKR)</label>
-            <input id="amount" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50.00" />
-          </div>
-          <button className="primary" type="submit" disabled={submitting}>
+          <Field id="to" label="Pay to (account ID)" value={toAccountId} onChange={(e) => setToAccountId(e.target.value)} placeholder="customer:bob" />
+          <Field id="amount" label="Amount (LKR)" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50.00" />
+          <Button type="submit" disabled={submitting}>
             {submitting ? 'Sending...' : 'Send'}
-          </button>
+          </Button>
         </form>
-        <div style={{ marginTop: 16 }}>
-          <button className="primary" style={{ background: 'transparent', color: 'var(--arka-accent)' }} onClick={() => router.replace('/dashboard')}>
-            Cancel
-          </button>
-        </div>
-      </div>
-    </main>
+        <Button variant="ghost" onClick={() => router.replace('/dashboard')}>
+          Cancel
+        </Button>
+      </Panel>
+    </Main>
   )
 }

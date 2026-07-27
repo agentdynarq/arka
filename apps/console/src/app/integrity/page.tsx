@@ -3,13 +3,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fetchAllIntegrity, fetchIntegrity, integrityExportUrl, ApiError } from '@/lib/api'
 import type { IntegrityEvidence } from '@/lib/api'
+import { Main, Panel, Field, SelectField, Button, Alert, Badge, Skeleton } from '@arka/ui'
 
 /**
  * Screen W6: on-demand ledger integrity verification with export (FR-23).
  * Follows `docs/RUNBOOK.md` P1: select the Cell and the block range (default
- * genesis to head), run verification, export the evidence. No Figma file was
- * available for this screen this session, same honesty note as screen W1: a
- * plain functional build of the journey, not a claimed wireframe match.
+ * genesis to head), run verification, export the evidence.
  */
 export default function IntegrityPage() {
   const [overview, setOverview] = useState<IntegrityEvidence[] | null>(null)
@@ -55,66 +54,63 @@ export default function IntegrityPage() {
   }
 
   return (
-    <div className="page">
-      <h1>Integrity audit</h1>
-      <p className="subtitle">On-demand ledger verification with export (FR-23). See docs/RUNBOOK.md P1.</p>
+    <Main size="dashboard">
+      <Panel title="Integrity audit" subtitle="On-demand ledger verification with export (FR-23). See docs/RUNBOOK.md P1.">
+        {error && <Alert>{error}</Alert>}
+      </Panel>
 
-      {error && <div className="error">{error}</div>}
+      {!overview && !error && (
+        <div className="ui-grid">
+          <Skeleton height="90px" />
+          <Skeleton height="90px" />
+        </div>
+      )}
 
-      <div className="cell-grid">
+      <div className="ui-grid">
         {overview?.map((e) => (
-          <div className="cell-card" key={e.cellId}>
-            <div className="cell-id">{e.cellId}</div>
-            <span className={`status-badge ${e.result.ok ? 'healthy' : 'quarantined'}`}>
-              {e.result.ok ? 'clean' : 'broken'}
-            </span>
-            <div className="meta">
-              {e.result.records} records &middot; checked {new Date(e.verifiedAt).toLocaleTimeString()}
+          <Panel key={e.cellId}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <span style={{ fontWeight: 700, fontSize: 'var(--text-lg)' }}>{e.cellId}</span>
+              <Badge tone={e.result.ok ? 'success' : 'danger'}>{e.result.ok ? 'clean' : 'broken'}</Badge>
             </div>
-          </div>
+            <div className="ui-meta">
+              {e.result.records} records · checked {new Date(e.verifiedAt).toLocaleTimeString()}
+            </div>
+          </Panel>
         ))}
-        {!overview && !error && <p>Loading integrity overview...</p>}
       </div>
 
-      <section className="panel" style={{ marginBottom: 24 }}>
-        <h2>Run a verification</h2>
-        <div className="actions" style={{ maxWidth: 420 }}>
-          <label>
-            Cell
-            <select value={selectedCellId} onChange={(e) => setSelectedCellId(e.target.value)}>
-              {overview?.map((e) => (
-                <option key={e.cellId} value={e.cellId}>
-                  {e.cellId}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Up to block (optional, default genesis to head)
-            <input
-              inputMode="numeric"
-              placeholder="e.g. 100"
-              value={upTo}
-              onChange={(event) => setUpTo(event.target.value)}
-            />
-          </label>
-          <button disabled={busy || !selectedCellId} onClick={runVerification}>
+      <Panel title="Run a verification">
+        <div style={{ maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <SelectField
+            id="cell"
+            label="Cell"
+            value={selectedCellId}
+            onChange={(e) => setSelectedCellId(e.target.value)}
+            options={(overview ?? []).map((e) => ({ value: e.cellId, label: e.cellId }))}
+          />
+          <Field
+            id="upTo"
+            label="Up to block (optional, default genesis to head)"
+            inputMode="numeric"
+            placeholder="e.g. 100"
+            value={upTo}
+            onChange={(event) => setUpTo(event.target.value)}
+          />
+          <Button disabled={busy || !selectedCellId} onClick={runVerification}>
             {busy ? 'Verifying...' : 'Run verification'}
-          </button>
+          </Button>
         </div>
-      </section>
+      </Panel>
 
       {evidence && (
-        <section className="panel">
-          <h2>Evidence: {evidence.cellId}</h2>
-          <table>
+        <Panel title={`Evidence: ${evidence.cellId}`}>
+          <table className="ui-table ui-table--attributes">
             <tbody>
               <tr>
                 <th>Status</th>
                 <td>
-                  <span className={`status-badge ${evidence.result.ok ? 'healthy' : 'quarantined'}`}>
-                    {evidence.result.ok ? 'clean' : 'broken'}
-                  </span>
+                  <Badge tone={evidence.result.ok ? 'success' : 'danger'}>{evidence.result.ok ? 'clean' : 'broken'}</Badge>
                 </td>
               </tr>
               <tr>
@@ -131,7 +127,7 @@ export default function IntegrityPage() {
               </tr>
               <tr>
                 <th>Root hash</th>
-                <td className="hash">{evidence.result.rootHash ?? '(empty chain)'}</td>
+                <td className="ui-hash">{evidence.result.rootHash ?? '(empty chain)'}</td>
               </tr>
               {!evidence.result.ok && (
                 <>
@@ -147,13 +143,13 @@ export default function IntegrityPage() {
               )}
             </tbody>
           </table>
-          <p className="actions">
-            <a className="link-button" href={integrityExportUrl(evidence.cellId, evidence.upTo ?? undefined)}>
+          <div style={{ marginTop: 16 }}>
+            <a className="ui-button ui-button--primary ui-button--auto" href={integrityExportUrl(evidence.cellId, evidence.upTo ?? undefined)}>
               Export evidence
             </a>
-          </p>
-        </section>
+          </div>
+        </Panel>
       )}
-    </div>
+    </Main>
   )
 }

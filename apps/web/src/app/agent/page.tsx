@@ -5,11 +5,17 @@ import { useRouter } from 'next/navigation'
 import { requestAgentCash, completeAgentCash, toMinorUnits, ApiError } from '@/lib/api'
 import type { AgentCashDirection } from '@/lib/api'
 import { isLowBandwidthEnabled, setLowBandwidthEnabled, LOW_BANDWIDTH_HISTORY_LIMIT } from '@/lib/low-bandwidth'
+import { Main, Panel, Field, SelectField, Button, Alert } from '@arka/ui'
 
 type Stage =
   | { name: 'form' }
   | { name: 'awaiting-otp'; requestId: string; expiresAt: string; idempotencyKey: string }
   | { name: 'done'; transferId: string; ledgerBlockSeq: number }
+
+const DIRECTION_OPTIONS = [
+  { value: 'cash_in', label: 'Cash in (customer hands the agent physical cash)' },
+  { value: 'cash_out', label: 'Cash out (agent hands the customer physical cash)' },
+]
 
 /**
  * Screen W4, the inclusion surface (FR-16) and the low-bandwidth preference
@@ -85,117 +91,88 @@ export default function AgentPage() {
 
   if (stage.name === 'done') {
     return (
-      <main>
-        <div className="panel">
-          <h1>Cash {direction === 'cash_in' ? 'in' : 'out'} confirmed</h1>
-          <p className="subtitle">Ledger block #{stage.ledgerBlockSeq}, confirmed immediately.</p>
-          <div className="hint">Transfer ID: {stage.transferId}</div>
-          <div style={{ marginTop: 24 }}>
-            <button className="primary" onClick={() => setStage({ name: 'form' })}>
-              Start another
-            </button>
-          </div>
-        </div>
-      </main>
+      <Main>
+        <Panel
+          title={`Cash ${direction === 'cash_in' ? 'in' : 'out'} confirmed`}
+          subtitle={`Ledger block #${stage.ledgerBlockSeq}, confirmed immediately.`}
+        >
+          <p className="ui-meta">Transfer ID: {stage.transferId}</p>
+          <Button onClick={() => setStage({ name: 'form' })}>Start another</Button>
+        </Panel>
+      </Main>
     )
   }
 
   if (stage.name === 'awaiting-otp') {
     return (
-      <main>
-        <div className="panel">
-          <h1>Ask the customer for their code</h1>
-          <p className="subtitle">
-            An OTP was sent to the customer&apos;s own notification inbox, it expires at{' '}
-            {new Date(stage.expiresAt).toLocaleTimeString()}. This app never sees it, the customer reads it to you.
-          </p>
-          {error && <div className="error">{error}</div>}
+      <Main>
+        <Panel
+          title="Ask the customer for their code"
+          subtitle={`An OTP was sent to the customer's own notification inbox, it expires at ${new Date(
+            stage.expiresAt
+          ).toLocaleTimeString()}. This app never sees it, the customer reads it to you.`}
+        >
+          {error && <Alert>{error}</Alert>}
           <form onSubmit={submitOtp}>
-            <div className="field">
-              <label htmlFor="otp">Customer&apos;s OTP</label>
-              <input id="otp" inputMode="numeric" maxLength={6} value={otpCode} onChange={(e) => setOtpCode(e.target.value)} autoFocus />
-            </div>
-            <button className="primary" type="submit" disabled={submitting}>
+            <Field id="otp" label="Customer's OTP" inputMode="numeric" maxLength={6} value={otpCode} onChange={(e) => setOtpCode(e.target.value)} autoFocus />
+            <Button type="submit" disabled={submitting}>
               {submitting ? 'Confirming...' : 'Confirm'}
-            </button>
+            </Button>
           </form>
-          <div style={{ marginTop: 16 }}>
-            <button
-              className="primary"
-              style={{ background: 'transparent', color: 'var(--arka-accent)' }}
-              onClick={() => setStage({ name: 'form' })}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </main>
+          <Button variant="ghost" onClick={() => setStage({ name: 'form' })}>
+            Cancel
+          </Button>
+        </Panel>
+      </Main>
     )
   }
 
   return (
-    <main style={{ flexDirection: 'column', gap: 16 }}>
-      <div className="panel panel-wide">
-        <h1>Agent cash in / cash out</h1>
-        <p className="subtitle">FR-16. The customer consents by OTP, sent to their own inbox, never to this screen.</p>
-        {error && <div className="error">{error}</div>}
+    <Main size="wide">
+      <Panel title="Agent cash in / cash out" subtitle="FR-16. The customer consents by OTP, sent to their own inbox, never to this screen.">
+        {error && <Alert>{error}</Alert>}
         <form onSubmit={submitRequest}>
-          <div className="field">
-            <label htmlFor="agentId">Agent ID</label>
-            <input id="agentId" value={agentId} onChange={(e) => setAgentId(e.target.value)} placeholder="agent:west-01" />
-          </div>
-          <div className="field">
-            <label htmlFor="agentAccountId">Agent's cash account</label>
-            <input id="agentAccountId" value={agentAccountId} onChange={(e) => setAgentAccountId(e.target.value)} placeholder="agent:west" />
-          </div>
-          <div className="field">
-            <label htmlFor="customerAccountId">Customer's account</label>
-            <input
-              id="customerAccountId"
-              value={customerAccountId}
-              onChange={(e) => setCustomerAccountId(e.target.value)}
-              placeholder="customer:alice"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="direction">Direction</label>
-            <select
-              id="direction"
-              value={direction}
-              onChange={(e) => setDirection(e.target.value as AgentCashDirection)}
-              style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--arka-border)', borderRadius: 8, fontSize: '1rem' }}
-            >
-              <option value="cash_in">Cash in (customer hands the agent physical cash)</option>
-              <option value="cash_out">Cash out (agent hands the customer physical cash)</option>
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="amount">Amount (LKR)</label>
-            <input id="amount" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50.00" />
-          </div>
-          <button className="primary" type="submit" disabled={submitting}>
+          <Field id="agentId" label="Agent ID" value={agentId} onChange={(e) => setAgentId(e.target.value)} placeholder="agent:west-01" />
+          <Field
+            id="agentAccountId"
+            label="Agent's cash account"
+            value={agentAccountId}
+            onChange={(e) => setAgentAccountId(e.target.value)}
+            placeholder="agent:west"
+          />
+          <Field
+            id="customerAccountId"
+            label="Customer's account"
+            value={customerAccountId}
+            onChange={(e) => setCustomerAccountId(e.target.value)}
+            placeholder="customer:alice"
+          />
+          <SelectField
+            id="direction"
+            label="Direction"
+            options={DIRECTION_OPTIONS}
+            value={direction}
+            onChange={(e) => setDirection(e.target.value as AgentCashDirection)}
+          />
+          <Field id="amount" label="Amount (LKR)" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50.00" />
+          <Button type="submit" disabled={submitting}>
             {submitting ? 'Requesting...' : 'Request'}
-          </button>
+          </Button>
         </form>
-      </div>
+      </Panel>
 
-      <div className="panel panel-wide">
-        <h1 style={{ fontSize: '1.1rem' }}>Low-bandwidth mode</h1>
-        <p className="subtitle">
-          FR-15. Keeps the dashboard usable on a slow connection: history loads only your {LOW_BANDWIDTH_HISTORY_LIMIT} most
-          recent transactions instead of the full ledger. Applies everywhere, remembered on this device.
-        </p>
-        <button className="primary" onClick={toggleLowBandwidth}>
+      <Panel title="Low-bandwidth mode" subtitle="FR-15. Keeps the dashboard usable on a slow connection: history loads only your most recent transactions instead of the full ledger. Applies everywhere, remembered on this device.">
+        <Button variant="secondary" onClick={toggleLowBandwidth}>
           {lowBandwidth ? 'Turn off low-bandwidth mode' : 'Turn on low-bandwidth mode'}
-        </button>
-        <div className="hint" style={{ marginTop: 8 }}>Currently {lowBandwidth ? 'on' : 'off'}.</div>
-      </div>
+        </Button>
+        <p className="ui-meta" style={{ marginTop: 8 }}>
+          Currently {lowBandwidth ? `on, showing ${LOW_BANDWIDTH_HISTORY_LIMIT} lines` : 'off'}.
+        </p>
+      </Panel>
 
-      <div style={{ textAlign: 'center' }}>
-        <button className="primary" style={{ background: 'transparent', color: 'var(--arka-accent)' }} onClick={() => router.push('/dashboard')}>
-          Back to dashboard
-        </button>
-      </div>
-    </main>
+      <Button variant="ghost" onClick={() => router.push('/dashboard')}>
+        Back to dashboard
+      </Button>
+    </Main>
   )
 }
