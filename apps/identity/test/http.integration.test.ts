@@ -358,6 +358,33 @@ describe('identity http surface', () => {
     assert.equal(response.status, 403)
   })
 
+  test('FR-15: ?limit= caps history to the newest few lines, the server side of low-bandwidth mode', async () => {
+    const accessToken = await loginAndVerifyMfa(baseUrl, mfaSecret)
+
+    const full = await fetch(`${baseUrl}/v1/accounts/customer:test-alice/history`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    const fullLines = await full.json()
+    assert.ok(fullLines.length > 1, 'test fixture should already have more than one history line by this point')
+
+    const limited = await fetch(`${baseUrl}/v1/accounts/customer:test-alice/history?limit=1`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    assert.equal(limited.status, 200)
+    const limitedLines = await limited.json()
+    assert.equal(limitedLines.length, 1)
+    assert.equal(limitedLines[0].seq, fullLines[0].seq, 'limit still returns the newest line first')
+  })
+
+  test('?limit=0 is rejected rather than silently treated as unlimited', async () => {
+    const accessToken = await loginAndVerifyMfa(baseUrl, mfaSecret)
+
+    const response = await fetch(`${baseUrl}/v1/accounts/customer:test-alice/history?limit=0`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    assert.equal(response.status, 400)
+  })
+
   test('FR-19: a transfer to a familiar payee notifies both sender and receiver', async () => {
     const accessToken = await loginAndVerifyMfa(baseUrl, mfaSecret)
 
