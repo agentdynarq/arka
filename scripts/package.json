@@ -1,0 +1,14 @@
+{
+  "name": "@arka/scripts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Operator and demo CLI scripts. Deliberately outside the pnpm workspace: these import services/ledger and packages/ledger-core by relative source path, never as installed packages, since scripts here are leaf consumers rather than something anything else depends on.",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^7.0.0"
+  }
+}
