@@ -6,6 +6,7 @@ import { fetchDashboard, fetchHistory, formatMinorUnits, ApiError } from '@/lib/
 import type { Dashboard, HistoryLine } from '@/lib/api'
 import { getAccessToken, clearSession } from '@/lib/session'
 import { isLowBandwidthEnabled, LOW_BANDWIDTH_HISTORY_LIMIT } from '@/lib/low-bandwidth'
+import { Main, Panel, Button, Alert, Skeleton, EmptyState, Row, Badge, ReceiptIcon } from '@arka/ui'
 
 /**
  * Screen W2, the end of the W1 journey too: a real dashboard, reading a real
@@ -60,83 +61,87 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <main>
-        <div className="panel">
-          <div className="error">{error}</div>
-          <button className="primary" onClick={() => router.replace('/reverify')}>
-            Back to sign in
-          </button>
-        </div>
-      </main>
+      <Main size="wide">
+        <Panel>
+          <Alert>{error}</Alert>
+          <Button onClick={() => router.replace('/reverify')}>Back to sign in</Button>
+        </Panel>
+      </Main>
     )
   }
 
   if (!dashboard) {
     return (
-      <main>
-        <div className="panel">
-          <p className="subtitle">Loading your dashboard...</p>
-        </div>
-      </main>
+      <Main size="wide">
+        <Panel>
+          <Skeleton height="1.4rem" width="60%" />
+          <div style={{ marginTop: 16 }}>
+            <Skeleton height="88px" />
+          </div>
+          <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <Skeleton height="52px" />
+            <Skeleton height="52px" />
+            <Skeleton height="52px" />
+          </div>
+        </Panel>
+      </Main>
     )
   }
 
   return (
-    <main>
-      <div className="panel panel-wide">
-        <h1>Welcome back, {dashboard.username}</h1>
-        <p className="subtitle">Role: {dashboard.role}</p>
-
-        {dashboard.accounts.length === 0 && <p className="subtitle">No accounts found for this customer.</p>}
+    <Main size="wide">
+      <Panel title={`Welcome back, ${dashboard.username}`} subtitle={`Role: ${dashboard.role}`}>
+        {dashboard.accounts.length === 0 && (
+          <EmptyState icon={<ReceiptIcon />} title="No accounts found" hint="This customer has no accounts registered yet." />
+        )}
 
         {dashboard.accounts.map((account) => (
-          <div className="balance-card" key={account.accountId}>
-            <div>{account.displayName}</div>
-            <div className="amount">LKR {formatMinorUnits(account.balance)}</div>
-            <div className="hint">{account.accountId}</div>
+          <div key={account.accountId} className="ui-panel" style={{ marginBottom: 16, boxShadow: 'none' }}>
+            <div className="ui-meta">{account.displayName}</div>
+            <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--color-accent)' }}>
+              LKR {formatMinorUnits(account.balance)}
+            </div>
+            <div className="ui-meta">{account.accountId}</div>
           </div>
         ))}
 
-        <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
-          <button className="primary" onClick={() => router.push('/transfer')}>
-            Send money
-          </button>
-          <button className="primary" style={{ background: 'transparent', color: 'var(--arka-accent)' }} onClick={() => router.push('/agent')}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <Button onClick={() => router.push('/transfer')}>Send money</Button>
+          <Button variant="secondary" onClick={() => router.push('/agent')}>
             Agent cash / settings
-          </button>
+          </Button>
         </div>
+      </Panel>
 
-        <h2 style={{ fontSize: '1rem', marginTop: 32, marginBottom: 8 }}>Transaction history</h2>
+      <Panel title="Transaction history">
         {lowBandwidth && (
-          <p className="hint">Low-bandwidth mode is on: showing your {LOW_BANDWIDTH_HISTORY_LIMIT} most recent transactions.</p>
+          <p className="ui-meta" style={{ marginTop: -8, marginBottom: 12 }}>
+            Low-bandwidth mode is on: showing your {LOW_BANDWIDTH_HISTORY_LIMIT} most recent transactions.
+          </p>
         )}
-        {history === null && <p className="subtitle">Loading history...</p>}
-        {history?.length === 0 && <p className="subtitle">No transactions yet.</p>}
-        {history?.map((line) => (
-          <div key={line.seq} className="history-line">
-            <div>
-              <div className="history-counterparty">
-                {line.direction === 'debit' ? 'To ' : 'From '}
-                {line.counterpartyHint}
-              </div>
-              <div className="hint">{new Date(line.at).toLocaleString()}</div>
-            </div>
-            <div className="history-amount-block">
-              <div className={line.direction === 'debit' ? 'history-amount-out' : 'history-amount-in'}>
-                {line.direction === 'debit' ? '-' : '+'}
-                {formatMinorUnits(line.amount)}
-              </div>
-              <div className="hint">{line.confirmed ? 'Ledger confirmed' : 'Pending'}</div>
-            </div>
+        {history === null && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <Skeleton height="52px" />
+            <Skeleton height="52px" />
+            <Skeleton height="52px" />
           </div>
+        )}
+        {history?.length === 0 && <EmptyState icon={<ReceiptIcon />} title="No transactions yet" hint="Sent and received money will show up here." />}
+        {history?.map((line) => (
+          <Row
+            key={line.seq}
+            title={`${line.direction === 'debit' ? 'To' : 'From'} ${line.counterpartyHint}`}
+            meta={new Date(line.at).toLocaleString()}
+            value={`${line.direction === 'debit' ? '-' : '+'}${formatMinorUnits(line.amount)}`}
+            valueTone={line.direction === 'debit' ? 'negative' : 'positive'}
+            footnote={<Badge tone={line.confirmed ? 'success' : 'warning'}>{line.confirmed ? 'Ledger confirmed' : 'Pending'}</Badge>}
+          />
         ))}
+      </Panel>
 
-        <div style={{ marginTop: 24 }}>
-          <button className="primary" onClick={signOut}>
-            Sign out
-          </button>
-        </div>
-      </div>
-    </main>
+      <Button variant="ghost" onClick={signOut}>
+        Sign out
+      </Button>
+    </Main>
   )
 }

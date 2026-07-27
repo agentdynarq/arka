@@ -4,8 +4,11 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { reVerify, login, verifyMfa, ApiError } from '@/lib/api'
 import { storeSession } from '@/lib/session'
+import { Main, Panel, Stepper, Field, Button, Alert } from '@arka/ui'
 
 type Step = 're-verify' | 'login' | 'mfa'
+
+const STEP_INDEX: Record<Step, number> = { 're-verify': 0, login: 1, mfa: 2 }
 
 /**
  * Screen W1: regain access. One page, three steps, matching the "done when"
@@ -14,11 +17,6 @@ type Step = 're-verify' | 'login' | 'mfa'
  * dashboard. Account opening (FR-02) has no screen commitment in this
  * scope; it is a backend capability in `@arka/identity`, exercised directly
  * against the API, not through this UI.
- *
- * No Figma file was available in this session to match the Phase 1
- * wireframe pixel-for-pixel, so this is a plain functional build of the
- * same three-step journey rather than a claimed wireframe match: honest
- * about what it is, same principle as `livenessSimulated`.
  */
 export default function ReVerifyPage() {
   const router = useRouter()
@@ -84,88 +82,72 @@ export default function ReVerifyPage() {
   }
 
   return (
-    <main>
-      <div className="panel">
-        <div className="stepper">
-          <div className={`dot ${step === 're-verify' ? 'active' : 'done'}`} />
-          <div className={`dot ${step === 'login' ? 'active' : step === 'mfa' ? 'done' : ''}`} />
-          <div className={`dot ${step === 'mfa' ? 'active' : ''}`} />
-        </div>
+    <Main>
+      <Panel>
+        <Stepper steps={3} current={STEP_INDEX[step]} />
 
-        {error && <div className="error">{error}</div>}
+        {error && <Alert>{error}</Alert>}
 
         {step === 're-verify' && (
           <form onSubmit={handleReVerify}>
-            <h1>Regain access</h1>
-            <p className="subtitle">
+            <h1 className="ui-panel__title">Regain access</h1>
+            <p className="ui-panel__subtitle">
               Re-verify your identity against the preserved registry before signing in. Liveness check is simulated.
             </p>
-            <div className="field">
-              <label htmlFor="customerId">Customer ID</label>
-              <input id="customerId" value={customerId} onChange={(e) => setCustomerId(e.target.value)} required />
-            </div>
-            <div className="field">
-              <label htmlFor="registryDocumentId">Registry document ID</label>
-              <input
-                id="registryDocumentId"
-                value={registryDocumentId}
-                onChange={(e) => setRegistryDocumentId(e.target.value)}
-                required
-              />
-            </div>
-            <button className="primary" type="submit" disabled={busy}>
+            <Field id="customerId" label="Customer ID" value={customerId} onChange={(e) => setCustomerId(e.target.value)} required />
+            <Field
+              id="registryDocumentId"
+              label="Registry document ID"
+              value={registryDocumentId}
+              onChange={(e) => setRegistryDocumentId(e.target.value)}
+              required
+            />
+            <Button type="submit" disabled={busy}>
               {busy ? 'Verifying...' : 'Re-verify identity'}
-            </button>
+            </Button>
           </form>
         )}
 
         {step === 'login' && (
           <form onSubmit={handleLogin}>
-            <h1>Sign in</h1>
-            <p className="subtitle">Identity re-verified. Enter your credentials to continue.</p>
-            <div className="field">
-              <label htmlFor="username">Username</label>
-              <input id="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
-            </div>
-            <div className="field">
-              <label htmlFor="password">Password</label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <button className="primary" type="submit" disabled={busy}>
+            <h1 className="ui-panel__title">Sign in</h1>
+            <p className="ui-panel__subtitle">Identity re-verified. Enter your credentials to continue.</p>
+            <Field id="username" label="Username" value={username} onChange={(e) => setUsername(e.target.value)} required />
+            <Field
+              id="password"
+              label="Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <Button type="submit" disabled={busy}>
               {busy ? 'Signing in...' : 'Sign in'}
-            </button>
+            </Button>
           </form>
         )}
 
         {step === 'mfa' && (
           <form onSubmit={handleMfa}>
-            <h1>Verify your identity</h1>
-            <p className="subtitle">Enter the 6-digit code from your authenticator app.</p>
-            <div className="field">
-              <label htmlFor="totpCode">Authentication code</label>
-              <input
-                id="totpCode"
-                inputMode="numeric"
-                pattern="\d{6}"
-                maxLength={6}
-                value={totpCode}
-                onChange={(e) => setTotpCode(e.target.value)}
-                required
-              />
-              <p className="hint">Local dev: the identity server logs a fresh valid code to its console on every boot.</p>
-            </div>
-            <button className="primary" type="submit" disabled={busy}>
+            <h1 className="ui-panel__title">Verify your identity</h1>
+            <p className="ui-panel__subtitle">Enter the 6-digit code from your authenticator app.</p>
+            <Field
+              id="totpCode"
+              label="Authentication code"
+              inputMode="numeric"
+              pattern="\d{6}"
+              maxLength={6}
+              value={totpCode}
+              onChange={(e) => setTotpCode(e.target.value)}
+              hint="Local dev: the identity server logs a fresh valid code to its console on every boot."
+              required
+            />
+            <Button type="submit" disabled={busy}>
               {busy ? 'Verifying...' : 'Verify and continue'}
-            </button>
+            </Button>
           </form>
         )}
-      </div>
-    </main>
+      </Panel>
+    </Main>
   )
 }
