@@ -9,6 +9,7 @@ import {
   PgKycDocumentStore,
   PgAccountOpeningStore,
 } from '@arka/identity'
+import { PaymentsService, PgIdempotencyStore, PgLimitsStore } from '@arka/payments'
 
 /**
  * `DATABASE_URL` is the name `docs/ARCHITECTURE.md` section 3 already gives
@@ -23,23 +24,27 @@ export function databaseUrl(): string {
 interface Built {
   readonly identity: IdentityService
   readonly accounts: AccountsService
+  readonly ledger: LedgerService
+  readonly payments: PaymentsService
 }
 
 let built: Built | null = null
 
 /**
- * The one `IdentityService` and `AccountsService` for this Cell, built from
- * real Postgres-backed stores and constructed exactly once. `IdentityService`
- * composes `AccountsService` for FR-02 provisioning; the dashboard endpoint
- * also needs `AccountsService` directly to read a real balance, so both are
- * built together here and handed out from the same cache rather than each
- * building its own, separate `AccountsService`.
+ * The one instance of each service for this Cell, composed together in a
+ * single process. See docs/adr/0006 for why: Identity, Accounts and Payments
+ * are separate, independently-testable packages, this is only where they run
+ * for Phase 2. Built from real Postgres-backed stores, constructed exactly
+ * once, and handed out from the same cache rather than each caller building
+ * its own copy.
  */
 function build(): Built {
   if (built) return built
 
   const connectionString = databaseUrl()
-  const ledger = new LedgerService(new PgLedgerStore(connectionString), { cellId: process.env.CELL_ID ?? 'cell-1' })
+  const cellId = process.env.CELL_ID ?? 'cell-1'
+
+  const ledger = new LedgerService(new PgLedgerStore(connectionString), { cellId })
   const accounts = new AccountsService({ registry: new PgAccountRegistry(connectionString), ledger })
 
   const identity = new IdentityService({
@@ -52,7 +57,15 @@ function build(): Built {
     accounts,
   })
 
-  built = { identity, accounts }
+  const payments = new PaymentsService({
+    accounts,
+    ledger,
+    idempotency: new PgIdempotencyStore(connectionString),
+    limits: new PgLimitsStore(connectionString),
+    qrSigningKey: process.env.QR_SIGNING_KEY ?? 'dev-only-qr-signing-key-not-for-production',
+  })
+
+  built = { identity, accounts, ledger, payments }
   return built
 }
 
@@ -62,4 +75,12 @@ export function buildIdentityService(): IdentityService {
 
 export function buildAccountsService(): AccountsService {
   return build().accounts
+}
+
+export function buildLedgerService(): LedgerService {
+  return build().ledger
+}
+
+export function buildPaymentsService(): PaymentsService {
+  return build().payments
 }

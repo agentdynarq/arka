@@ -112,6 +112,25 @@ export class PaymentsService {
   }
 
   /**
+   * FR-04: whether `toAccountId` has ever received a transfer from
+   * `fromAccountId` before. The wireframe's step-up trigger ("a new payee...
+   * triggers step-up confirmation") is a question about the sender's own
+   * history, so it belongs here alongside the balance and limit checks
+   * `transfer()` already makes, not duplicated at whatever composes this
+   * service with step-up verification.
+   */
+  async isNewPayee(fromAccountId: string, toAccountId: string): Promise<boolean> {
+    const history = await this.#ledger.history(fromAccountId)
+    for (const record of history) {
+      if (record.entry.direction !== 'debit') continue
+      if (record.blockEntries.some((e) => e.account === toAccountId)) {
+        return false
+      }
+    }
+    return true
+  }
+
+  /**
    * FR-12: change an account's daily limit. Gated on `stepUpVerified`, which
    * this service trusts rather than checks: verifying the actual step-up
    * token is `@arka/identity`'s job, at the layer that composes both

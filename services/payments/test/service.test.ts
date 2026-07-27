@@ -103,6 +103,31 @@ describe('transfer', () => {
   })
 })
 
+describe('isNewPayee (FR-04 trigger)', () => {
+  test('a payee never transferred to is new', async () => {
+    const { payments } = await newFundedPayments()
+    assert.equal(await payments.isNewPayee('customer:alice', 'customer:bob'), true)
+  })
+
+  test('a payee already paid at least once is not new', async () => {
+    const { payments } = await newFundedPayments()
+    await payments.transfer({
+      idempotencyKey: 'req-1',
+      fromAccountId: 'customer:alice',
+      toAccountId: 'customer:bob',
+      amount: 10_00n,
+    })
+    assert.equal(await payments.isNewPayee('customer:alice', 'customer:bob'), false)
+  })
+
+  test('receiving money from an account does not count as having paid them', async () => {
+    const { payments } = await newFundedPayments()
+    // The opening deposit credits alice from bank:reserve; alice has never
+    // sent bank:reserve anything, so it must still read as a new payee.
+    assert.equal(await payments.isNewPayee('customer:alice', 'bank:reserve'), true)
+  })
+})
+
 describe('idempotency (FR-13)', () => {
   test('the identical request retried sequentially returns the same result and moves money once', async () => {
     const { payments, accounts, ledger } = await newFundedPayments()

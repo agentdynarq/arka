@@ -101,6 +101,7 @@ Recorded here so a reviewer comparing the two documents finds the reasoning rath
 | AWS managed services, Terraform | Docker Compose, two Cells locally | Phase 2 requires no deployment. Infrastructure as code is Phase 3 work |
 | Anomaly detection service per Cell | Rate limiting only | Declared deferred in the Phase 1 submission |
 | Liveness check on re-verification | Simulated, and labelled as simulated | Real liveness is not buildable in the phase window, and faking it silently would be dishonest |
+| One deployable per service | Identity, Accounts, Ledger and Payments composed in `apps/identity` for Phase 2 | See docs/adr/0006. Step-up proofs live in one process's memory; a separate Payments deployable would need a real network call, its own authentication, and a new failure mode to verify one, for a boundary inside a single Cell's own trust zone |
 
 ## 9. Decision records
 

@@ -15,3 +15,4 @@ and the consequences accepted. A record that hides its trade-off cannot be revie
 | [0003](0003-no-master-key-quorum-recovery.md) | No master key, 3-of-5 quorum recovery | Accepted |
 | [0004](0004-redis-streams-for-phase-2.md) | Redis Streams as the event backbone for Phase 2 | Accepted |
 | [0005](0005-compose-for-phase-2-terraform-for-phase-3.md) | Docker Compose for Phase 2, Terraform deferred to Phase 3 | Accepted |
+| [0006](0006-services-composed-in-one-deployable-per-cell.md) | Identity, Accounts and Payments composed in one deployable for Phase 2 | Accepted |

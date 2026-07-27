@@ -92,6 +92,17 @@ from deciding what entries a caller should have chosen.
 `transfer()` (and therefore `redeemQr()`) checks the limit alongside the balance: `spentToday + amount`
 must not exceed the live limit, tested with two transfers that individually fit but together do not.
 
+## FR-04: `isNewPayee`, the wireframe's step-up trigger
+
+`isNewPayee(fromAccountId, toAccountId)` answers whether `toAccountId` has ever received a transfer
+from `fromAccountId` before, by walking the sender's own ledger history for a prior debit whose block
+also contains the candidate payee. It lives here rather than in whatever composes step-up verification
+(`apps/identity`'s `TransfersController`, see docs/adr/0006) because it is a question about a sender's
+own transfer history, the same kind of fact `dailyLimit`'s `spentToday` already answers from the
+ledger. `transfer()` itself does not call it: whether a new payee requires step-up is a policy decision
+made by the caller, the same shape `changeDailyLimit`'s `stepUpVerified` already uses, not something
+baked unconditionally into every transfer.
+
 ## `PaymentsError` codes
 
 | Code | When |
