@@ -1,8 +1,7 @@
 # @arka/payments
 
-Payments for one Cell. Owns FR-09 (instant transfer) and FR-13 (idempotency: an interrupted or
-retried payment is never executed twice). Saga orchestration for multi-step flows (QR acceptance,
-agent cash-in/cash-out) is 29 July scope; this is the single-step transfer everything else builds on.
+Payments for one Cell. Owns FR-09 (instant transfer), FR-11 (QR acceptance), FR-12 (daily limits
+with step-up), and FR-13 (idempotency: an interrupted or retried payment is never executed twice).
 
 Framework-free, same reasoning as `@arka/ledger` and `@arka/accounts`: `PaymentsService` is composed
 from their public methods, never their storage, so the behaviour that decides whether a transfer is
@@ -57,12 +56,54 @@ An ad hoc end-to-end run against real seeded data confirmed it under load a data
 introduces: firing the same key concurrently moved exactly 50.00, not 100.00, and the ledger still
 verified clean afterward.
 
+## FR-11: QR acceptance, without a saga
+
+`generateQrPayload` signs a payload (merchant account, amount, reference, expiry) with HMAC-SHA256,
+zero runtime dependencies, same reasoning as `@arka/workload-auth`. The canonical form is JSON, not a
+hand-joined delimited string: an earlier draft used a plain string join and it silently produced an
+unparseable token the first time it was actually exercised. `verifyQrPayload` checks the signature
+before parsing anything, the same discipline `verifyWorkloadToken` uses, and distinguishes
+`QR_EXPIRED` from `QR_SIGNATURE_INVALID` so a customer sees "this code expired" rather than "invalid
+code" for the ordinary case of a stale scan.
+
+`redeemQr` verifies the token, then delegates to `transfer()`, keyed on the caller's idempotency key.
+There is no separate "consumed QR tokens" table and no compensating action, because a QR redemption is
+exactly one ledger append, already atomic. A saga only earns its complexity when a single state change
+cannot be made atomic on its own; redeeming a QR is not that case. Where a real saga belongs is the
+multi-step agent cash-in/cash-out flow (FR-16, 30 July scope), which genuinely has more than one
+state change to coordinate.
+
+Because redemption is a `transfer()` under the hood, it is automatically subject to the same balance
+check and daily limit as any other transfer, tested directly in `test/service.test.ts`.
+
+## FR-12: daily limits
+
+`dailyLimit(accountId)` returns the account's live limit (an explicit override, or the platform
+default) and `spentToday`, summed from today's outgoing ledger entries, the same "never cached"
+reasoning as `AccountsService.summary`. Reads the account's full history rather than an indexed
+date-range query, correct at Phase 2 demo scale, worth revisiting if an account's history grows large
+enough for it to matter.
+
+`changeDailyLimit` requires `stepUpVerified: true` on the request. This service never checks an actual
+step-up token: verifying one is `@arka/identity`'s job, at whatever layer composes both services. This
+method only enforces that the gate cannot be skipped, the same separation `LedgerService.record` keeps
+from deciding what entries a caller should have chosen.
+
+`transfer()` (and therefore `redeemQr()`) checks the limit alongside the balance: `spentToday + amount`
+must not exceed the live limit, tested with two transfers that individually fit but together do not.
+
 ## `PaymentsError` codes
 
 | Code | When |
 |---|---|
 | `SAME_ACCOUNT` | `fromAccountId` equals `toAccountId` |
 | `INSUFFICIENT_FUNDS` | The sender's live ledger balance is below the amount |
+| `DAILY_LIMIT_EXCEEDED` | `spentToday + amount` exceeds the account's live daily limit |
+| `STEP_UP_REQUIRED` | `changeDailyLimit` called without `stepUpVerified: true` |
+| `INVALID_LIMIT` | A new daily limit that is not strictly positive |
+| `QR_EXPIRED` | A scanned QR code's `expiresAt` has passed |
+| `QR_SIGNATURE_INVALID` | A scanned QR code's signature does not match its contents |
+| `QR_MALFORMED` | A scanned QR code is not shaped like one this service issued |
 | `IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_REQUEST` | The same key was used for a materially different request |
 | `IDEMPOTENCY_TIMEOUT` | Waited `idempotencyWaitMs` for a claimant that never completed |
 
