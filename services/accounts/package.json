@@ -1,0 +1,28 @@
+{
+  "name": "@arka/accounts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Accounts for one Cell. Owns FR-06 (balances and history) and FR-08 (ledger confirmation status), composed from @arka/ledger rather than touching its storage.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "build": "echo 'no build step: consumed as source via workspace TS paths'",
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'no lint configured yet'"
+  },
+  "dependencies": {
+    "@arka/ledger": "workspace:*",
+    "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.20.0",
+    "typescript": "^7.0.0"
+  }
+}

@@ -77,6 +77,25 @@ importers:
         specifier: ^7.0.0
         version: 7.0.2
 
+  services/accounts:
+    dependencies:
+      '@arka/ledger':
+        specifier: workspace:*
+        version: link:../ledger
+      pg:
+        specifier: ^8.22.0
+        version: 8.22.0
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      '@types/pg':
+        specifier: ^8.20.0
+        version: 8.20.0
+      typescript:
+        specifier: ^7.0.0
+        version: 7.0.2
+
   services/ledger:
     dependencies:
       '@arka/ledger-core':
