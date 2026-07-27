@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "HTTP adapter for one Cell's customer-facing API. Composes identity, accounts and payments in one deployable for Phase 2 (docs/adr/0006); thin, since everything that decides behaviour lives in the composed service packages.",
+  "description": "HTTP adapter for one Cell's customer-facing API. Composes identity, accounts, payments and notifications in one deployable for Phase 2 (docs/adr/0006); thin, since everything that decides behaviour lives in the composed service packages.",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node --experimental-strip-types dist/main.js",
@@ -17,6 +17,7 @@
     "@arka/contracts": "workspace:*",
     "@arka/identity": "workspace:*",
     "@arka/ledger": "workspace:*",
+    "@arka/notifications": "workspace:*",
     "@arka/payments": "workspace:*",
     "@nestjs/common": "^11.1.0",
     "@nestjs/core": "^11.1.0",

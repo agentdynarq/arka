@@ -2,6 +2,7 @@ import { Body, Controller, Headers, HttpException, HttpStatus, Inject, Post, Req
 import { IdentityService } from '@arka/identity'
 import { AccountsService } from '@arka/accounts'
 import { PaymentsService, PaymentsError } from '@arka/payments'
+import { NotificationsService } from '@arka/notifications'
 import { AccessTokenGuard } from '../auth/access-token.guard.ts'
 import type { AuthenticatedRequest } from '../auth/access-token.guard.ts'
 import { assertOwnsAccount } from './account-ownership.ts'
@@ -34,7 +35,8 @@ export class TransfersController {
   constructor(
     @Inject(IdentityService) private readonly identity: IdentityService,
     @Inject(AccountsService) private readonly accounts: AccountsService,
-    @Inject(PaymentsService) private readonly payments: PaymentsService
+    @Inject(PaymentsService) private readonly payments: PaymentsService,
+    @Inject(NotificationsService) private readonly notifications: NotificationsService
   ) {}
 
   @Post('transfers')
@@ -55,19 +57,58 @@ export class TransfersController {
     await assertOwnsAccount(this.identity, this.accounts, request, fromAccountId)
 
     const isNewPayee = await this.payments.isNewPayee(fromAccountId, toAccountId)
+    let stepUpCompleted = false
     if (isNewPayee) {
       const verified = stepUpToken ? await this.identity.verifyStepUpToken(stepUpToken, 'new_payee') : null
       if (!verified) {
         return { stepUpRequired: true, reason: 'new_payee' }
       }
+      stepUpCompleted = true
     }
 
+    let result
     try {
-      const result = await this.payments.transfer({ idempotencyKey, fromAccountId, toAccountId, amount })
-      return result
+      result = await this.payments.transfer({ idempotencyKey, fromAccountId, toAccountId, amount })
     } catch (error) {
       throwAsHttpException(error)
     }
+
+    // FR-19: both sides of the transfer are told, matching "every
+    // transaction" rather than only the account that initiated it.
+    // FR-20: a transfer to a brand-new payee is an account-affecting
+    // incident worth a security alert, on top of the step-up gate that
+    // already guarded it.
+    const [fromSummary, toSummary] = await Promise.all([
+      this.accounts.summary(fromAccountId),
+      this.accounts.summary(toAccountId),
+    ])
+    await Promise.all([
+      this.notifications.notifyTransaction({
+        customerId: fromSummary.customerId,
+        accountId: fromAccountId,
+        direction: 'debit',
+        amountMinorUnits: amount,
+        counterpartyHint: toAccountId,
+        ledgerBlockHash: result.ledgerBlockHash,
+      }),
+      this.notifications.notifyTransaction({
+        customerId: toSummary.customerId,
+        accountId: toAccountId,
+        direction: 'credit',
+        amountMinorUnits: amount,
+        counterpartyHint: fromAccountId,
+        ledgerBlockHash: result.ledgerBlockHash,
+      }),
+      stepUpCompleted
+        ? this.notifications.notifySecurity(
+            fromSummary.customerId,
+            'New payee added',
+            `A transfer to a new payee, ${toAccountId}, was confirmed with a step-up code.`
+          )
+        : Promise.resolve(),
+    ])
+
+    return { transferId: result.transferId, status: result.status, ledgerBlockSeq: result.ledgerBlockSeq }
   }
 }
 

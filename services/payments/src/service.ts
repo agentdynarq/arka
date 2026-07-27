@@ -219,7 +219,7 @@ export class PaymentsService {
       { account: request.toAccountId, direction: 'credit', amount: request.amount },
     ])
 
-    return { transferId: randomUUID(), status: 'confirmed', ledgerBlockSeq: block.seq }
+    return { transferId: randomUUID(), status: 'confirmed', ledgerBlockSeq: block.seq, ledgerBlockHash: block.hash }
   }
 
   async #limitFor(accountId: string): Promise<bigint> {

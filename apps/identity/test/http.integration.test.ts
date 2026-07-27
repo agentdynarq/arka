@@ -22,6 +22,7 @@ import { LedgerService, InMemoryLedgerStore } from '@arka/ledger'
 import { AccountsService, InMemoryAccountRegistry } from '@arka/accounts'
 import { PaymentsService, InMemoryIdempotencyStore, InMemoryLimitsStore } from '@arka/payments'
 import type { TransferResult } from '@arka/payments'
+import { NotificationsService, InMemoryNotificationStore } from '@arka/notifications'
 import {
   IdentityService,
   InMemoryUserStore,
@@ -47,6 +48,13 @@ function buildTestServices() {
     kycStore: new InMemoryKycDocumentStore(),
     accountOpenings: new InMemoryAccountOpeningStore(),
     accounts,
+    // The default (10 per 60s) is correct in production and is proven
+    // directly in services/identity's own tests. This suite logs "alice" in
+    // far more than 10 times across its growing list of journeys sharing one
+    // in-memory rate limiter for the whole file; a generous limit here tests
+    // the HTTP boundary this file actually owns without also re-triggering a
+    // real security control the volume only exists because it's a test.
+    loginRateLimit: { limit: 1000, windowMs: 60_000 },
   })
   const payments = new PaymentsService({
     accounts,
@@ -55,7 +63,8 @@ function buildTestServices() {
     limits: new InMemoryLimitsStore(),
     qrSigningKey: 'test-qr-signing-key',
   })
-  return { identity, accounts, ledger, payments }
+  const notifications = new NotificationsService({ store: new InMemoryNotificationStore() })
+  return { identity, accounts, ledger, payments, notifications }
 }
 
 let app: Awaited<ReturnType<typeof NestFactory.create>>
@@ -63,6 +72,7 @@ let baseUrl = ''
 let identity: IdentityService
 let accounts: AccountsService
 let mfaSecret: string
+let bobMfaSecret: string
 
 describe('identity http surface', () => {
   before(async () => {
@@ -78,6 +88,14 @@ describe('identity http surface', () => {
       customerId: 'cust-test-alice',
       mfaSecret,
     })
+    bobMfaSecret = generateTotpSecret()
+    await identity.createUser({
+      username: 'test-bob',
+      password: 'a genuinely strong test password for bob',
+      role: 'customer',
+      customerId: 'cust-test-bob',
+      mfaSecret: bobMfaSecret,
+    })
     await accounts.open('customer:test-alice', 'cust-test-alice', 'Test Alice')
     await accounts.open('customer:test-bob', 'cust-test-bob', 'Test Bob')
     await built.ledger.record([
@@ -92,6 +110,8 @@ describe('identity http surface', () => {
       .useValue(accounts)
       .overrideProvider(PaymentsService)
       .useValue(built.payments)
+      .overrideProvider(NotificationsService)
+      .useValue(built.notifications)
       .compile()
 
     app = moduleRef.createNestApplication()
@@ -331,14 +351,125 @@ describe('identity http surface', () => {
     })
     assert.equal(response.status, 403)
   })
+
+  test('FR-19: a transfer to a familiar payee notifies both sender and receiver', async () => {
+    const accessToken = await loginAndVerifyMfa(baseUrl, mfaSecret)
+
+    const transferResponse = await fetch(`${baseUrl}/v1/payments/transfers`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+        'Idempotency-Key': 'notify-1',
+      },
+      body: JSON.stringify({ fromAccountId: 'customer:test-alice', toAccountId: 'customer:test-bob', amount: '100' }),
+    })
+    assert.equal(transferResponse.status, 201)
+
+    const aliceInbox = await fetch(`${baseUrl}/v1/notifications`, { headers: { Authorization: `Bearer ${accessToken}` } })
+    const aliceNotifications = await aliceInbox.json()
+    const sentAlert = aliceNotifications.find((n: { title: string }) => n.title === 'Money sent')
+    assert.ok(sentAlert, 'the sender must be notified')
+    assert.equal(sentAlert.readAt, null)
+
+    const bobLogin = await loginAndVerifyMfaAs(baseUrl, 'test-bob', 'a genuinely strong test password for bob', bobMfaSecret)
+    const bobInbox = await fetch(`${baseUrl}/v1/notifications`, { headers: { Authorization: `Bearer ${bobLogin}` } })
+    const bobNotifications = await bobInbox.json()
+    assert.ok(
+      bobNotifications.some((n: { title: string }) => n.title === 'Money received'),
+      'the receiver must be notified too, not only the sender'
+    )
+  })
+
+  test('an unauthenticated notifications request is rejected', async () => {
+    const response = await fetch(`${baseUrl}/v1/notifications`)
+    assert.equal(response.status, 401)
+  })
+
+  test('POST /v1/notifications/:id/read marks a notification read, and rejects one belonging to someone else', async () => {
+    const accessToken = await loginAndVerifyMfa(baseUrl, mfaSecret)
+    const inbox = await fetch(`${baseUrl}/v1/notifications`, { headers: { Authorization: `Bearer ${accessToken}` } })
+    const [notification] = await inbox.json()
+
+    const marked = await fetch(`${baseUrl}/v1/notifications/${notification.notificationId}/read`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    assert.equal(marked.status, 201)
+    const markedBody = await marked.json()
+    assert.ok(markedBody.readAt)
+
+    const bobLogin = await loginAndVerifyMfaAs(baseUrl, 'test-bob', 'a genuinely strong test password for bob', bobMfaSecret)
+    const forbidden = await fetch(`${baseUrl}/v1/notifications/${notification.notificationId}/read`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${bobLogin}` },
+    })
+    assert.equal(forbidden.status, 403, "bob must not be able to mark alice's notification read")
+  })
+
+  test('FR-12 over HTTP: reading a limit needs no step-up, changing one does', async () => {
+    const accessToken = await loginAndVerifyMfa(baseUrl, mfaSecret)
+
+    const read = await fetch(`${baseUrl}/v1/payments/limits/customer:test-alice`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    assert.equal(read.status, 200)
+
+    const withoutStepUp = await fetch(`${baseUrl}/v1/payments/limits/customer:test-alice`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ newLimit: '100000' }),
+    })
+    assert.equal(withoutStepUp.status, 428, 'PRECONDITION_REQUIRED')
+  })
+
+  test('FR-12 and FR-20 together: changing a limit with step-up succeeds and raises a security alert', async () => {
+    const accessToken = await loginAndVerifyMfa(baseUrl, mfaSecret)
+
+    const challenge = await fetch(`${baseUrl}/v1/identity/step-up/challenge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ reason: 'over_limit' }),
+    })
+    const { actionToken } = await challenge.json()
+
+    const verify = await fetch(`${baseUrl}/v1/identity/step-up/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actionToken, reason: 'over_limit', totpCode: totpAt(mfaSecret) }),
+    })
+    const { stepUpToken } = await verify.json()
+
+    const changed = await fetch(`${baseUrl}/v1/payments/limits/customer:test-alice`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+        'X-Step-Up-Token': stepUpToken,
+      },
+      body: JSON.stringify({ newLimit: '250000' }),
+    })
+    assert.equal(changed.status, 201)
+    const changedBody = await changed.json()
+    assert.equal(changedBody.limit, '250000')
+
+    const inbox = await fetch(`${baseUrl}/v1/notifications`, { headers: { Authorization: `Bearer ${accessToken}` } })
+    const notifications = await inbox.json()
+    assert.ok(notifications.some((n: { title: string }) => n.title === 'Daily limit changed'))
+  })
 })
 
 /** Logs test-alice in over HTTP and returns a ready-to-use access token. */
 async function loginAndVerifyMfa(baseUrl: string, secret: string): Promise<string> {
+  return loginAndVerifyMfaAs(baseUrl, 'test-alice', 'a genuinely strong test password', secret)
+}
+
+/** Logs any seeded user in over HTTP and returns a ready-to-use access token. */
+async function loginAndVerifyMfaAs(baseUrl: string, username: string, password: string, secret: string): Promise<string> {
   const login = await fetch(`${baseUrl}/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: 'test-alice', password: 'a genuinely strong test password' }),
+    body: JSON.stringify({ username, password }),
   })
   const { mfaToken } = await login.json()
 
