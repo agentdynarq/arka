@@ -1,0 +1,29 @@
+{
+  "name": "@arka/payments",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Payments for one Cell. Owns FR-09 (instant transfer) and FR-13 (idempotency), composed from @arka/accounts and @arka/ledger.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "build": "echo 'no build step: consumed as source via workspace TS paths'",
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'no lint configured yet'"
+  },
+  "dependencies": {
+    "@arka/accounts": "workspace:*",
+    "@arka/ledger": "workspace:*",
+    "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.20.0",
+    "typescript": "^7.0.0"
+  }
+}
