@@ -1,0 +1,30 @@
+{
+  "name": "@arka/identity",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Authentication and identity for one Cell. Argon2 password hashing, refresh token rotation, TOTP MFA, step-up authentication, RBAC, login rate limiting and lockout, FR-01 re-verification and FR-02 account opening.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "build": "echo 'no build step: consumed as source via workspace TS paths'",
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'no lint configured yet'"
+  },
+  "dependencies": {
+    "@arka/accounts": "workspace:*",
+    "@arka/ledger": "workspace:*",
+    "@node-rs/argon2": "^2.0.0",
+    "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.20.0",
+    "typescript": "^7.0.0"
+  }
+}
