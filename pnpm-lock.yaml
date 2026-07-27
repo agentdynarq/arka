@@ -24,6 +24,19 @@ importers:
         specifier: ^7.0.0
         version: 7.0.2
 
+  services/ledger:
+    dependencies:
+      '@arka/ledger-core':
+        specifier: workspace:*
+        version: link:../../packages/ledger-core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      typescript:
+        specifier: ^7.0.0
+        version: 7.0.2
+
 packages:
 
   '@turbo/darwin-64@2.10.6':
