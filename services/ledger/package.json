@@ -1,9 +1,9 @@
 {
-  "name": "@arka/ledger-core",
+  "name": "@arka/ledger",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Append-only, hash-chained, double-entry ledger. Arka's single source of financial truth.",
+  "description": "Ledger service for one Cell. Framework-free core over @arka/ledger-core; the HTTP layer is a thin adapter.",
   "license": "MIT",
   "exports": {
     ".": "./src/index.ts"
@@ -16,6 +16,9 @@
     "test": "node --experimental-strip-types --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
     "lint": "echo 'no lint configured yet'"
+  },
+  "dependencies": {
+    "@arka/ledger-core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
