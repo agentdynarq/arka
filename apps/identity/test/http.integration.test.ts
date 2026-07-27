@@ -20,7 +20,7 @@ import { Test } from '@nestjs/testing'
 import { NestFactory } from '@nestjs/core'
 import { LedgerService, InMemoryLedgerStore } from '@arka/ledger'
 import { AccountsService, InMemoryAccountRegistry } from '@arka/accounts'
-import { PaymentsService, InMemoryIdempotencyStore, InMemoryLimitsStore } from '@arka/payments'
+import { PaymentsService, InMemoryIdempotencyStore, InMemoryLimitsStore, InMemoryAgentCashStore } from '@arka/payments'
 import type { TransferResult } from '@arka/payments'
 import { NotificationsService, InMemoryNotificationStore } from '@arka/notifications'
 import {
@@ -61,6 +61,7 @@ function buildTestServices() {
     ledger,
     idempotency: new InMemoryIdempotencyStore<TransferResult>(),
     limits: new InMemoryLimitsStore(),
+    agentCash: new InMemoryAgentCashStore(),
     qrSigningKey: 'test-qr-signing-key',
   })
   const notifications = new NotificationsService({ store: new InMemoryNotificationStore() })
@@ -98,9 +99,14 @@ describe('identity http surface', () => {
     })
     await accounts.open('customer:test-alice', 'cust-test-alice', 'Test Alice')
     await accounts.open('customer:test-bob', 'cust-test-bob', 'Test Bob')
+    await accounts.open('agent:test-west', 'cust-agent-test-west', 'Test West Branch Agent')
     await built.ledger.record([
       { account: 'bank:reserve', direction: 'debit', amount: 5_000_00n },
       { account: 'customer:test-alice', direction: 'credit', amount: 5_000_00n },
+    ])
+    await built.ledger.record([
+      { account: 'bank:reserve', direction: 'debit', amount: 5_000_00n },
+      { account: 'agent:test-west', direction: 'credit', amount: 5_000_00n },
     ])
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
@@ -456,6 +462,82 @@ describe('identity http surface', () => {
     const inbox = await fetch(`${baseUrl}/v1/notifications`, { headers: { Authorization: `Bearer ${accessToken}` } })
     const notifications = await inbox.json()
     assert.ok(notifications.some((n: { title: string }) => n.title === 'Daily limit changed'))
+  })
+
+  test('FR-16: agent cash-in, the OTP is read from the customer\'s own inbox, exactly as a real customer would', async () => {
+    const accessToken = await loginAndVerifyMfa(baseUrl, mfaSecret)
+
+    const requested = await fetch(`${baseUrl}/v1/payments/agent-cash/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        agentId: 'agent-1',
+        agentAccountId: 'agent:test-west',
+        customerAccountId: 'customer:test-alice',
+        direction: 'cash_in',
+        amount: '2000',
+      }),
+    })
+    assert.equal(requested.status, 201)
+    const requestedBody = await requested.json()
+    assert.ok(requestedBody.requestId)
+    assert.equal(typeof requestedBody.otpCode, 'undefined', 'the OTP must never be returned to the agent directly')
+
+    const inbox = await fetch(`${baseUrl}/v1/notifications`, { headers: { Authorization: `Bearer ${accessToken}` } })
+    const notifications = await inbox.json()
+    const alert = notifications.find((n: { title: string }) => n.title === 'Agent cash request')
+    assert.ok(alert, 'the customer must be told, out of band, via their own inbox')
+    const otpCode = /code with them only if you agree: (\d{6})/.exec(alert.message)?.[1]
+    assert.ok(otpCode, 'the OTP must be discoverable from the notification the same way a real customer would read it')
+
+    const completed = await fetch(`${baseUrl}/v1/payments/agent-cash/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Idempotency-Key': 'agent-cash-1' },
+      body: JSON.stringify({ requestId: requestedBody.requestId, otpCode }),
+    })
+    assert.equal(completed.status, 201)
+    const completedBody = await completed.json()
+    assert.equal(completedBody.status, 'confirmed')
+
+    const dashboard = await fetch(`${baseUrl}/v1/me/dashboard`, { headers: { Authorization: `Bearer ${accessToken}` } })
+    const dashboardBody = await dashboard.json()
+    const aliceAccount = dashboardBody.accounts.find((a: { accountId: string }) => a.accountId === 'customer:test-alice')
+    assert.ok(BigInt(aliceAccount.balance) >= 2000n, 'the cash-in must have credited the customer')
+  })
+
+  test('FR-16: completing with a wrong OTP is rejected, and the correct one still works afterward', async () => {
+    const requested = await fetch(`${baseUrl}/v1/payments/agent-cash/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        agentId: 'agent-1',
+        agentAccountId: 'agent:test-west',
+        customerAccountId: 'customer:test-bob',
+        direction: 'cash_in',
+        amount: '500',
+      }),
+    })
+    const { requestId } = await requested.json()
+
+    const wrongAttempt = await fetch(`${baseUrl}/v1/payments/agent-cash/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Idempotency-Key': 'agent-cash-wrong-1' },
+      body: JSON.stringify({ requestId, otpCode: '000000' }),
+    })
+    assert.equal(wrongAttempt.status, 401)
+
+    const bobLogin = await loginAndVerifyMfaAs(baseUrl, 'test-bob', 'a genuinely strong test password for bob', bobMfaSecret)
+    const inbox = await fetch(`${baseUrl}/v1/notifications`, { headers: { Authorization: `Bearer ${bobLogin}` } })
+    const notifications = await inbox.json()
+    const alert = notifications.find((n: { title: string }) => n.title === 'Agent cash request')
+    const otpCode = /code with them only if you agree: (\d{6})/.exec(alert.message)?.[1]
+
+    const correctAttempt = await fetch(`${baseUrl}/v1/payments/agent-cash/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Idempotency-Key': 'agent-cash-wrong-1-retry' },
+      body: JSON.stringify({ requestId, otpCode }),
+    })
+    assert.equal(correctAttempt.status, 201)
   })
 })
 

@@ -45,6 +45,13 @@ principle as `reVerificationResult.livenessSimulated`.
 | POST | `/v1/payments/limits/:accountId` | FR-12, FR-20. Requires `X-Step-Up-Token` (reason `over_limit`) or `428`. Raises a security alert on success |
 | GET | `/v1/notifications` | FR-19, FR-20. Bearer-guarded. The calling session's own inbox, newest first |
 | POST | `/v1/notifications/:notificationId/read` | Bearer-guarded, rejects a notification belonging to a different customer |
+| POST | `/v1/payments/agent-cash/request` | FR-16. Unauthenticated, same precedent as QR generation: no agent identity system exists in this scope. Writes the OTP into the customer's own inbox, never returns it in the response |
+| POST | `/v1/payments/agent-cash/complete` | FR-16. `Idempotency-Key` required. Authorised by the OTP itself, not a session |
+
+`AgentCashController` is unauthenticated on purpose (`src/payments/agent-cash.controller.ts`): there is
+no agent login system built in this scope, the same reason merchant QR generation has none either.
+Authorisation is the OTP, delivered out of band to the customer's own notification inbox and never
+returned to the agent directly.
 
 `TransfersController` (`src/payments/transfers.controller.ts`) verifies step-up with one in-process call
 to `IdentityService.verifyStepUpToken`, not a network hop; see docs/adr/0006 for why that is fine at
@@ -61,11 +68,13 @@ as `apps/gateway`. It overrides `IdentityService`, `AccountsService`, `PaymentsS
 is already proven exhaustively by each service's own `pg-stores.integration.test.ts`, and running every
 package's Postgres-touching tests concurrently under `turbo run test` would race to reset the same
 schemas. This file's job is the HTTP boundary: request validation, the guard, ownership checks, and the
-full journeys wired together for real, over the network, not asserted against pieces in isolation. 16
+full journeys wired together for real, over the network, not asserted against pieces in isolation. 18
 tests: re-verify to dashboard (screen W1), the transfer-to-a-new-payee-triggers-step-up-then-succeeds
 round trip (screens W2 and W3), a familiar-payee transfer notifying both sender and receiver (FR-19), the
-notification inbox and its ownership check, and the daily-limit-change flow requiring step-up and raising
-a security alert (FR-12, FR-20).
+notification inbox and its ownership check, the daily-limit-change flow requiring step-up and raising a
+security alert (FR-12, FR-20), and agent cash-in with the OTP read from the customer's own notification
+inbox exactly as a real customer would (FR-16), including a wrong-OTP rejection followed by a successful
+retry with the right one.
 
 The login rate limiter is configured generously for this file specifically (the default, 10 per 60s, is
 correct in production and proven directly in `services/identity`'s own tests). This suite logs the same

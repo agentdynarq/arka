@@ -19,6 +19,7 @@ import { HealthController } from './health/health.controller.ts'
 import { TransfersController } from './payments/transfers.controller.ts'
 import { HistoryController } from './payments/history.controller.ts'
 import { LimitsController } from './payments/limits.controller.ts'
+import { AgentCashController } from './payments/agent-cash.controller.ts'
 import { NotificationsController } from './notifications/notifications.controller.ts'
 
 @Module({
@@ -32,6 +33,7 @@ import { NotificationsController } from './notifications/notifications.controlle
     TransfersController,
     HistoryController,
     LimitsController,
+    AgentCashController,
     NotificationsController,
   ],
   providers: [

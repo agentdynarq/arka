@@ -1,7 +1,8 @@
 # @arka/payments
 
 Payments for one Cell. Owns FR-09 (instant transfer), FR-11 (QR acceptance), FR-12 (daily limits
-with step-up), and FR-13 (idempotency: an interrupted or retried payment is never executed twice).
+with step-up), FR-13 (idempotency: an interrupted or retried payment is never executed twice), and
+FR-16 (agent cash-in/cash-out with OTP consent).
 
 Framework-free, same reasoning as `@arka/ledger` and `@arka/accounts`: `PaymentsService` is composed
 from their public methods, never their storage, so the behaviour that decides whether a transfer is
@@ -103,6 +104,32 @@ ledger. `transfer()` itself does not call it: whether a new payee requires step-
 made by the caller, the same shape `changeDailyLimit`'s `stepUpVerified` already uses, not something
 baked unconditionally into every transfer.
 
+## FR-16: agent cash-in/cash-out, no new money-movement code either
+
+`requestAgentCash` generates a 6-digit OTP and a pending request (its own store, `agent_cash_requests`,
+same schema), returning the OTP to the caller. It is never delivered by this package: who tells the
+customer (a notification, a display screen) is a decision for whatever composes Payments with a
+delivery channel, the same separation `changeDailyLimit` keeps from verifying an actual step-up token.
+`apps/identity`'s `AgentCashController` writes it into the customer's notification inbox and never
+returns it to the agent in the HTTP response.
+
+`completeAgentCash` verifies the OTP (`timingSafeEqual`, same reasoning as identity's TOTP compare),
+consumes the request exactly once, then delegates to `transfer()`: `cash_in` credits the customer (the
+agent received physical cash), `cash_out` debits the customer (the agent handed cash over). No new
+money-movement code, no saga, the same "one ledger append is already atomic" reasoning `redeemQr` uses.
+
+### A real race, closed the same way every other race in this codebase is
+
+The first version of `AgentCashStore.consume` was a plain `get`-then-`set`, unconditional, returning
+`void`. Two `completeAgentCash` calls for the same request with two *different* idempotency keys
+(a genuine double-submit, not a retry with the same key) could both read `consumedAt: null` before
+either wrote, both pass the check, and both proceed to a real transfer, one OTP spent twice. Caught
+before it shipped a test, not in review: `consume` now atomically transitions `consumedAt` only if it
+is still `null` and returns whether *this* call won, the identical shape `PgIdempotencyStore.reserve`
+and the quarantine dual-approval `UPDATE` already use. A ten-way concurrent `consume` test against real
+Postgres, and a two-different-idempotency-keys `completeAgentCash` race, both prove exactly one call
+wins.
+
 ## `PaymentsError` codes
 
 | Code | When |
@@ -115,6 +142,10 @@ baked unconditionally into every transfer.
 | `QR_EXPIRED` | A scanned QR code's `expiresAt` has passed |
 | `QR_SIGNATURE_INVALID` | A scanned QR code's signature does not match its contents |
 | `QR_MALFORMED` | A scanned QR code is not shaped like one this service issued |
+| `AGENT_REQUEST_NOT_FOUND` | `completeAgentCash` called with an unknown `requestId` |
+| `AGENT_REQUEST_EXPIRED` | The OTP window (`agentCashTtlSeconds`, default 5 minutes) has passed |
+| `AGENT_REQUEST_ALREADY_USED` | The request was already consumed, including by a concurrent call that won the race |
+| `AGENT_OTP_INVALID` | The submitted OTP does not match |
 | `IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_REQUEST` | The same key was used for a materially different request |
 | `IDEMPOTENCY_TIMEOUT` | Waited `idempotencyWaitMs` for a claimant that never completed |
 

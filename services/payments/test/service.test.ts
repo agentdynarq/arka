@@ -7,40 +7,50 @@ import { AccountsService, InMemoryAccountRegistry } from '@arka/accounts'
 import { PaymentsService } from '../src/service.ts'
 import { InMemoryIdempotencyStore } from '../src/memory-idempotency-store.ts'
 import { InMemoryLimitsStore } from '../src/memory-limits-store.ts'
+import { InMemoryAgentCashStore } from '../src/memory-agent-cash-store.ts'
 import { PaymentsError } from '../src/types.ts'
 import type { TransferResult } from '../src/types.ts'
 
 const TEST_QR_SIGNING_KEY = 'test-qr-signing-key'
 
 async function newFundedPayments(
-  options: { idempotencyWaitMs?: number; defaultDailyLimit?: bigint; now?: () => Date } = {}
+  options: { idempotencyWaitMs?: number; defaultDailyLimit?: bigint; agentCashTtlSeconds?: number; now?: () => Date } = {}
 ): Promise<{
   payments: PaymentsService
   ledger: LedgerService
   accounts: AccountsService
   limits: InMemoryLimitsStore
+  agentCash: InMemoryAgentCashStore
 }> {
   const ledger = new LedgerService(new InMemoryLedgerStore(), { cellId: 'cell-1' })
   const accounts = new AccountsService({ registry: new InMemoryAccountRegistry(), ledger })
   await accounts.open('customer:alice', 'cust-1', 'Alice Perera')
   await accounts.open('customer:bob', 'cust-2', 'Bob Silva')
+  await accounts.open('agent:west', 'cust-agent-west', 'West Branch Agent')
   await ledger.record([
     { account: 'bank:reserve', direction: 'debit', amount: 1_000_00n },
     { account: 'customer:alice', direction: 'credit', amount: 1_000_00n },
   ])
+  await ledger.record([
+    { account: 'bank:reserve', direction: 'debit', amount: 1_000_00n },
+    { account: 'agent:west', direction: 'credit', amount: 1_000_00n },
+  ])
 
   const limits = new InMemoryLimitsStore()
+  const agentCash = new InMemoryAgentCashStore()
   const payments = new PaymentsService({
     accounts,
     ledger,
     idempotency: new InMemoryIdempotencyStore<TransferResult>(),
     limits,
+    agentCash,
     qrSigningKey: TEST_QR_SIGNING_KEY,
     ...(options.idempotencyWaitMs !== undefined ? { idempotencyWaitMs: options.idempotencyWaitMs } : {}),
     ...(options.defaultDailyLimit !== undefined ? { defaultDailyLimit: options.defaultDailyLimit } : {}),
+    ...(options.agentCashTtlSeconds !== undefined ? { agentCashTtlSeconds: options.agentCashTtlSeconds } : {}),
     ...(options.now !== undefined ? { now: options.now } : {}),
   })
-  return { payments, ledger, accounts, limits }
+  return { payments, ledger, accounts, limits, agentCash }
 }
 
 describe('transfer', () => {
@@ -143,7 +153,7 @@ describe('idempotency (FR-13)', () => {
 
     assert.equal(first.transferId, second.transferId)
     assert.equal((await accounts.summary('customer:bob')).balance, 125_00n, 'not 250.00')
-    assert.equal(await ledger.count(), 2, 'one opening deposit block, one transfer block')
+    assert.equal(await ledger.count(), 3, 'two opening deposit blocks (alice, agent:west), one transfer block')
   })
 
   test('the same key fired concurrently transfers money exactly once', async () => {
@@ -159,7 +169,7 @@ describe('idempotency (FR-13)', () => {
 
     assert.equal(a.transferId, b.transferId, 'both callers must see the same outcome')
     assert.equal((await accounts.summary('customer:bob')).balance, 100_00n, 'not 200.00')
-    assert.equal(await ledger.count(), 2, 'one opening deposit block, exactly one transfer block')
+    assert.equal(await ledger.count(), 3, 'two opening deposit blocks (alice, agent:west), exactly one transfer block')
   })
 
   test('reusing a key with a different amount is rejected, not silently replayed', async () => {
@@ -252,6 +262,7 @@ describe('idempotency (FR-13)', () => {
       ledger,
       idempotency: store,
       limits: new InMemoryLimitsStore(),
+      agentCash: new InMemoryAgentCashStore(),
       qrSigningKey: TEST_QR_SIGNING_KEY,
       idempotencyWaitMs: 60,
     })
@@ -481,4 +492,184 @@ describe('QR acceptance (FR-11)', () => {
       (e: unknown) => e instanceof PaymentsError && e.code === 'DAILY_LIMIT_EXCEEDED'
     )
   })
+})
+
+describe('agent cash-in and cash-out (FR-16)', () => {
+  test('cash-in credits the customer, debits the agent', async () => {
+    const { payments, accounts } = await newFundedPayments()
+    const { requestId, otpCode } = await payments.requestAgentCash({
+      agentId: 'agent-1',
+      agentAccountId: 'agent:west',
+      customerAccountId: 'customer:bob',
+      direction: 'cash_in',
+      amount: 200_00n,
+    })
+
+    const result = await payments.completeAgentCash({ idempotencyKey: 'complete-1', requestId, otpCode })
+
+    assert.equal(result.status, 'confirmed')
+    assert.equal((await accounts.summary('customer:bob')).balance, 200_00n)
+    assert.equal((await accounts.summary('agent:west')).balance, 800_00n, '1000.00 minus the 200.00 handed to bob')
+  })
+
+  test('cash-out debits the customer, credits the agent', async () => {
+    const { payments, accounts } = await newFundedPayments()
+    const { requestId, otpCode } = await payments.requestAgentCash({
+      agentId: 'agent-1',
+      agentAccountId: 'agent:west',
+      customerAccountId: 'customer:alice',
+      direction: 'cash_out',
+      amount: 200_00n,
+    })
+
+    await payments.completeAgentCash({ idempotencyKey: 'complete-1', requestId, otpCode })
+
+    assert.equal((await accounts.summary('customer:alice')).balance, 800_00n)
+    assert.equal((await accounts.summary('agent:west')).balance, 1_200_00n)
+  })
+
+  test('the OTP is never delivered by this service, only returned to the caller', async () => {
+    const { payments } = await newFundedPayments()
+    const result = await payments.requestAgentCash({
+      agentId: 'agent-1',
+      agentAccountId: 'agent:west',
+      customerAccountId: 'customer:bob',
+      direction: 'cash_in',
+      amount: 10_00n,
+    })
+    assert.match(result.otpCode, /^\d{6}$/)
+  })
+
+  test('rejects the agent and customer being the same account', async () => {
+    const { payments } = await newFundedPayments()
+    await assert.rejects(
+      () =>
+        payments.requestAgentCash({
+          agentId: 'agent-1',
+          agentAccountId: 'customer:alice',
+          customerAccountId: 'customer:alice',
+          direction: 'cash_in',
+          amount: 10_00n,
+        }),
+      (e: unknown) => e instanceof PaymentsError && e.code === 'SAME_ACCOUNT'
+    )
+  })
+
+  test('rejects a wrong OTP without consuming the request, a retry with the right one still works', async () => {
+    const { payments, accounts } = await newFundedPayments()
+    const { requestId, otpCode } = await payments.requestAgentCash({
+      agentId: 'agent-1',
+      agentAccountId: 'agent:west',
+      customerAccountId: 'customer:bob',
+      direction: 'cash_in',
+      amount: 50_00n,
+    })
+
+    const wrongCode = otpCode === '000000' ? '111111' : '000000'
+    await assert.rejects(
+      () => payments.completeAgentCash({ idempotencyKey: 'complete-1', requestId, otpCode: wrongCode }),
+      (e: unknown) => e instanceof PaymentsError && e.code === 'AGENT_OTP_INVALID'
+    )
+
+    const result = await payments.completeAgentCash({ idempotencyKey: 'complete-1', requestId, otpCode })
+    assert.equal(result.status, 'confirmed')
+    assert.equal((await accounts.summary('customer:bob')).balance, 50_00n)
+  })
+
+  test('rejects completing the same request twice, even with the correct OTP', async () => {
+    const { payments } = await newFundedPayments()
+    const { requestId, otpCode } = await payments.requestAgentCash({
+      agentId: 'agent-1',
+      agentAccountId: 'agent:west',
+      customerAccountId: 'customer:bob',
+      direction: 'cash_in',
+      amount: 10_00n,
+    })
+
+    await payments.completeAgentCash({ idempotencyKey: 'complete-1', requestId, otpCode })
+    await assert.rejects(
+      () => payments.completeAgentCash({ idempotencyKey: 'complete-2', requestId, otpCode }),
+      (e: unknown) => e instanceof PaymentsError && e.code === 'AGENT_REQUEST_ALREADY_USED'
+    )
+  })
+
+  test('rejects an unknown request id', async () => {
+    const { payments } = await newFundedPayments()
+    await assert.rejects(
+      () => payments.completeAgentCash({ idempotencyKey: 'complete-1', requestId: 'nonexistent', otpCode: '123456' }),
+      (e: unknown) => e instanceof PaymentsError && e.code === 'AGENT_REQUEST_NOT_FOUND'
+    )
+  })
+
+  test('rejects an expired request', async () => {
+    let now = () => new Date('2066-01-01T00:00:00.000Z')
+    const { payments } = await newFundedPayments({ agentCashTtlSeconds: 60, now: () => now() })
+
+    const { requestId, otpCode } = await payments.requestAgentCash({
+      agentId: 'agent-1',
+      agentAccountId: 'agent:west',
+      customerAccountId: 'customer:bob',
+      direction: 'cash_in',
+      amount: 10_00n,
+    })
+
+    now = () => new Date('2066-01-01T00:01:01.000Z') // 61 seconds later, past the 60-second TTL
+    await assert.rejects(
+      () => payments.completeAgentCash({ idempotencyKey: 'complete-1', requestId, otpCode }),
+      (e: unknown) => e instanceof PaymentsError && e.code === 'AGENT_REQUEST_EXPIRED'
+    )
+  })
+
+  test('completing an agent cash request is subject to the same daily limit as a direct transfer', async () => {
+    const { payments } = await newFundedPayments({ defaultDailyLimit: 50_00n })
+    const { requestId, otpCode } = await payments.requestAgentCash({
+      agentId: 'agent-1',
+      agentAccountId: 'agent:west',
+      customerAccountId: 'customer:alice',
+      direction: 'cash_out',
+      amount: 75_00n,
+    })
+
+    await assert.rejects(
+      () => payments.completeAgentCash({ idempotencyKey: 'complete-1', requestId, otpCode }),
+      (e: unknown) => e instanceof PaymentsError && e.code === 'DAILY_LIMIT_EXCEEDED'
+    )
+  })
+
+  test(
+    'genuinely concurrent completion with two different idempotency keys still moves money exactly once: ' +
+      'the loser gets AGENT_REQUEST_ALREADY_USED, not a second real transfer',
+    async () => {
+      const { payments, accounts, agentCash } = await newFundedPayments()
+      const { requestId, otpCode } = await payments.requestAgentCash({
+        agentId: 'agent-1',
+        agentAccountId: 'agent:west',
+        customerAccountId: 'customer:bob',
+        direction: 'cash_in',
+        amount: 30_00n,
+      })
+
+      // Different idempotency keys, deliberately: a same-key race would only
+      // prove transfer()'s already-tested idempotency, not that
+      // completeAgentCash's own OTP-consumption step is exclusive. This is
+      // what a genuine double-submit (two different agent devices, or a
+      // naive retry that generates a fresh key) actually looks like.
+      const results = await Promise.allSettled([
+        payments.completeAgentCash({ idempotencyKey: 'complete-a', requestId, otpCode }),
+        payments.completeAgentCash({ idempotencyKey: 'complete-b', requestId, otpCode }),
+      ])
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled')
+      const rejected = results.filter((r) => r.status === 'rejected')
+      assert.equal(fulfilled.length, 1, 'exactly one concurrent completion should win')
+      assert.equal(rejected.length, 1)
+      assert.ok(
+        (rejected[0] as PromiseRejectedResult).reason instanceof PaymentsError &&
+          (rejected[0] as PromiseRejectedResult).reason.code === 'AGENT_REQUEST_ALREADY_USED',
+        'the loser must fail closed, not silently execute a second real transfer'
+      )
+      assert.equal((await accounts.summary('customer:bob')).balance, 30_00n, 'not 60.00')
+      assert.equal(await agentCash.get(requestId).then((r) => r?.consumedAt !== null), true)
+    }
+  )
 })
