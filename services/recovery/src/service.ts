@@ -5,13 +5,16 @@ import type { AuditRecord } from './audit-hash.ts'
 import type { AuditTrailStore } from './audit-trail-store.ts'
 import type { QuarantineStore } from './quarantine-store.ts'
 import type { CellEndpoint, CellHealthChecker } from './cell-health.ts'
+import type { LedgerIntegrityChecker } from './ledger-integrity.ts'
 import type { CellHealthSnapshot, QuarantineRow, QuarantineStatus } from './types.ts'
 import type { VerifyResult } from '@arka/ledger-core'
+import type { IntegrityEvidence } from '@arka/ledger'
 
 export interface RecoveryServiceOptions {
   readonly quarantineStore: QuarantineStore
   readonly auditTrailStore: AuditTrailStore
   readonly healthChecker: CellHealthChecker
+  readonly integrityChecker: LedgerIntegrityChecker
   readonly cellEndpoints: readonly CellEndpoint[]
   /** How many times to rebuild and retry an audit append when a concurrent action wins the race. */
   readonly maxAuditAppendAttempts?: number
@@ -34,6 +37,7 @@ export class RecoveryService {
   readonly #quarantineStore: QuarantineStore
   readonly #auditTrailStore: AuditTrailStore
   readonly #healthChecker: CellHealthChecker
+  readonly #integrityChecker: LedgerIntegrityChecker
   readonly #cellEndpoints: readonly CellEndpoint[]
   readonly #maxAuditAppendAttempts: number
 
@@ -41,6 +45,7 @@ export class RecoveryService {
     this.#quarantineStore = options.quarantineStore
     this.#auditTrailStore = options.auditTrailStore
     this.#healthChecker = options.healthChecker
+    this.#integrityChecker = options.integrityChecker
     this.#cellEndpoints = options.cellEndpoints
     this.#maxAuditAppendAttempts = options.maxAuditAppendAttempts ?? 5
   }
@@ -167,6 +172,31 @@ export class RecoveryService {
       lastCheckedAt: observed.lastCheckedAt,
       latencyMs: observed.latencyMs,
     }
+  }
+
+  // ---------------------------------------------------------------------
+  // FR-23: on-demand ledger integrity verification with export
+  // ---------------------------------------------------------------------
+
+  /**
+   * Verifies one Cell's ledger chain (P1 in `docs/RUNBOOK.md`). Deliberately
+   * not gated on quarantine state: verification is read-only, and P3 (rebuild
+   * a Cell) specifically runs this *while* the Cell is quarantined, to prove
+   * the rebuilt chain is clean before lifting.
+   */
+  async verifyIntegrity(cellId: string, options?: { upTo?: number }): Promise<IntegrityEvidence> {
+    return this.#integrityChecker.verify(this.#endpointFor(cellId), options)
+  }
+
+  /** Every configured Cell's evidence, in one call, for the console's overview. */
+  async verifyAllIntegrity(): Promise<IntegrityEvidence[]> {
+    return Promise.all(this.#cellEndpoints.map((endpoint) => this.#integrityChecker.verify(endpoint)))
+  }
+
+  #endpointFor(cellId: string): CellEndpoint {
+    const endpoint = this.#cellEndpoints.find((e) => e.cellId === cellId)
+    if (!endpoint) throw new RecoveryError('CELL_NOT_FOUND', `No configured Cell "${cellId}"`)
+    return endpoint
   }
 
   // ---------------------------------------------------------------------

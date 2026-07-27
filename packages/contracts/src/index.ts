@@ -99,8 +99,8 @@ export {
   quarantineState,
   quarantineStatus,
   integrityVerificationResult,
-  integrityExportRequest,
-  integrityExportResult,
+  integrityQuery,
+  integrityEvidence,
   auditTrailEntry,
 } from './recovery.ts'
 export type {
@@ -109,7 +109,7 @@ export type {
   QuarantineState,
   QuarantineStatus,
   IntegrityVerificationResult,
-  IntegrityExportRequest,
-  IntegrityExportResult,
+  IntegrityQuery,
+  IntegrityEvidence,
   AuditTrailEntry,
 } from './recovery.ts'

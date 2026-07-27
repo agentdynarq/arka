@@ -86,3 +86,33 @@ export interface AuditTrailEntry {
 export function fetchAuditTrail(): Promise<AuditTrailEntry[]> {
   return get('/v1/recovery/audit-trail')
 }
+
+export interface IntegrityVerificationResult {
+  ok: boolean
+  records: number
+  rootHash: string | null
+  brokenAt?: number
+  reason?: string
+}
+
+export interface IntegrityEvidence {
+  cellId: string
+  verifiedAt: string
+  upTo: number | null
+  result: IntegrityVerificationResult
+}
+
+export function fetchAllIntegrity(): Promise<IntegrityEvidence[]> {
+  return get('/v1/recovery/integrity')
+}
+
+export function fetchIntegrity(cellId: string, upTo?: number): Promise<IntegrityEvidence> {
+  const query = upTo === undefined ? '' : `?upTo=${upTo}`
+  return get(`/v1/recovery/integrity/${encodeURIComponent(cellId)}${query}`)
+}
+
+/** Not a `fetch`: this one navigates the browser to a file download, same as any other export link. */
+export function integrityExportUrl(cellId: string, upTo?: number): string {
+  const query = upTo === undefined ? '' : `?upTo=${upTo}`
+  return `${API_BASE}/v1/recovery/integrity/${encodeURIComponent(cellId)}/export${query}`
+}

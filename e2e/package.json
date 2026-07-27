@@ -1,0 +1,20 @@
+{
+  "name": "@arka/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser end-to-end tests for the two critical journeys in docs/TEST-STRATEGY.md, driven with a real browser against the full stack: docker compose plus every app process, built and started fresh.",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'no lint configured yet'"
+  },
+  "dependencies": {
+    "@arka/identity": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^22.10.0",
+    "typescript": "^7.0.0"
+  }
+}

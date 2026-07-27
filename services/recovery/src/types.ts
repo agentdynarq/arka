@@ -1,6 +1,7 @@
 /**
  * The Recovery Console's control plane. Owns FR-21 (live Cell health), FR-22
- * (quarantine with dual approval) and FR-25 (the append-only operator audit
+ * (quarantine with dual approval), FR-23 (on-demand ledger integrity
+ * verification with export) and FR-25 (the append-only operator audit
  * trail). A separate trust zone from the data plane: this service holds no
  * customer data, only operator actions and Cell health observations. See
  * docs/ARCHITECTURE.md section 1.
@@ -50,6 +51,7 @@ export type RecoveryErrorCode =
   | 'CELL_NOT_QUARANTINED'
   | 'NO_PENDING_ACTION'
   | 'ALREADY_APPROVED_BY_THIS_OPERATOR'
+  | 'CELL_NOT_FOUND'
 
 export class RecoveryError extends Error {
   readonly code: RecoveryErrorCode

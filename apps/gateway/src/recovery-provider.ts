@@ -1,4 +1,10 @@
-import { RecoveryService, PgQuarantineStore, PgAuditTrailStore, InfrastructureCellHealthChecker } from '@arka/recovery'
+import {
+  RecoveryService,
+  PgQuarantineStore,
+  PgAuditTrailStore,
+  InfrastructureCellHealthChecker,
+  PgLedgerIntegrityChecker,
+} from '@arka/recovery'
 import type { CellEndpoint } from '@arka/recovery'
 
 /**
@@ -47,6 +53,10 @@ export function buildRecoveryService(): RecoveryService {
     quarantineStore: new PgQuarantineStore(connectionString),
     auditTrailStore: new PgAuditTrailStore(connectionString),
     healthChecker: new InfrastructureCellHealthChecker(),
+    // Never called from the gateway (only `isQuarantined`, a read), but
+    // `RecoveryServiceOptions` requires one. Constructing it opens no
+    // connection until `.verify()` is actually called.
+    integrityChecker: new PgLedgerIntegrityChecker(),
     cellEndpoints: cellEndpoints(),
   })
   return instance

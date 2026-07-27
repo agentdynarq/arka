@@ -44,20 +44,27 @@ export const integrityVerificationResult = z.object({
 })
 export type IntegrityVerificationResult = z.infer<typeof integrityVerificationResult>
 
-export const integrityExportRequest = z.object({
+/**
+ * Verification always walks from genesis, never from an arbitrary point:
+ * proving a slice is internally consistent is a weaker claim than it looks
+ * (see `LedgerService.verify` in `services/ledger`), and this platform does
+ * not deal in half-guarantees. `upTo` only limits how far the walk runs, so
+ * there is no `fromSeq`.
+ */
+export const integrityQuery = z.object({
   cellId,
-  fromSeq: z.number().int().nonnegative().optional(),
-  toSeq: z.number().int().nonnegative().optional(),
+  upTo: z.number().int().nonnegative().optional(),
 })
-export type IntegrityExportRequest = z.infer<typeof integrityExportRequest>
+export type IntegrityQuery = z.infer<typeof integrityQuery>
 
-export const integrityExportResult = z.object({
+/** The exportable evidence from one on-demand verification. Backs FR-23, screen W6. */
+export const integrityEvidence = z.object({
   cellId,
-  generatedAt: isoTimestamp,
+  verifiedAt: isoTimestamp,
+  upTo: z.number().int().nonnegative().nullable(),
   result: integrityVerificationResult,
-  downloadUrl: z.string().min(1).optional(),
 })
-export type IntegrityExportResult = z.infer<typeof integrityExportResult>
+export type IntegrityEvidence = z.infer<typeof integrityEvidence>
 
 /** Same append-only, hash-chained primitive as the ledger, reused for operator actions. */
 export const auditTrailEntry = z.object({

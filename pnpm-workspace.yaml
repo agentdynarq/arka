@@ -2,5 +2,12 @@ packages:
   - "apps/*"
   - "services/*"
   - "packages/*"
+  - "e2e"
 allowBuilds:
   sharp: true
+# Patches transitive vulnerabilities pulled in by Next.js (postcss, sharp)
+# without waiting on Next itself to bump them. See docs/TEST-STRATEGY.md's
+# dependency audit gate.
+overrides:
+  postcss: ">=8.5.18"
+  sharp: ">=0.35.0"

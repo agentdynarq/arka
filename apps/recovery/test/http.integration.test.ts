@@ -15,13 +15,26 @@ import assert from 'node:assert/strict'
 import { Test } from '@nestjs/testing'
 import { NestFactory } from '@nestjs/core'
 import { RecoveryService, InMemoryQuarantineStore, InMemoryAuditTrailStore } from '@arka/recovery'
-import type { CellHealthChecker, CellEndpoint, CellHealthObservation } from '@arka/recovery'
+import type { CellHealthChecker, CellEndpoint, CellHealthObservation, LedgerIntegrityChecker } from '@arka/recovery'
+import type { IntegrityEvidence } from '@arka/ledger'
 
 const { AppModule } = await import('../dist/app.module.js')
 
 class FakeHealthChecker implements CellHealthChecker {
   async check(endpoint: CellEndpoint): Promise<CellHealthObservation> {
     return { cellId: endpoint.cellId, lastCheckedAt: new Date().toISOString(), latencyMs: 3, infrastructureHealthy: true }
+  }
+}
+
+/** Never touches Postgres, same reasoning as `FakeHealthChecker`: this suite proves the HTTP surface, not storage. */
+class FakeIntegrityChecker implements LedgerIntegrityChecker {
+  async verify(endpoint: CellEndpoint, options?: { upTo?: number }): Promise<IntegrityEvidence> {
+    return {
+      cellId: endpoint.cellId,
+      verifiedAt: new Date().toISOString(),
+      upTo: options?.upTo ?? null,
+      result: { ok: true, records: 5, rootHash: 'fake-root-hash' },
+    }
   }
 }
 
@@ -34,6 +47,7 @@ describe('recovery http surface', () => {
       quarantineStore: new InMemoryQuarantineStore(),
       auditTrailStore: new InMemoryAuditTrailStore(),
       healthChecker: new FakeHealthChecker(),
+      integrityChecker: new FakeIntegrityChecker(),
       cellEndpoints: [
         { cellId: 'cell-1', postgresUrl: '', redisUrl: '' },
         { cellId: 'cell-2', postgresUrl: '', redisUrl: '' },
@@ -139,5 +153,39 @@ describe('recovery http surface', () => {
 
     const restored = await (await fetch(`${baseUrl}/v1/recovery/health-map`)).json()
     assert.equal(restored.find((c: { cellId: string }) => c.cellId === 'cell-1').status, 'healthy')
+  })
+
+  test('FR-23: verifying every configured Cell returns one evidence record each', async () => {
+    const response = await fetch(`${baseUrl}/v1/recovery/integrity`)
+    assert.equal(response.status, 200)
+    const evidence = await response.json()
+    assert.deepEqual(
+      evidence.map((e: { cellId: string }) => e.cellId).sort(),
+      ['cell-1', 'cell-2']
+    )
+  })
+
+  test('FR-23: verifying one Cell returns its evidence', async () => {
+    const response = await fetch(`${baseUrl}/v1/recovery/integrity/cell-1`)
+    assert.equal(response.status, 200)
+    const evidence = await response.json()
+    assert.equal(evidence.cellId, 'cell-1')
+    assert.equal(evidence.result.ok, true)
+  })
+
+  test('FR-23: verifying an unconfigured Cell 404s rather than silently checking nothing', async () => {
+    const response = await fetch(`${baseUrl}/v1/recovery/integrity/cell-9`)
+    assert.equal(response.status, 404)
+    const body = await response.json()
+    assert.equal(body.code, 'CELL_NOT_FOUND')
+  })
+
+  test('FR-23: exporting delivers the evidence as a downloadable file', async () => {
+    const response = await fetch(`${baseUrl}/v1/recovery/integrity/cell-1/export`)
+    assert.equal(response.status, 200)
+    assert.match(response.headers.get('content-disposition') ?? '', /^attachment; filename="integrity-cell-1-.*\.json"$/)
+    const evidence = await response.json()
+    assert.equal(evidence.cellId, 'cell-1')
+    assert.equal(evidence.result.ok, true)
   })
 })

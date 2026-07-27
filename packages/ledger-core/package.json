@@ -14,6 +14,7 @@
   "scripts": {
     "build": "echo 'no build step: consumed as source via workspace TS paths'",
     "test": "node --experimental-strip-types --test test/*.test.ts",
+    "test:coverage": "node --experimental-strip-types --experimental-test-coverage --test-coverage-branches=100 --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
     "lint": "echo 'no lint configured yet'"
   },

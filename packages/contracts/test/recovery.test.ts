@@ -1,6 +1,12 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { quarantineApproval, quarantineStatus, integrityVerificationResult } from '../src/recovery.ts'
+import {
+  quarantineApproval,
+  quarantineStatus,
+  integrityVerificationResult,
+  integrityQuery,
+  integrityEvidence,
+} from '../src/recovery.ts'
 
 describe('quarantineApproval', () => {
   test('records who approved, not merely that someone did', () => {
@@ -46,5 +52,30 @@ describe('integrityVerificationResult', () => {
       reason: 'hash mismatch',
     })
     assert.equal(parsed.brokenAt, 4)
+  })
+})
+
+describe('integrityQuery', () => {
+  test('upTo is optional, since the default is genesis to head', () => {
+    const parsed = integrityQuery.parse({ cellId: 'cell-1' })
+    assert.equal(parsed.upTo, undefined)
+  })
+
+  test('has no fromSeq: verification always starts at genesis', () => {
+    const parsed = integrityQuery.parse({ cellId: 'cell-1', upTo: 5 })
+    assert.deepEqual(Object.keys(parsed).sort(), ['cellId', 'upTo'])
+  })
+})
+
+describe('integrityEvidence', () => {
+  test('carries which Cell, when, and how far the walk ran', () => {
+    const parsed = integrityEvidence.parse({
+      cellId: 'cell-1',
+      verifiedAt: '2026-07-30T12:00:00.000Z',
+      upTo: null,
+      result: { ok: true, records: 12, rootHash: 'abc123' },
+    })
+    assert.equal(parsed.upTo, null)
+    assert.equal(parsed.result.ok, true)
   })
 })
