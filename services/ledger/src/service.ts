@@ -3,12 +3,21 @@ import { LedgerConflictError } from './store.ts'
 import type { LedgerStore } from './store.ts'
 import type { Block, Entry, VerifyResult } from './ledger-core.ts'
 
-/** One entry, carried with the block that sealed it. Backs FR-06 and FR-08. */
+/**
+ * One entry touching the queried account, carried with the block that sealed
+ * it. Backs FR-06 and FR-08.
+ *
+ * `blockEntries` is every entry in that same block, not only the one that
+ * matched. A block balances, so a two-party transfer's other side is always
+ * in here, which is what lets a caller show a transaction's counterparty
+ * without re-querying the ledger.
+ */
 export interface LedgerRecord {
   readonly seq: number
   readonly at: string
   readonly hash: string
   readonly entry: Entry
+  readonly blockEntries: readonly Entry[]
 }
 
 /** The exportable output of an integrity verification. Backs FR-23. */
@@ -128,7 +137,13 @@ export class LedgerService {
       const block = blocks[i]!
       for (const entry of block.entries) {
         if (entry.account !== account) continue
-        records.push({ seq: block.seq, at: block.at, hash: block.hash, entry })
+        records.push({
+          seq: block.seq,
+          at: block.at,
+          hash: block.hash,
+          entry,
+          blockEntries: block.entries,
+        })
         if (limit !== undefined && records.length >= limit) return records
       }
     }

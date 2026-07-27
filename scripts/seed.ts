@@ -3,11 +3,11 @@
  * Deterministic demo data for both Cells.
  *
  * Minimal for now, this is day-one-of-Phase-2 scope: enough for
- * `verify-ledger` to have something real to verify and for the accounts
- * service to have balances to read. It grows to match the wireframes exactly
- * on 30 July, per PHASE-2-PLAN.md; the shape here (named customers, an
- * opening deposit, a transfer between them) is the seed that grows, not
- * throwaway scaffolding.
+ * `verify-ledger` to have something real to verify and for Accounts to have
+ * registered accounts with balances to read. It grows to match the
+ * wireframes exactly on 30 July, per PHASE-2-PLAN.md; the shape here (named
+ * customers, an opening deposit, a transfer between them) is the seed that
+ * grows, not throwaway scaffolding.
  *
  * Usage:
  *   pnpm seed            seed any Cell that is currently empty
@@ -15,6 +15,7 @@
  */
 import { LedgerService, PgLedgerStore } from '../services/ledger/src/index.ts'
 import type { Entry } from '../services/ledger/src/index.ts'
+import { AccountsService, PgAccountRegistry } from '../services/accounts/src/index.ts'
 import { loadEnvFile } from './lib/load-env.ts'
 import { loadCellConfigs } from './lib/cell-config.ts'
 
@@ -26,6 +27,13 @@ const reset = process.argv.includes('--reset')
 const CUSTOMERS_BY_CELL: Record<string, [string, string]> = {
   'cell-1': ['customer:alice', 'customer:bob'],
   'cell-2': ['customer:chandi', 'customer:deepal'],
+}
+
+const DISPLAY_NAMES: Record<string, string> = {
+  'customer:alice': 'Alice Perera',
+  'customer:bob': 'Bob Silva',
+  'customer:chandi': 'Chandi Fernando',
+  'customer:deepal': 'Deepal Jayasuriya',
 }
 
 function opening(account: string, amount: bigint): Entry[] {
@@ -43,13 +51,17 @@ function transfer(from: string, to: string, amount: bigint): Entry[] {
 }
 
 for (const config of loadCellConfigs()) {
-  const store = new PgLedgerStore(config.connectionString)
+  const ledgerStore = new PgLedgerStore(config.connectionString)
+  const accountRegistry = new PgAccountRegistry(config.connectionString)
+
   try {
     if (reset) {
-      await store.resetSchema()
+      await ledgerStore.resetSchema()
+      await accountRegistry.resetSchema()
     }
 
-    const ledger = new LedgerService(store, { cellId: config.cellId })
+    const ledger = new LedgerService(ledgerStore, { cellId: config.cellId })
+    const accounts = new AccountsService({ registry: accountRegistry, ledger })
     const existing = await ledger.count()
 
     if (existing > 0) {
@@ -58,12 +70,18 @@ for (const config of loadCellConfigs()) {
     }
 
     const [first, second] = CUSTOMERS_BY_CELL[config.cellId] ?? ['customer:a', 'customer:b']
+    const customerIdOf = (accountId: string) => accountId.replace('customer:', 'cust-')
+
+    await accounts.open(first, customerIdOf(first), DISPLAY_NAMES[first] ?? first)
+    await accounts.open(second, customerIdOf(second), DISPLAY_NAMES[second] ?? second)
+
     await ledger.record(opening(first, 1_000_00n))
     await ledger.record(opening(second, 1_000_00n))
     await ledger.record(transfer(first, second, 125_00n))
 
     console.log(`${config.cellId}: seeded ${await ledger.count()} blocks (${first}, ${second})`)
   } finally {
-    await store.close()
+    await ledgerStore.close()
+    await accountRegistry.close()
   }
 }

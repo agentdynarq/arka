@@ -217,6 +217,17 @@ describe('balances and history', () => {
     assert.equal(history[0]!.hash, block.hash)
   })
 
+  test('blockEntries carries every entry in the sealing block, not only the match', async () => {
+    const ledger = serviceWith()
+    await ledger.record(transfer('customer:alice', 'customer:bob', 125_00n))
+
+    const [record] = await ledger.history('customer:alice')
+
+    assert.equal(record!.blockEntries.length, 2)
+    const counterparty = record!.blockEntries.find((e) => e.account !== 'customer:alice')
+    assert.equal(counterparty!.account, 'customer:bob')
+  })
+
   test('history respects a limit', async () => {
     const ledger = serviceWith()
     for (let i = 0; i < 10; i++) await ledger.record(transfer('a', 'b', 10n))
