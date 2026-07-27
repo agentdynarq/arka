@@ -35,6 +35,10 @@ export type PaymentsErrorCode =
   | 'QR_EXPIRED'
   | 'QR_SIGNATURE_INVALID'
   | 'QR_MALFORMED'
+  | 'AGENT_REQUEST_NOT_FOUND'
+  | 'AGENT_REQUEST_EXPIRED'
+  | 'AGENT_REQUEST_ALREADY_USED'
+  | 'AGENT_OTP_INVALID'
   | 'IDEMPOTENCY_TIMEOUT'
   | 'IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_REQUEST'
 
@@ -97,4 +101,41 @@ export interface RedeemQrRequest {
   readonly idempotencyKey: string
   readonly customerAccountId: string
   readonly qrToken: string
+}
+
+/**
+ * FR-16: an authorised agent performs cash-in or cash-out for a customer,
+ * consented by the customer's own OTP. `cash_in` credits the customer
+ * (physical cash handed to the agent); `cash_out` debits the customer
+ * (physical cash handed over by the agent). Either way this is a transfer
+ * between the agent's own account and the customer's, the agent's account on
+ * whichever side represents the agent giving up or receiving physical cash.
+ */
+export type AgentCashDirection = 'cash_in' | 'cash_out'
+
+export interface RequestAgentCashOptions {
+  readonly agentId: string
+  readonly agentAccountId: string
+  readonly customerAccountId: string
+  readonly direction: AgentCashDirection
+  readonly amount: bigint
+}
+
+/**
+ * `otpCode` is returned to the caller, never delivered by this service: who
+ * tells the customer (a notification, a display screen) is a decision for
+ * whatever composes Payments with a delivery channel, the same separation
+ * `changeDailyLimit`'s `stepUpVerified` already keeps from verifying an
+ * actual step-up token.
+ */
+export interface AgentCashRequestResult {
+  readonly requestId: string
+  readonly otpCode: string
+  readonly expiresAt: string
+}
+
+export interface CompleteAgentCashRequest {
+  readonly idempotencyKey: string
+  readonly requestId: string
+  readonly otpCode: string
 }

@@ -1,9 +1,9 @@
 /**
  * Payments for one Cell. Owns FR-09 (instant transfer), FR-11 (QR
- * acceptance), FR-12 (daily limits with step-up), and FR-13 (idempotency:
- * an interrupted or retried payment is never executed twice). Composed from
- * `@arka/accounts` and `@arka/ledger`'s public methods, never their storage
- * directly.
+ * acceptance), FR-12 (daily limits with step-up), FR-13 (idempotency: an
+ * interrupted or retried payment is never executed twice), and FR-16 (agent
+ * cash-in/cash-out with OTP consent). Composed from `@arka/accounts` and
+ * `@arka/ledger`'s public methods, never their storage directly.
  */
 
 export { PaymentsService } from './service.ts'
@@ -19,6 +19,10 @@ export type {
   QrPaymentPayload,
   SignedQrPayload,
   RedeemQrRequest,
+  AgentCashDirection,
+  RequestAgentCashOptions,
+  AgentCashRequestResult,
+  CompleteAgentCashRequest,
 } from './types.ts'
 
 export type { IdempotencyStore, IdempotencyRecord, ReserveOutcome } from './idempotency-store.ts'
@@ -28,5 +32,9 @@ export { PgIdempotencyStore } from './pg-idempotency-store.ts'
 export type { LimitsStore } from './limits-store.ts'
 export { InMemoryLimitsStore } from './memory-limits-store.ts'
 export { PgLimitsStore } from './pg-limits-store.ts'
+
+export type { AgentCashStore, AgentCashRow } from './agent-cash-store.ts'
+export { InMemoryAgentCashStore } from './memory-agent-cash-store.ts'
+export { PgAgentCashStore } from './pg-agent-cash-store.ts'
 
 export { signQrPayload, verifyQrPayload } from './qr.ts'

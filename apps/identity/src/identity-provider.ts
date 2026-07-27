@@ -9,7 +9,7 @@ import {
   PgKycDocumentStore,
   PgAccountOpeningStore,
 } from '@arka/identity'
-import { PaymentsService, PgIdempotencyStore, PgLimitsStore } from '@arka/payments'
+import { PaymentsService, PgIdempotencyStore, PgLimitsStore, PgAgentCashStore } from '@arka/payments'
 import { NotificationsService, PgNotificationStore } from '@arka/notifications'
 
 /**
@@ -64,6 +64,7 @@ function build(): Built {
     ledger,
     idempotency: new PgIdempotencyStore(connectionString),
     limits: new PgLimitsStore(connectionString),
+    agentCash: new PgAgentCashStore(connectionString),
     qrSigningKey: process.env.QR_SIGNING_KEY ?? 'dev-only-qr-signing-key-not-for-production',
   })
 

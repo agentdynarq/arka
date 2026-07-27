@@ -21,3 +21,17 @@ CREATE TABLE IF NOT EXISTS payments.daily_limits (
   limit_value text NOT NULL,
   updated_at  text NOT NULL
 );
+
+-- FR-16: a pending agent cash-in/cash-out request, awaiting the customer's
+-- OTP. See src/pg-agent-cash-store.ts.
+CREATE TABLE IF NOT EXISTS payments.agent_cash_requests (
+  request_id          text PRIMARY KEY,
+  agent_id            text NOT NULL,
+  agent_account_id    text NOT NULL,
+  customer_account_id text NOT NULL,
+  direction            text NOT NULL CHECK (direction IN ('cash_in', 'cash_out')),
+  amount              text NOT NULL,
+  otp_code            text NOT NULL,
+  expires_at          text NOT NULL,
+  consumed_at         text
+);

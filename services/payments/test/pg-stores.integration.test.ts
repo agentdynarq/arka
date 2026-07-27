@@ -18,6 +18,7 @@ import { isPostgresReachable } from '@arka/ledger'
 
 import { PgIdempotencyStore } from '../src/pg-idempotency-store.ts'
 import { PgLimitsStore } from '../src/pg-limits-store.ts'
+import { PgAgentCashStore } from '../src/pg-agent-cash-store.ts'
 
 const CONNECTION_STRING =
   process.env.TEST_CELL1_DATABASE_URL ?? 'postgres://arka_cell1:change-me-cell1@localhost:5433/arka_cell1'
@@ -30,16 +31,19 @@ describe(
   () => {
     let idempotency: PgIdempotencyStore<{ ok: true; value: number }>
     let limits: PgLimitsStore
+    let agentCash: PgAgentCashStore
 
     before(async () => {
       idempotency = new PgIdempotencyStore(CONNECTION_STRING)
-      await idempotency.resetSchema() // owns the schema; limits reuses what this creates
+      await idempotency.resetSchema() // owns the schema; limits and agentCash reuse what this creates
       limits = new PgLimitsStore(CONNECTION_STRING)
+      agentCash = new PgAgentCashStore(CONNECTION_STRING)
     })
 
     after(async () => {
       await idempotency.close()
       await limits.close()
+      await agentCash.close()
     })
 
     describe('PgIdempotencyStore', () => {
@@ -116,6 +120,65 @@ describe(
         await limits.set('customer:bob', 100_00n)
         await limits.set('customer:bob', 300_00n)
         assert.equal(await limits.get('customer:bob'), 300_00n)
+      })
+    })
+
+    describe('PgAgentCashStore', () => {
+      function row(overrides: Partial<Parameters<typeof agentCash.create>[0]> = {}) {
+        return {
+          requestId: `req-${Math.random().toString(36).slice(2)}`,
+          agentId: 'agent-1',
+          agentAccountId: 'agent:west',
+          customerAccountId: 'customer:bob',
+          direction: 'cash_in' as const,
+          amount: 5000n,
+          otpCode: '123456',
+          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+          ...overrides,
+        }
+      }
+
+      test('an unknown request is null', async () => {
+        assert.equal(await agentCash.get('nonexistent'), null)
+      })
+
+      test('create then get round-trips exactly, amount stays bigint', async () => {
+        const r = row({ amount: 9_007_199_254_740_993n }) // Number.MAX_SAFE_INTEGER + 2
+        await agentCash.create(r)
+
+        const fetched = await agentCash.get(r.requestId)
+        assert.deepEqual(fetched, { ...r, consumedAt: null })
+      })
+
+      test('consume returns true the first time, marks consumedAt', async () => {
+        const r = row()
+        await agentCash.create(r)
+
+        const consumed = await agentCash.consume(r.requestId)
+        assert.equal(consumed, true)
+
+        const fetched = await agentCash.get(r.requestId)
+        assert.ok(fetched!.consumedAt)
+      })
+
+      test('consume returns false the second time, does not overwrite the first consumedAt', async () => {
+        const r = row()
+        await agentCash.create(r)
+        await agentCash.consume(r.requestId)
+        const firstConsumedAt = (await agentCash.get(r.requestId))!.consumedAt
+
+        const secondAttempt = await agentCash.consume(r.requestId)
+        assert.equal(secondAttempt, false)
+        assert.equal((await agentCash.get(r.requestId))!.consumedAt, firstConsumedAt)
+      })
+
+      test('ten genuinely concurrent consume calls for the same request, fired with Promise.all against a real database, still let exactly one win', async () => {
+        const r = row()
+        await agentCash.create(r)
+
+        const results = await Promise.all(Array.from({ length: 10 }, () => agentCash.consume(r.requestId)))
+        const wins = results.filter(Boolean)
+        assert.equal(wins.length, 1, 'exactly one concurrent consume should win, this is the whole point of FR-16 OTP single-use')
       })
     })
   }

@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { randomUUID, timingSafeEqual } from 'node:crypto'
 import { PaymentsError } from './types.ts'
 import type {
   TransferRequest,
@@ -7,9 +7,13 @@ import type {
   ChangeDailyLimitRequest,
   SignedQrPayload,
   RedeemQrRequest,
+  RequestAgentCashOptions,
+  AgentCashRequestResult,
+  CompleteAgentCashRequest,
 } from './types.ts'
 import type { IdempotencyStore } from './idempotency-store.ts'
 import type { LimitsStore } from './limits-store.ts'
+import type { AgentCashStore } from './agent-cash-store.ts'
 import { signQrPayload, verifyQrPayload } from './qr.ts'
 import type { AccountsService } from '@arka/accounts'
 import type { LedgerService } from '@arka/ledger'
@@ -17,34 +21,43 @@ import type { LedgerService } from '@arka/ledger'
 /** LKR 500,000.00 in minor units. A placeholder platform default, overridable per account via FR-12. */
 const DEFAULT_DAILY_LIMIT = 500_000_00n
 
+/** 5 minutes. How long a customer has to give an agent's request their OTP before it expires. */
+const DEFAULT_AGENT_CASH_TTL_SECONDS = 300
+
 export interface PaymentsServiceOptions {
   readonly accounts: AccountsService
   readonly ledger: LedgerService
   readonly idempotency: IdempotencyStore<TransferResult>
   readonly limits: LimitsStore
+  readonly agentCash: AgentCashStore
   /** Signs and verifies FR-11 QR payloads. Per-Cell, same as the ledger's signing key. */
   readonly qrSigningKey: string
   /** How long a concurrent caller waits for the claimant to finish, in milliseconds. */
   readonly idempotencyWaitMs?: number
   /** Applies to any account with no explicit override set via `changeDailyLimit`. */
   readonly defaultDailyLimit?: bigint
-  /** Injectable clock, for deterministic tests of the daily-limit and QR-expiry windows. */
+  /** How long an agent cash-in/cash-out OTP stays valid, in seconds. */
+  readonly agentCashTtlSeconds?: number
+  /** Injectable clock, for deterministic tests of the daily-limit, QR-expiry and agent-OTP windows. */
   readonly now?: () => Date
 }
 
 /**
  * Payments for one Cell. Framework-free, same reasoning as `LedgerService`
  * and `AccountsService`. Owns FR-09 (instant transfer), FR-11 (QR
- * acceptance), FR-12 (daily limits with step-up), and FR-13 (idempotency).
+ * acceptance), FR-12 (daily limits with step-up), FR-13 (idempotency), and
+ * FR-16 (agent cash-in/cash-out with OTP consent).
  */
 export class PaymentsService {
   readonly #accounts: AccountsService
   readonly #ledger: LedgerService
   readonly #idempotency: IdempotencyStore<TransferResult>
   readonly #limits: LimitsStore
+  readonly #agentCash: AgentCashStore
   readonly #qrSigningKey: string
   readonly #idempotencyWaitMs: number
   readonly #defaultDailyLimit: bigint
+  readonly #agentCashTtlSeconds: number
   readonly #now: () => Date
 
   constructor(options: PaymentsServiceOptions) {
@@ -52,9 +65,11 @@ export class PaymentsService {
     this.#ledger = options.ledger
     this.#idempotency = options.idempotency
     this.#limits = options.limits
+    this.#agentCash = options.agentCash
     this.#qrSigningKey = options.qrSigningKey
     this.#idempotencyWaitMs = options.idempotencyWaitMs ?? 5000
     this.#defaultDailyLimit = options.defaultDailyLimit ?? DEFAULT_DAILY_LIMIT
+    this.#agentCashTtlSeconds = options.agentCashTtlSeconds ?? DEFAULT_AGENT_CASH_TTL_SECONDS
     this.#now = options.now ?? (() => new Date())
   }
 
@@ -194,6 +209,84 @@ export class PaymentsService {
     })
   }
 
+  /**
+   * FR-16: an agent opens a cash-in or cash-out request for a customer. The
+   * OTP is generated here and handed back to the caller, never delivered by
+   * this method: who tells the customer (a notification, a display screen)
+   * is a decision for whatever composes this service with a delivery
+   * channel, the same separation `changeDailyLimit` keeps from verifying an
+   * actual step-up token.
+   */
+  async requestAgentCash(options: RequestAgentCashOptions): Promise<AgentCashRequestResult> {
+    if (options.agentAccountId === options.customerAccountId) {
+      throw new PaymentsError('SAME_ACCOUNT', 'agentAccountId and customerAccountId must differ')
+    }
+    await this.#accounts.summary(options.agentAccountId)
+    await this.#accounts.summary(options.customerAccountId)
+
+    const requestId = randomUUID()
+    const otpCode = randomSixDigitCode()
+    const expiresAt = new Date(this.#now().getTime() + this.#agentCashTtlSeconds * 1000).toISOString()
+
+    await this.#agentCash.create({
+      requestId,
+      agentId: options.agentId,
+      agentAccountId: options.agentAccountId,
+      customerAccountId: options.customerAccountId,
+      direction: options.direction,
+      amount: options.amount,
+      otpCode,
+      expiresAt,
+    })
+
+    return { requestId, otpCode, expiresAt }
+  }
+
+  /**
+   * FR-16: the agent submits the OTP the customer gave them. Verified,
+   * consumed exactly once, then delegated to `transfer()`, the same
+   * "no saga needed, one ledger append is already atomic" reasoning
+   * `redeemQr` uses. `cash_in` credits the customer (the agent received
+   * physical cash); `cash_out` debits the customer (the agent handed
+   * physical cash over).
+   */
+  async completeAgentCash(request: CompleteAgentCashRequest): Promise<TransferResult> {
+    const pending = await this.#agentCash.get(request.requestId)
+    if (!pending) {
+      throw new PaymentsError('AGENT_REQUEST_NOT_FOUND', `No agent cash request "${request.requestId}"`)
+    }
+    if (pending.consumedAt) {
+      throw new PaymentsError('AGENT_REQUEST_ALREADY_USED', `Agent cash request "${request.requestId}" was already used`)
+    }
+    if (Date.parse(pending.expiresAt) <= this.#now().getTime()) {
+      throw new PaymentsError('AGENT_REQUEST_EXPIRED', `Agent cash request "${request.requestId}" expired at ${pending.expiresAt}`)
+    }
+    if (!constantTimeCodeEqual(request.otpCode, pending.otpCode)) {
+      throw new PaymentsError('AGENT_OTP_INVALID', 'OTP code does not match')
+    }
+
+    // The check above only ruled out a request that was already consumed by
+    // the time this call read it. A concurrent completion attempt could
+    // still win the race to consume it; this is the actual concurrency
+    // control, not the earlier read.
+    const consumed = await this.#agentCash.consume(request.requestId)
+    if (!consumed) {
+      throw new PaymentsError('AGENT_REQUEST_ALREADY_USED', `Agent cash request "${request.requestId}" was already used`)
+    }
+
+    const [fromAccountId, toAccountId] =
+      pending.direction === 'cash_in'
+        ? [pending.agentAccountId, pending.customerAccountId]
+        : [pending.customerAccountId, pending.agentAccountId]
+
+    return this.transfer({
+      idempotencyKey: request.idempotencyKey,
+      fromAccountId,
+      toAccountId,
+      amount: pending.amount,
+    })
+  }
+
   async #execute(request: TransferRequest): Promise<TransferResult> {
     const from = await this.#accounts.summary(request.fromAccountId)
     await this.#accounts.summary(request.toAccountId)
@@ -278,4 +371,19 @@ function fingerprintOf(request: TransferRequest): string {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/** A 6-digit OTP, zero-padded, matching the fixed-width digit codes `@arka/identity` uses for TOTP. */
+function randomSixDigitCode(): string {
+  return Math.floor(Math.random() * 1_000_000)
+    .toString()
+    .padStart(6, '0')
+}
+
+/** Constant-time comparison for a fixed-width digit code, same reasoning as identity's TOTP compare. */
+function constantTimeCodeEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a)
+  const bufB = Buffer.from(b)
+  if (bufA.length !== bufB.length) return false
+  return timingSafeEqual(bufA, bufB)
 }
