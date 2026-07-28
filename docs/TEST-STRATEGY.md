@@ -54,18 +54,18 @@ Each of these is a named test:
   guarantee lives in a uniqueness constraint, not in application logic.
 - **Concurrency, same request.** The same idempotency key fired concurrently still transfers money
   exactly once (`services/payments/test/service.test.ts`).
+- **Concurrency, different requests.** Two genuinely concurrent transfers from the same account,
+  different idempotency keys, cannot jointly overdraw it: `LedgerService.record`'s optional `validate`
+  callback re-reads and re-checks balance and daily limit on every append attempt, including retries
+  against a fresh head, not just once beforehand. A live test found this was not true until 28 July
+  (`../arka-ops/LOG.md`): two concurrent 600.00 transfers each valid against a 1000.00 starting balance
+  both landed, taking the account to -200.00. Fixed the same day; `services/payments/test/service.test.ts`
+  reproduces the exact finding and asserts exactly one of the two lands, the other rejects
+  `INSUFFICIENT_FUNDS`.
 
-**Known gap, not yet fixed (flagged in `../arka-ops/TASKS.md`, 28 July).** No saga was ever built, so
-there is no saga-compensation test suite; every money-movement path this build shipped reduces to one
-atomic ledger append (`services/payments/README.md`'s FR-11 and FR-16 sections). More importantly,
-**concurrent transfers from the same account, with different idempotency keys, are not yet proven
-safe against overdraw, and a live test found that they are not**: `PaymentsService` checks the sender's
-balance once before calling `LedgerService.record`, which retries the same append against a fresh head
-on conflict but never re-checks the balance on retry. Two genuinely concurrent transfers, each valid
-against the starting balance alone, landed alice at a negative balance. This is the highest-priority
-gap in the whole platform right now; do not treat "parallel transfers cannot overdraw" as tested or
-true until it is actually fixed and a real concurrency test like the idempotency one above exists for
-it.
+No saga was ever built, so there is no saga-compensation test suite; every money-movement path this
+build shipped reduces to one atomic ledger append (`services/payments/README.md`'s FR-11 and FR-16
+sections). Recorded as a deliberate divergence in `docs/ARCHITECTURE.md` section 8, not a gap.
 
 ## Authentication
 
