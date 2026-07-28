@@ -151,16 +151,19 @@ full history on the next load.
 
 ### 4.1 Cell health map (W5)
 
-The Recovery Console opens on a live health map of every Cell, with the anomaly feed alongside it.
-This screen is containment made clickable.
+The Recovery Console opens on a live health map of every Cell, with the operator audit trail (FR-25)
+alongside it. This screen is containment made clickable.
 
 ### 4.2 Quarantining a Cell (W5)
 
 This is the demonstration that matters most, because it is the claim the whole architecture rests on.
 
-1. Sign in as operator one. Select the Cell and request quarantine, stating a reason.
-2. Sign in as operator two in a separate session and approve. The action does not take effect on one
-   operator's authority.
+1. On the health map, type an operator id (for example `operator-1`) into "Acting as operator id".
+   Select the Cell and request quarantine, stating a reason. There is no operator login in this scope,
+   the id is free text (see section 2).
+2. In a separate browser session, type a second, distinct operator id (for example `operator-2`) and
+   approve. The action does not take effect on one operator's authority, and the same id cannot approve
+   its own request.
 3. Observe on the health map that the Cell is quarantined.
 
 To see containment for yourself, keep a second browser signed in as the customer in cell-2 while you

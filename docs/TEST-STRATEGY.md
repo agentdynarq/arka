@@ -87,13 +87,14 @@ document.
 
 - No credential in Cell 1's configuration authenticates against Cell 2's database or Redis.
 - No service source file branches on `CELL_ID`.
-- A quarantined Cell's write-check rejects writes and its plain route continues to serve reads
-  (`apps/gateway`'s `CellRouterController`), while the other Cell is unaffected. **Known gap, not yet
-  fixed (flagged in `../arka-ops/TASKS.md`, 28 July):** this is proven at the gateway's write-check
-  endpoint, the actual enforcement point per `docs/ARCHITECTURE.md` section 1, but a real transfer
-  fired directly against the quarantined Cell's own `apps/identity` still succeeds today, since
-  `TransfersController` and its siblings never check quarantine state. Do not read this line as "a
-  quarantined Cell cannot move money" until that gap closes.
+- A quarantined Cell rejects writes and continues to serve reads, while the other Cell is unaffected.
+  Enforced by `QuarantineGuard` (`apps/identity/src/recovery/quarantine.guard.ts`) on the four real
+  money-moving endpoints (`TransfersController`, `AgentCashController.complete`, `QrController.redeem`,
+  `LimitsController.change`), asked directly of `apps/recovery` keyed by the process's own `CELL_ID`,
+  and fails closed (`503`) if the check itself cannot complete, rather than assuming "not quarantined".
+  `apps/identity/test/http.integration.test.ts` reproduces the exact live finding that motivated this
+  (`../arka-ops/LOG.md`, 28 July): a transfer against a quarantined Cell rejects `403 CELL_QUARANTINED`,
+  a read against the same Cell still succeeds, and a transfer succeeds again once lifted.
 
 ## CI gates
 

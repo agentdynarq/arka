@@ -39,14 +39,6 @@ a clean result or the exact sequence number of the first break. A break reports 
 
 ## P2. Quarantine a Cell
 
-**Known gap, not yet fixed (flagged in `../arka-ops/TASKS.md`, 28 July).** Verified live: quarantine
-correctly flips the health map and rejects a write through `apps/gateway`'s `write-check` endpoint, but
-a real customer transfer fired directly against the quarantined Cell's own `apps/identity` still
-succeeds, since `TransfersController` and its siblings never check quarantine state. Do not rehearse
-step 4 below ("a write attempt against the quarantined Cell is rejected") against a real transfer
-through `apps/web` until this is fixed, it will not behave as written. The gateway `write-check`
-endpoint itself does work correctly.
-
 **Trigger.** A Cell shows sustained anomalous behaviour, a confirmed compromise, or a bad deploy that
 cannot be rolled back quickly.
 
@@ -55,7 +47,7 @@ move money. Every other Cell is untouched and its customers notice nothing.
 
 **Steps.**
 
-1. Open the Recovery Console, screen W5. Confirm the Cell's health status and the anomaly feed.
+1. Open the Recovery Console, screen W5. Confirm the Cell's health status and the audit trail.
 2. Request quarantine on the affected Cell. State the reason. The reason is recorded.
 3. **Dual approval.** A second operator approves from their own session. The action does not take
    effect on one person's authority. This is deliberate and is not to be bypassed.
