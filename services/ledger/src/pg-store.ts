@@ -156,3 +156,30 @@ export async function isPostgresReachable(connectionString: string): Promise<boo
     await probe.end()
   }
 }
+
+/**
+ * Creates `databaseName` on the same Postgres server as `connectionString` if
+ * it does not already exist yet, then returns a connection string pointing
+ * at it. Test suites call this to get a genuinely separate database from the
+ * one `pnpm seed` populates, instead of colliding with demo data on every
+ * `resetSchema()` (arka-ops/LOG.md, 28 July: `pnpm test` was wiping the
+ * seeded demo because every integration test's default connection string
+ * fell back to the same database the demo uses).
+ */
+export async function ensureTestDatabase(connectionString: string, databaseName: string): Promise<string> {
+  const target = new URL(connectionString)
+  const admin = new URL(connectionString)
+  admin.pathname = '/postgres'
+
+  const adminPool = new Pool({ connectionString: admin.toString(), connectionTimeoutMillis: 2000 })
+  try {
+    await adminPool.query(`CREATE DATABASE "${databaseName}"`)
+  } catch (error) {
+    if ((error as { code?: string }).code !== '42P04') throw error // 42P04: database already exists
+  } finally {
+    await adminPool.end()
+  }
+
+  target.pathname = `/${databaseName}`
+  return target.toString()
+}

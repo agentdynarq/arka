@@ -5,13 +5,13 @@
 import { test, describe, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
-import { isPostgresReachable } from '@arka/ledger'
+import { isPostgresReachable, ensureTestDatabase } from '@arka/ledger'
 import type { DomainEvent } from '@arka/events'
 
 import { PgNotificationStore } from '../src/pg-notification-store.ts'
 import type { NewNotification } from '../src/types.ts'
 
-const CONNECTION_STRING =
+const BASE_CONNECTION_STRING =
   process.env.TEST_CELL1_DATABASE_URL ?? 'postgres://arka_cell1:change-me-cell1@localhost:5433/arka_cell1'
 
 function notification(overrides: Partial<NewNotification> = {}): NewNotification {
@@ -35,7 +35,10 @@ function event(overrides: Partial<DomainEvent> = {}): DomainEvent {
   }
 }
 
-const reachable = await isPostgresReachable(CONNECTION_STRING)
+const reachable = await isPostgresReachable(BASE_CONNECTION_STRING)
+// A genuinely separate database from the one `pnpm seed` populates: resetSchema()
+// below must never touch demo data. See ensureTestDatabase's doc comment.
+const CONNECTION_STRING = reachable ? await ensureTestDatabase(BASE_CONNECTION_STRING, 'arka_cell1_test') : BASE_CONNECTION_STRING
 
 describe(
   'PgNotificationStore, against a real Postgres',
