@@ -1,22 +1,13 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { SplitHero } from '@arka/ui'
+import { ScrollReveal } from '@/components/ScrollReveal'
 
-const DOCTRINES = [
-  {
-    title: 'Assume breach',
-    body: 'Every service-to-service call carries a short-lived workload identity. A process that cannot prove what it is talks to nothing, so one foothold never becomes lateral movement.',
-  },
-  {
-    title: 'Contain by construction',
-    body: 'Customers are sharded across independent Cells that share nothing and have no network path to each other. A compromise is capped at one Cell while every other Cell keeps serving, unaware anything happened.',
-  },
-  {
-    title: 'Recovery is a feature',
-    body: 'The ledger is an append-only chain of double-entry records, each block carrying the hash of its predecessor. Tampering is detectable by mathematics. There is no Master Key: root recovery needs a 3-of-5 quorum.',
-  },
+const BULLETS = [
+  { title: 'Assume breach', description: 'A process that cannot prove what it is talks to nothing.' },
+  { title: 'Contain by construction', description: 'A compromise is capped at one Cell. No exceptions.' },
+  { title: 'Recovery is a feature', description: 'No Master Key. Root recovery needs a 3-of-5 quorum.' },
 ]
-
-const BULLETS = DOCTRINES.map((d) => ({ title: d.title, description: d.body }))
 
 export default function Home() {
   return (
@@ -66,70 +57,154 @@ export default function Home() {
         </div>
       </SplitHero>
 
-      <section className="landing-section">
-        <div className="landing-section__inner">
-          <p className="landing-section__label">The problem</p>
-          <p className="landing-prose">
-            Backups protect data. They do not protect a bank&rsquo;s ability to keep operating once one
-            compromised service can reach every other service. The 2065 scenario&rsquo;s real failure was
-            structural: <strong>a single trust domain</strong> meant one breach anywhere was a breach
-            everywhere, and a single Master Key meant recovery itself depended on the one artifact an
-            attacker most wanted.
-          </p>
-          <p className="landing-prose">
-            Arka is the rebuild. Blast radius stops being a matter of luck and becomes a design parameter,
-            set at build time, not discovered during an incident. A Cell is configuration, not code: there
-            is exactly one copy of each service, and adding a third Cell is an environment change, never a
-            code change.
-          </p>
-        </div>
-      </section>
+      <section className="timeline-section">
+        <ScrollReveal className="timeline-intro">
+          <p className="timeline-intro__label">What we had, what we built</p>
+          <h2 className="timeline-intro__title">Not a pitch. The actual build, in order, proven live at every step.</h2>
+        </ScrollReveal>
 
-      <section className="landing-section">
-        <div className="landing-section__inner">
-          <p className="landing-section__label">Three doctrines</p>
-          <div className="landing-doctrine-list">
-            {DOCTRINES.map((d, i) => (
-              <div className="landing-doctrine" key={d.title}>
-                <span className="landing-doctrine__index">{String(i + 1).padStart(2, '0')}</span>
-                <div>
-                  <h2 className="landing-doctrine__title">{d.title}</h2>
-                  <p className="landing-doctrine__body">{d.body}</p>
+        <div className="timeline">
+          <ScrollReveal>
+            <article className="timeline-entry timeline-entry--danger">
+              <span className="timeline-entry__marker" aria-hidden="true" />
+              <p className="timeline-entry__stage">2065 · what we had</p>
+              <h3 className="timeline-entry__title">One trust domain. One Master Key. One breach was every breach.</h3>
+              <p className="timeline-entry__body">
+                Backups protect data. They do not protect a bank&rsquo;s ability to keep operating once one
+                compromised service can reach every other service. <strong>A single trust domain</strong>{' '}
+                meant one foothold anywhere was total compromise everywhere, and a single Master Key meant
+                recovery itself depended on the one artifact an attacker most wanted.
+              </p>
+              <div className="timeline-entry__media">
+                <Image
+                  src="/media/architecture.gif"
+                  alt="Animated diagram: the 2065 collapse spreading through one undivided trust domain, versus the same attack today staying contained inside one Cell while Cell 2 keeps serving"
+                  width={1200}
+                  height={640}
+                  unoptimized
+                />
+              </div>
+              <p className="timeline-entry__caption">
+                An animated architecture diagram, not a screen recording: how it failed then, how Arka
+                contains the same attack now.
+              </p>
+            </article>
+          </ScrollReveal>
+
+          <ScrollReveal>
+            <article className="timeline-entry">
+              <span className="timeline-entry__marker" aria-hidden="true" />
+              <p className="timeline-entry__stage">26 Jul · day one</p>
+              <h3 className="timeline-entry__title">A ledger that cannot lie, before anything else exists.</h3>
+              <p className="timeline-entry__body">
+                <code>ledger-core</code> first: append-only, hash-chained, double-entry, zero runtime
+                dependencies. Every later service builds on this. Tampering is detectable by mathematics,
+                not by trust, and the chain is walked from genesis every time, never from a checkpoint that
+                could itself have been forged.
+              </p>
+            </article>
+          </ScrollReveal>
+
+          <ScrollReveal>
+            <article className="timeline-entry">
+              <span className="timeline-entry__marker" aria-hidden="true" />
+              <p className="timeline-entry__stage">27 Jul · Cells get a router</p>
+              <h3 className="timeline-entry__title">Two Cells. No shared network. Provable, not asserted.</h3>
+              <p className="timeline-entry__body">
+                The Gateway pins each customer to a Cell by stable hash. Cell 1 holds no credential that
+                reaches Cell 2, because there is no route between them at all, not a firewall rule sitting
+                on top of a real connection.
+              </p>
+              <div className="timeline-entry__media">
+                <Image
+                  src="/media/isolation.gif"
+                  alt="Terminal recording: docker exec ping from Cell 1's container to Cell 2's fails on DNS resolution, then pnpm verify-ledger walks both Cells' real hash chains clean"
+                  width={897}
+                  height={605}
+                  unoptimized
+                />
+              </div>
+              <p className="timeline-entry__caption">Real terminal output. `docker exec ... ping` really fails. `verify-ledger` really walks the chain.</p>
+            </article>
+          </ScrollReveal>
+
+          <ScrollReveal>
+            <article className="timeline-entry">
+              <span className="timeline-entry__marker" aria-hidden="true" />
+              <p className="timeline-entry__stage">28 Jul · identity in depth</p>
+              <h3 className="timeline-entry__title">Argon2, TOTP, step-up. A 15% mark bucket on its own.</h3>
+              <p className="timeline-entry__body">
+                Sessions with refresh rotation, a reused token revokes the whole family. Step-up on a new
+                payee, not just a password. A seeded customer re-verifies, passes MFA, and reaches a real
+                dashboard sourced live from the ledger, not a fixture.
+              </p>
+            </article>
+          </ScrollReveal>
+
+          <ScrollReveal>
+            <article className="timeline-entry">
+              <span className="timeline-entry__marker" aria-hidden="true" />
+              <p className="timeline-entry__stage">29 to 30 Jul · money moves, safely</p>
+              <h3 className="timeline-entry__title">QR acceptance, daily limits, agent cash-in. One atomic append each.</h3>
+              <p className="timeline-entry__body">
+                No saga anywhere, because nothing in this build&rsquo;s real scope ever needed one: every
+                money-movement path reduces to a single ledger append, and idempotency means a retried
+                payment never executes twice.
+              </p>
+              <div className="landing-terminal">
+                <div className="landing-terminal__bar">
+                  <span className="landing-terminal__dot" />
+                  <span className="landing-terminal__dot" />
+                  <span className="landing-terminal__dot" />
+                </div>
+                <div className="landing-terminal__body">
+                  <div className="landing-terminal__line">
+                    <span className="landing-terminal__prompt">$</span> pnpm test
+                  </div>
+                  <div className="landing-terminal__result">
+                    concurrent-race tests fire ten simultaneous requests at a real Postgres, exactly one wins
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </article>
+          </ScrollReveal>
+
+          <ScrollReveal>
+            <article className="timeline-entry">
+              <span className="timeline-entry__marker" aria-hidden="true" />
+              <p className="timeline-entry__stage">FR-22 · contained, live</p>
+              <h3 className="timeline-entry__title">A real incident. Not a diagram this time.</h3>
+              <p className="timeline-entry__body">
+                Two operators quarantine Cell 1 under dual approval, neither alone. The identical transfer
+                that succeeded a moment earlier is now rejected <strong>403 CELL_QUARANTINED</strong>. Reads
+                still work: read-only, not down. Cell 2 never notices. Lift the quarantine, the transfer
+                succeeds again.
+              </p>
+              <div className="timeline-entry__media">
+                <Image
+                  src="/media/quarantine.gif"
+                  alt="Terminal recording of the real HTTP traffic: a transfer succeeds, two operators quarantine Cell 1 under dual approval, the identical transfer is rejected 403 CELL_QUARANTINED, a dashboard read still succeeds, the quarantine is lifted, and the transfer succeeds again"
+                  width={1100}
+                  height={640}
+                  unoptimized
+                />
+              </div>
+              <p className="timeline-entry__caption">The real HTTP traffic, recorded live against the running stack. No staging.</p>
+            </article>
+          </ScrollReveal>
         </div>
       </section>
 
-      <section className="landing-section" style={{ borderBottom: 'none' }}>
-        <div className="landing-section__inner">
-          <p className="landing-section__label">Nothing here is a mockup</p>
-          <div className="landing-terminal">
-            <div className="landing-terminal__bar">
-              <span className="landing-terminal__dot" />
-              <span className="landing-terminal__dot" />
-              <span className="landing-terminal__dot" />
-            </div>
-            <div className="landing-terminal__body">
-              <div className="landing-terminal__line">
-                <span className="landing-terminal__prompt">$</span> pnpm verify-ledger
-              </div>
-              <div className="landing-terminal__result">walks every block, prints the chain and any break, real hash chain, not a claim</div>
-              <div className="landing-terminal__line" style={{ marginTop: '12px' }}>
-                <span className="landing-terminal__prompt">$</span> pnpm test
-              </div>
-              <div className="landing-terminal__result">
-                concurrent-race tests fire ten simultaneous requests at a real Postgres and assert exactly
-                one wins
-              </div>
-              <div className="landing-terminal__line" style={{ marginTop: '12px' }}>
-                <span className="landing-terminal__prompt">$</span> grep livenessSimulated
-              </div>
-              <div className="landing-terminal__result">the one simulated step says so in the response itself, not buried in a comment</div>
-            </div>
+      <section className="landing-cta">
+        <ScrollReveal>
+          <h2 className="landing-cta__title">Sign in as alice and watch it work.</h2>
+          <p className="landing-cta__sub">Blast radius stops being luck. It becomes a design parameter.</p>
+          <div className="landing-cta__actions">
+            <Link href="/reverify" className="landing-cta__primary">
+              Enter the live demo
+            </Link>
           </div>
-        </div>
+        </ScrollReveal>
       </section>
 
       <footer className="landing-footer">
