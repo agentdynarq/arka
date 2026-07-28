@@ -11,7 +11,7 @@ const PORTS = {
   identity: Number(process.env.E2E_IDENTITY_PORT ?? 3101),
   recovery: Number(process.env.E2E_RECOVERY_PORT ?? 3102),
   gateway: Number(process.env.E2E_GATEWAY_PORT ?? 3103),
-  console: Number(process.env.E2E_CONSOLE_PORT ?? 3200),
+  console: Number(process.env.E2E_CONSOLE_PORT ?? 3300),
 }
 
 export const BASE_URLS = {
@@ -75,7 +75,7 @@ export default defineConfig({
       timeout: 180_000,
     },
     {
-      // Console's own start script fixes -p 3200; started directly here instead
+      // Console's own start script fixes -p 3300; started directly here instead
       // so this suite's port is independently overridable (see PORTS above).
       command: `pnpm run build && npx next start -p ${PORTS.console}`,
       cwd: join(APPS, 'console'),

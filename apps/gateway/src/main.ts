@@ -9,7 +9,7 @@ const { AppModule } = await import('./app.module.ts')
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule)
   app.enableCors()
-  const port = process.env.GATEWAY_PORT ? Number(process.env.GATEWAY_PORT) : 3000
+  const port = process.env.GATEWAY_PORT ? Number(process.env.GATEWAY_PORT) : 8080
   await app.listen(port)
   console.log(`gateway listening on :${port}`)
 }
