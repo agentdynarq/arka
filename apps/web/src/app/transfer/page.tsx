@@ -13,7 +13,7 @@ import {
 } from '@/lib/api'
 import type { Dashboard, TransferOutcome } from '@/lib/api'
 import { getAccessToken, clearSession } from '@/lib/session'
-import { Main, Panel, Field, Button, Alert, Skeleton } from '@arka/ui'
+import { Main, Panel, Field, Button, Alert, Skeleton, OtpInput } from '@arka/ui'
 
 type Stage =
   | { name: 'form' }
@@ -159,28 +159,27 @@ export default function TransferPage() {
 
   if (stage.name === 'step-up') {
     return (
-      <Main>
+      <div className="ui-modal-backdrop">
         <Panel
           title="Confirm it's you"
-          subtitle={`${stage.toAccountId} is a new payee for this account. Enter your authenticator code to confirm this transfer.`}
+          subtitle={`${stage.toAccountId} is a new payee for this account, sending LKR ${formatMinorUnits(
+            stage.amountMinorUnits
+          )}. Enter the code from your authenticator app.`}
         >
           {error && <Alert>{error}</Alert>}
           <form onSubmit={submitStepUp}>
-            <Field
-              id="totp"
-              label="Authenticator code"
-              inputMode="numeric"
-              maxLength={6}
-              value={totpCode}
-              onChange={(e) => setTotpCode(e.target.value)}
-              autoFocus
-            />
-            <Button type="submit" disabled={submitting}>
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <OtpInput value={totpCode} onChange={setTotpCode} autoFocus />
+            </div>
+            <Button type="submit" variant="teal" disabled={submitting}>
               {submitting ? 'Verifying...' : 'Confirm transfer'}
             </Button>
           </form>
+          <p className="ui-meta" style={{ marginTop: 'var(--space-4)', textAlign: 'center' }}>
+            Never share this code. Arka staff will never ask for it.
+          </p>
         </Panel>
-      </Main>
+      </div>
     )
   }
 

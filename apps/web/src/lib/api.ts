@@ -180,6 +180,17 @@ export function markNotificationRead(accessToken: string, notificationId: string
   return post(`/v1/notifications/${encodeURIComponent(notificationId)}/read`, {}, { Authorization: `Bearer ${accessToken}` })
 }
 
+/** FR-12, screen W2's limits card and W4's settings. Minor-units strings, same convention as balances. */
+export interface DailyLimit {
+  accountId: string
+  limit: string
+  spentToday: string
+}
+
+export function fetchDailyLimit(accessToken: string, accountId: string): Promise<DailyLimit> {
+  return get(`/v1/payments/limits/${encodeURIComponent(accountId)}`, accessToken)
+}
+
 export interface ActionChallenge {
   actionToken: string
   reason: 'new_payee' | 'over_limit' | 'unrecognised_device'

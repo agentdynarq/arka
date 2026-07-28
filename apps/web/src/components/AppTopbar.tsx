@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Topbar, Button } from '@arka/ui'
+import { Topbar, Button, Badge } from '@arka/ui'
 import { getAccessToken, clearSession } from '@/lib/session'
 
 /** @arka/ui's `TopbarLink` is a plain `<a>`, framework-agnostic by design. Next apps want client-side
@@ -39,27 +39,47 @@ export function AppTopbar() {
     router.push('/reverify')
   }
 
+  // Screen W1 (re-verify, the only unauthenticated screen) is a full-bleed
+  // split panel with its own brand mark in the wireframe, no persistent
+  // topbar above it. Every other screen requires a session, so "not signed
+  // in" and "on W1" are effectively the same condition.
+  if (!signedIn) return null
+
   return (
     <Topbar brand="Arka">
-      {signedIn ? (
-        <>
-          <NavLink href="/dashboard" active={pathname === '/dashboard'}>
-            Dashboard
-          </NavLink>
-          <NavLink href="/transfer" active={pathname === '/transfer'}>
-            Send money
-          </NavLink>
-          <NavLink href="/agent" active={pathname === '/agent'}>
-            Agent &amp; settings
-          </NavLink>
-          <NavLink href="/notifications" active={pathname === '/notifications'}>
-            Notifications
-          </NavLink>
-          <Button variant="ghost" fullWidth={false} onClick={signOut}>
-            Sign out
-          </Button>
-        </>
-      ) : null}
+      <NavLink href="/dashboard" active={pathname === '/dashboard'}>
+        Home
+      </NavLink>
+      <NavLink href="/transfer" active={pathname === '/transfer'}>
+        Payments
+      </NavLink>
+      <NavLink href="/agent" active={pathname === '/agent'}>
+        Agents
+      </NavLink>
+      <NavLink href="/notifications" active={pathname === '/notifications'}>
+        Notifications
+      </NavLink>
+      <Badge tone="success">All systems verified</Badge>
+      <Button variant="ghost" fullWidth={false} onClick={signOut}>
+        Sign out
+      </Button>
+      <span
+        aria-hidden="true"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 34,
+          height: 34,
+          borderRadius: '50%',
+          background: 'var(--color-accent)',
+          color: 'var(--color-accent-text)',
+          fontSize: 'var(--text-sm)',
+          fontWeight: 600,
+        }}
+      >
+        A
+      </span>
     </Topbar>
   )
 }

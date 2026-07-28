@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { requestAgentCash, completeAgentCash, toMinorUnits, ApiError } from '@/lib/api'
 import type { AgentCashDirection } from '@/lib/api'
 import { isLowBandwidthEnabled, setLowBandwidthEnabled, LOW_BANDWIDTH_HISTORY_LIMIT } from '@/lib/low-bandwidth'
-import { Main, Panel, Field, SelectField, Button, Alert } from '@arka/ui'
+import { Main, Panel, Field, SelectField, Button, Alert, OtpInput } from '@arka/ui'
 
 type Stage =
   | { name: 'form' }
@@ -114,7 +114,9 @@ export default function AgentPage() {
         >
           {error && <Alert>{error}</Alert>}
           <form onSubmit={submitOtp}>
-            <Field id="otp" label="Customer's OTP" inputMode="numeric" maxLength={6} value={otpCode} onChange={(e) => setOtpCode(e.target.value)} autoFocus />
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <OtpInput value={otpCode} onChange={setOtpCode} autoFocus />
+            </div>
             <Button type="submit" disabled={submitting}>
               {submitting ? 'Confirming...' : 'Confirm'}
             </Button>
