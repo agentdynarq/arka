@@ -1,6 +1,316 @@
 /**
  * Reset and component styles live in @arka/ui (imported in layout.tsx).
- * Nothing app-specific has been needed here since the shared design system
- * landed; kept as a file, not deleted, since it is the natural place for a
- * screen-specific override if one is ever genuinely needed.
+ * This file is screen-specific composition for the landing page at "/":
+ * it reuses @arka/ui's ui-split-hero (the same component W1 uses) rather
+ * than inventing a second hero pattern, and adds only what that page
+ * genuinely needs beyond it. Reads only --color, --space and --radius
+ * tokens from tokens.css, never a raw value.
  */
+
+.landing-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-7);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.landing-nav__brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-md);
+  letter-spacing: 0.1em;
+  color: var(--color-text-primary);
+}
+
+.landing-nav__link {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.landing-nav__link:hover {
+  color: var(--color-text-primary);
+}
+
+/* ---- Hero right panel: the Cell diagram stands in for a screenshot ---- */
+
+.landing-diagram {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  max-width: 420px;
+}
+
+.landing-diagram__gateway {
+  padding: var(--space-2) var(--space-5);
+  background: var(--palette-navy-900);
+  color: var(--palette-white);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
+}
+
+.landing-diagram__drop {
+  width: 1px;
+  height: var(--space-5);
+  background: var(--color-border-strong);
+}
+
+.landing-diagram__cells {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.landing-diagram__cell {
+  flex: 1;
+  padding: var(--space-4);
+  background: var(--color-bg-surface);
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+}
+
+.landing-diagram__cell-title {
+  font-weight: 700;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.landing-diagram__cell-services {
+  margin-top: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+
+.landing-diagram__cell-store {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--color-border);
+  font-size: 0.68rem;
+  color: var(--color-text-tertiary);
+}
+
+.landing-diagram__no-route {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+}
+
+.landing-diagram__no-route::before {
+  content: '×';
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-danger);
+  background: var(--color-bg-tint);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-sm);
+}
+
+.landing-diagram__caption {
+  margin-top: var(--space-4);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  color: var(--color-text-tertiary);
+  text-align: center;
+}
+
+.landing-hero-actions {
+  margin-top: var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.landing-hero-actions__primary {
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-pill);
+  background: var(--palette-navy-900);
+  color: var(--palette-white);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.landing-hero-actions__primary:hover {
+  background: var(--palette-navy-950);
+}
+
+.landing-hero-actions__secondary {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.landing-hero-actions__secondary:hover {
+  color: var(--color-text-primary);
+}
+
+.landing-hero-credentials {
+  margin-top: var(--space-5);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--color-text-tertiary);
+  text-align: center;
+}
+
+/* ---- Below the fold: editorial, not a card grid ---- */
+
+.landing-section {
+  padding: var(--space-8) var(--space-7);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.landing-section__inner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.landing-section__label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-teal-strong);
+}
+
+.landing-doctrine-list {
+  margin-top: var(--space-6);
+}
+
+.landing-doctrine {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: var(--space-5);
+  padding: var(--space-6) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.landing-doctrine:last-child {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.landing-doctrine__index {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  color: var(--color-text-tertiary);
+}
+
+.landing-doctrine__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+}
+
+.landing-doctrine__body {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-md);
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+  max-width: 62ch;
+}
+
+.landing-prose {
+  margin-top: var(--space-5);
+  font-size: var(--text-md);
+  line-height: 1.8;
+  color: var(--color-text-secondary);
+}
+
+.landing-prose strong {
+  color: var(--color-text-primary);
+}
+
+.landing-prose + .landing-prose {
+  margin-top: var(--space-4);
+}
+
+/* ---- Proof, styled as a terminal, not a checkmark grid ---- */
+
+.landing-terminal {
+  margin-top: var(--space-6);
+  background: var(--palette-navy-950);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.landing-terminal__bar {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid #16283e;
+}
+
+.landing-terminal__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2a3f58;
+}
+
+.landing-terminal__body {
+  padding: var(--space-5) var(--space-6) var(--space-6);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.9;
+}
+
+.landing-terminal__line {
+  color: #7e93a8;
+}
+
+.landing-terminal__prompt {
+  color: var(--palette-teal-300);
+}
+
+.landing-terminal__result {
+  color: #d7e2ec;
+  padding-left: var(--space-4);
+}
+
+.landing-footer {
+  padding: var(--space-6) var(--space-7);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+}
+
+.landing-footer a {
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 640px) {
+  .landing-doctrine {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .landing-diagram__cells {
+    flex-direction: column;
+  }
+
+  .landing-diagram__no-route {
+    transform: rotate(90deg);
+  }
+}
