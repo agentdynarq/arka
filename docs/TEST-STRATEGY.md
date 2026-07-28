@@ -52,9 +52,20 @@ Each of these is a named test:
 - **Idempotency.** The same payment request fired twice moves money exactly once and returns the same
   result both times. This is tested at the integration level against a real database, because the
   guarantee lives in a uniqueness constraint, not in application logic.
-- **Saga compensation.** A multi-step transfer with an injected failure at each step leaves no money
-  in limbo. One test per failure point.
-- **Concurrency.** Parallel transfers from the same account cannot overdraw it.
+- **Concurrency, same request.** The same idempotency key fired concurrently still transfers money
+  exactly once (`services/payments/test/service.test.ts`).
+
+**Known gap, not yet fixed (flagged in `../arka-ops/TASKS.md`, 28 July).** No saga was ever built, so
+there is no saga-compensation test suite; every money-movement path this build shipped reduces to one
+atomic ledger append (`services/payments/README.md`'s FR-11 and FR-16 sections). More importantly,
+**concurrent transfers from the same account, with different idempotency keys, are not yet proven
+safe against overdraw, and a live test found that they are not**: `PaymentsService` checks the sender's
+balance once before calling `LedgerService.record`, which retries the same append against a fresh head
+on conflict but never re-checks the balance on retry. Two genuinely concurrent transfers, each valid
+against the starting balance alone, landed alice at a negative balance. This is the highest-priority
+gap in the whole platform right now; do not treat "parallel transfers cannot overdraw" as tested or
+true until it is actually fixed and a real concurrency test like the idempotency one above exists for
+it.
 
 ## Authentication
 
@@ -76,7 +87,13 @@ document.
 
 - No credential in Cell 1's configuration authenticates against Cell 2's database or Redis.
 - No service source file branches on `CELL_ID`.
-- A quarantined Cell rejects writes and continues to serve reads, while the other Cell is unaffected.
+- A quarantined Cell's write-check rejects writes and its plain route continues to serve reads
+  (`apps/gateway`'s `CellRouterController`), while the other Cell is unaffected. **Known gap, not yet
+  fixed (flagged in `../arka-ops/TASKS.md`, 28 July):** this is proven at the gateway's write-check
+  endpoint, the actual enforcement point per `docs/ARCHITECTURE.md` section 1, but a real transfer
+  fired directly against the quarantined Cell's own `apps/identity` still succeeds today, since
+  `TransfersController` and its siblings never check quarantine state. Do not read this line as "a
+  quarantined Cell cannot move money" until that gap closes.
 
 ## CI gates
 
