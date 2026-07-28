@@ -40,6 +40,8 @@ import {
   generateTotpSecret,
   totpAt,
 } from '@arka/identity'
+import { QUARANTINE_CHECKER } from '../src/recovery/quarantine-checker.ts'
+import type { QuarantineChecker } from '../src/recovery/quarantine-checker.ts'
 
 const { AppModule } = await import('../dist/app.module.js')
 
@@ -81,6 +83,15 @@ let identity: IdentityService
 let accounts: AccountsService
 let mfaSecret: string
 let bobMfaSecret: string
+
+// Controllable per test, defaults to "not quarantined" so every other test
+// in this file exercises the real HTTP boundary without needing a live
+// apps/recovery. FR-22's own tests below flip this and reset it immediately
+// after, since this instance is shared across the whole file's app boot.
+let cellQuarantined = false
+const fakeQuarantineChecker: QuarantineChecker = {
+  isQuarantined: async () => cellQuarantined,
+}
 
 describe('identity http surface', () => {
   before(async () => {
@@ -126,6 +137,8 @@ describe('identity http surface', () => {
       .useValue(built.payments)
       .overrideProvider(NotificationsService)
       .useValue(built.notifications)
+      .overrideProvider(QUARANTINE_CHECKER)
+      .useValue(fakeQuarantineChecker)
       .compile()
 
     app = moduleRef.createNestApplication()
@@ -652,6 +665,43 @@ describe('identity http surface', () => {
       body: JSON.stringify({ customerAccountId: 'customer:test-alice', qrToken: 'anything' }),
     })
     assert.equal(response.status, 401)
+  })
+
+  // FR-22: closes the exact live gap found in arka-ops/LOG.md, 28 July: a real
+  // customer transfer against a quarantined Cell used to succeed, because
+  // nothing on this app's write path checked quarantine at all, only
+  // apps/gateway's separate write-check endpoint did, and nothing in the
+  // real customer journey ever calls that.
+  test('a transfer is rejected while this Cell is quarantined, a read still succeeds', async () => {
+    const accessToken = await loginAndVerifyMfa(baseUrl, mfaSecret)
+    cellQuarantined = true
+    try {
+      const transfer = await fetch(`${baseUrl}/v1/payments/transfers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}`, 'Idempotency-Key': 'quarantine-1' },
+        body: JSON.stringify({ fromAccountId: 'customer:test-alice', toAccountId: 'customer:test-bob', amount: '100' }),
+      })
+      assert.equal(transfer.status, 403)
+      assert.equal((await transfer.json()).code, 'CELL_QUARANTINED')
+
+      // Read-only, not down: the dashboard must still work on a quarantined Cell.
+      const dashboard = await fetch(`${baseUrl}/v1/me/dashboard`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      assert.equal(dashboard.status, 200)
+    } finally {
+      cellQuarantined = false
+    }
+  })
+
+  test('a transfer succeeds again once the Cell is no longer quarantined', async () => {
+    const accessToken = await loginAndVerifyMfa(baseUrl, mfaSecret)
+    const response = await fetch(`${baseUrl}/v1/payments/transfers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}`, 'Idempotency-Key': 'quarantine-2' },
+      body: JSON.stringify({ fromAccountId: 'customer:test-alice', toAccountId: 'customer:test-bob', amount: '100' }),
+    })
+    assert.equal(response.status, 201)
   })
 })
 
