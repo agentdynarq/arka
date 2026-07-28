@@ -389,35 +389,35 @@ def build_act2():
     draw_caption(d, "A normal transfer lands in Cell 1. Business as usual.")
     hold(img, 30)
 
-    for i in range(20):
-        img, d = draw_act2(c1_state="normal", attacker_alpha=int(255 * (i + 1) / 20))
+    for i in range(30):
+        img, d = draw_act2(c1_state="normal", attacker_alpha=int(255 * (i + 1) / 30))
         draw_caption(d, "Cell 1 is now suspected compromised.")
         add(img)
     img, d = draw_act2(c1_state="compromised", attacker_alpha=255)
     draw_caption(d, "Cell 1 is now suspected compromised.")
-    hold(img, 32)
+    hold(img, 60)
 
-    for i in range(18):
+    for i in range(24):
         img, d = draw_act2(c1_state="compromised", c2_state="normal", attacker_alpha=255, no_route_glow=(i % 6) / 6)
         draw_caption(d, "It cannot reach Cell 2.", "There is no route between them. Not a rule. A missing wire.")
         add(img)
-    hold(img, 30)
+    hold(img, 55)
 
     img, d = draw_act2(c1_state="compromised", c2_state="normal", ops_active=1)
     draw_caption(d, "Operator A requests quarantine.")
-    hold(img, 28)
+    hold(img, 55)
     img, d = draw_act2(c1_state="compromised", c2_state="normal", ops_active=2)
     draw_caption(d, "Operator B approves.", "Dual approval: a different person, never the same one alone.")
-    hold(img, 36)
+    hold(img, 65)
 
-    for i in range(14):
-        quarantined_now = i > 6
+    for i in range(20):
+        quarantined_now = i > 10
         img, d = draw_act2(c1_state="quarantined" if quarantined_now else "compromised", c2_state="normal", ops_active=2)
         draw_caption(d, "Cell 1 is quarantined. Read-only." if quarantined_now else "Quarantine applied.")
         add(img)
     img, d = draw_act2(c1_state="quarantined", c2_state="normal")
     draw_caption(d, "Cell 1 is quarantined. Read-only.")
-    hold(img, 32)
+    hold(img, 55)
 
     arrow_sequence(
         {"c1_state": "quarantined", "c2_state": "normal"},
@@ -431,7 +431,7 @@ def build_act2():
     )
     img, d = draw_act2(c1_state="quarantined", c2_state="normal")
     draw_caption(d, "REJECTED. 403 CELL_QUARANTINED.", "Blocked by construction, not by luck.")
-    hold(img, 44)
+    hold(img, 60)
 
     arrow_sequence(
         {"c1_state": "quarantined", "c2_state": "normal"},
@@ -448,16 +448,16 @@ def build_act2():
 
     img, d = draw_act2(c1_state="quarantined", c2_state="normal", ops_active=2)
     draw_caption(d, "Operators lift the quarantine.", "Dual approval again.")
-    hold(img, 32)
+    hold(img, 55)
 
-    for i in range(14):
-        restored_now = i > 6
+    for i in range(20):
+        restored_now = i > 10
         img, d = draw_act2(c1_state="restored" if restored_now else "quarantined", c2_state="normal")
         draw_caption(d, "Cell 1 is restored." if restored_now else "Lifting quarantine.")
         add(img)
     img, d = draw_act2(c1_state="restored", c2_state="normal")
     draw_caption(d, "Cell 1 is restored.")
-    hold(img, 26)
+    hold(img, 45)
 
     arrow_sequence(
         {"c1_state": "restored", "c2_state": "normal"},
