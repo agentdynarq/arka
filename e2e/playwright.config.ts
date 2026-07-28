@@ -46,7 +46,11 @@ export default defineConfig({
       command: 'pnpm run build && pnpm run start',
       cwd: join(APPS, 'identity'),
       url: `${BASE_URLS.identity}/healthz`,
-      env: { IDENTITY_PORT: String(PORTS.identity) },
+      // FR-22's QuarantineGuard asks apps/recovery directly and fails closed
+      // if it cannot reach it; without this, every write here 503s, since the
+      // default RECOVERY_URL (:3002) is not where this suite's own recovery
+      // instance listens.
+      env: { IDENTITY_PORT: String(PORTS.identity), RECOVERY_URL: BASE_URLS.recovery },
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     },
