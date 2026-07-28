@@ -15,7 +15,7 @@ recovery was never designed.
 
 Arka rebuilds digital banking so that class of disaster is structurally impossible.
 
-![The 2065 incident's root cause, typed out](docs/media/incident.gif)
+![How the 2065 collapse happened, and how Arka contains the same attack today](docs/media/architecture.gif)
 
 ## Three doctrines
 
