@@ -8,7 +8,10 @@ import {
   buildAccountsService,
   buildPaymentsService,
   buildNotificationsService,
+  buildQuarantineChecker,
 } from './identity-provider.ts'
+import { QuarantineGuard } from './recovery/quarantine.guard.ts'
+import { QUARANTINE_CHECKER } from './recovery/quarantine-checker.ts'
 import { AuthController } from './auth/auth.controller.ts'
 import { StepUpController } from './auth/step-up.controller.ts'
 import { AccessTokenGuard } from './auth/access-token.guard.ts'
@@ -43,7 +46,9 @@ import { NotificationsController } from './notifications/notifications.controlle
     { provide: AccountsService, useFactory: buildAccountsService },
     { provide: PaymentsService, useFactory: buildPaymentsService },
     { provide: NotificationsService, useFactory: buildNotificationsService },
+    { provide: QUARANTINE_CHECKER, useFactory: buildQuarantineChecker },
     AccessTokenGuard,
+    QuarantineGuard,
   ],
 })
 export class AppModule {}

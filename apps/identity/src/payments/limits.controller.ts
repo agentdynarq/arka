@@ -7,6 +7,7 @@ import { NotificationsService } from '@arka/notifications'
 import { AccessTokenGuard } from '../auth/access-token.guard.ts'
 import type { AuthenticatedRequest } from '../auth/access-token.guard.ts'
 import { assertOwnsAccount } from './account-ownership.ts'
+import { QuarantineGuard } from '../recovery/quarantine.guard.ts'
 
 export interface DailyLimitHttp {
   readonly accountId: string
@@ -41,6 +42,7 @@ export class LimitsController {
   }
 
   @Post(':accountId')
+  @UseGuards(QuarantineGuard)
   async change(
     @Req() request: AuthenticatedRequest,
     @Param('accountId') accountId: string,

@@ -14,8 +14,9 @@ pnpm --filter @arka/identity-app build
 pnpm --filter @arka/identity-app start
 ```
 
-Reads `DATABASE_URL` (falls back to Cell 1's local compose port), `CELL_ID` (default `cell-1`), and
-`IDENTITY_PORT` (default `3001`).
+Reads `DATABASE_URL` (falls back to Cell 1's local compose port), `CELL_ID` (default `cell-1`),
+`IDENTITY_PORT` (default `3001`), and `RECOVERY_URL` (default `http://localhost:3002`, where this
+process asks whether its own Cell is quarantined before a risky write; see FR-22 below).
 
 On every non-production boot it seeds one demo customer, `alice`, aligned with lane A's
 `scripts/seed.ts` data (`customer:alice` / `cust-alice`, Cell 1), plus a matching FR-01 registry entry,
@@ -62,6 +63,34 @@ Phase 2 scale. Both payments controllers share an ownership check
 account `AccountsService.summariesForCustomer` actually returns for their session, checked before any
 request reaches `@arka/payments` or `@arka/accounts`.
 
+## FR-22: a real quarantine gap, found live and closed
+
+Found by Keshan verifying `docs/RUNBOOK.md` P2 literally (see `arka-ops/LOG.md`, 28 July): quarantining
+Cell 2 through the Recovery Console correctly made the health map show it read-only, but a real customer
+transfer against that same Cell's `apps/identity` still succeeded. `TransfersController`,
+`AgentCashController.complete`, `QrController.redeem` and `LimitsController.change` never checked
+quarantine state at all; the only place it was enforced was `apps/gateway`'s separate `write-check`
+endpoint, which nothing in the real customer journey ever calls (`apps/web` talks to `apps/identity`
+directly, per ADR 0006).
+
+Closed with `QuarantineGuard` (`src/recovery/quarantine.guard.ts`), applied to exactly those four write
+endpoints, not to reads: a quarantined Cell is read-only, not down, so `GET /v1/me/dashboard` and history
+must keep working. The guard asks `apps/recovery` directly via `HttpQuarantineChecker`
+(`src/recovery/quarantine-checker.ts`), keyed by this process's own `CELL_ID`, deliberately not routed
+through the gateway's customer-keyed `write-check` endpoint: that re-derives a Cell from a customer id
+via the Cell Router's hash, which can disagree with the Cell this process actually is (the Cell Router
+has its own known reshuffle caveat, see `arka-ops/LOG.md`). Fails closed: if the check itself cannot be
+completed, the request is rejected `503 QUARANTINE_CHECK_UNAVAILABLE`, not silently allowed through.
+
+Not authenticated between the two processes yet, a known gap rather than a silent one:
+`apps/recovery`'s `GET /v1/recovery/quarantine/:cellId` is also called unauthenticated directly from the
+browser by `apps/console` (W5's health map), so it cannot be gated behind `@arka/workload-auth` without
+breaking that screen. Same accepted gap `apps/gateway`'s own `write-check` endpoint already has.
+
+`test/http.integration.test.ts` reproduces the exact live finding: a transfer against a quarantined Cell
+is rejected `403 CELL_QUARANTINED`, a read against the same Cell still succeeds, and a transfer once the
+Cell is no longer quarantined succeeds again.
+
 ## Tests
 
 `test/http.integration.test.ts` boots the actual compiled app and calls it over real HTTP, same pattern
@@ -70,7 +99,7 @@ as `apps/gateway`. It overrides `IdentityService`, `AccountsService`, `PaymentsS
 is already proven exhaustively by each service's own `pg-stores.integration.test.ts`, and running every
 package's Postgres-touching tests concurrently under `turbo run test` would race to reset the same
 schemas. This file's job is the HTTP boundary: request validation, the guard, ownership checks, and the
-full journeys wired together for real, over the network, not asserted against pieces in isolation. 24
+full journeys wired together for real, over the network, not asserted against pieces in isolation. 26
 tests: re-verify to dashboard (screen W1), the transfer-to-a-new-payee-triggers-step-up-then-succeeds
 round trip (screens W2 and W3), a familiar-payee transfer notifying both sender and receiver (FR-19), the
 notification inbox and its ownership check, the daily-limit-change flow requiring step-up and raising a
@@ -79,7 +108,8 @@ inbox exactly as a real customer would (FR-16), including a wrong-OTP rejection 
 retry with the right one, `?limit=` (FR-15) capping history to the newest lines while rejecting
 anything not a positive integer, and a merchant generating a QR code with no login followed by a real
 customer redemption that moves the balance (FR-11), including redeeming the same code twice with two
-different idempotency keys correctly rejecting the second.
+different idempotency keys correctly rejecting the second, and FR-22: a transfer rejected while this
+Cell is quarantined with a read still succeeding, and transfers working again once it is not.
 
 The login rate limiter is configured generously for this file specifically (the default, 10 per 60s, is
 correct in production and proven directly in `services/identity`'s own tests). This suite logs the same

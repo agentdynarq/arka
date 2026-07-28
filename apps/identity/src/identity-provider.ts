@@ -11,6 +11,8 @@ import {
 } from '@arka/identity'
 import { PaymentsService, PgIdempotencyStore, PgLimitsStore, PgAgentCashStore, PgQrRedemptionStore } from '@arka/payments'
 import { NotificationsService, PgNotificationStore } from '@arka/notifications'
+import { HttpQuarantineChecker } from './recovery/quarantine-checker.ts'
+import type { QuarantineChecker } from './recovery/quarantine-checker.ts'
 
 /**
  * `DATABASE_URL` is the name `docs/ARCHITECTURE.md` section 3 already gives
@@ -28,6 +30,7 @@ interface Built {
   readonly ledger: LedgerService
   readonly payments: PaymentsService
   readonly notifications: NotificationsService
+  readonly quarantineChecker: QuarantineChecker
 }
 
 let built: Built | null = null
@@ -71,7 +74,11 @@ function build(): Built {
 
   const notifications = new NotificationsService({ store: new PgNotificationStore(connectionString) })
 
-  built = { identity, accounts, ledger, payments, notifications }
+  const quarantineChecker = new HttpQuarantineChecker({
+    recoveryUrl: process.env.RECOVERY_URL ?? 'http://localhost:3002',
+  })
+
+  built = { identity, accounts, ledger, payments, notifications, quarantineChecker }
   return built
 }
 
@@ -93,4 +100,8 @@ export function buildPaymentsService(): PaymentsService {
 
 export function buildNotificationsService(): NotificationsService {
   return build().notifications
+}
+
+export function buildQuarantineChecker(): QuarantineChecker {
+  return build().quarantineChecker
 }

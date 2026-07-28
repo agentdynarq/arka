@@ -5,6 +5,7 @@ import { PaymentsService, PaymentsError } from '@arka/payments'
 import { AccessTokenGuard } from '../auth/access-token.guard.ts'
 import type { AuthenticatedRequest } from '../auth/access-token.guard.ts'
 import { assertOwnsAccount } from './account-ownership.ts'
+import { QuarantineGuard } from '../recovery/quarantine.guard.ts'
 
 export interface QrGenerateHttpResult {
   readonly token: string
@@ -61,7 +62,7 @@ export class QrController {
   }
 
   @Post('redeem')
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AccessTokenGuard, QuarantineGuard)
   async redeem(
     @Req() request: AuthenticatedRequest,
     @Headers('idempotency-key') idempotencyKey: string | undefined,
