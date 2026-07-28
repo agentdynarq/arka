@@ -115,6 +115,32 @@ describe('transfer', () => {
       })
     )
   })
+
+  test('two genuinely concurrent transfers that would jointly overdraw an account: exactly one lands, the account never goes negative', async () => {
+    // Reproduces the live finding in arka-ops/LOG.md, 28 July: alice starts at
+    // 1000.00, two transfers of 600.00 each fired with Promise.allSettled, not
+    // sequentially. Both are individually valid against her starting balance;
+    // only one can be valid against the real, combined result.
+    const { payments, accounts } = await newFundedPayments()
+
+    const results = await Promise.allSettled([
+      payments.transfer({ idempotencyKey: 'req-a', fromAccountId: 'customer:alice', toAccountId: 'customer:bob', amount: 600_00n }),
+      payments.transfer({ idempotencyKey: 'req-b', fromAccountId: 'customer:alice', toAccountId: 'customer:bob', amount: 600_00n }),
+    ])
+
+    const fulfilled = results.filter((r) => r.status === 'fulfilled')
+    const rejected = results.filter((r) => r.status === 'rejected')
+    assert.equal(fulfilled.length, 1, 'exactly one of the two transfers should succeed')
+    assert.equal(rejected.length, 1, 'the other must be rejected, not silently dropped')
+    assert.ok(
+      (rejected[0] as PromiseRejectedResult).reason instanceof PaymentsError &&
+        (rejected[0] as PromiseRejectedResult).reason.code === 'INSUFFICIENT_FUNDS'
+    )
+
+    const balance = (await accounts.summary('customer:alice')).balance
+    assert.equal(balance, 400_00n, 'alice must end at exactly 1000.00 minus one 600.00 transfer, never negative')
+    assert.ok(balance >= 0n)
+  })
 })
 
 describe('isNewPayee (FR-04 trigger)', () => {

@@ -33,7 +33,7 @@ else in the service changes.
 ## What `LedgerService` does
 
 ```ts
-record(entries, at?): Promise<Block>              // seal entries into the chain
+record(entries, at?, validate?): Promise<Block>   // seal entries into the chain
 verify(options?: { upTo? }): Promise<VerifyResult> // walk from genesis, report the first break
 evidence(options?): Promise<IntegrityEvidence>     // verify() plus cell id and timestamp
 balanceOf(account): Promise<bigint>
@@ -55,6 +55,16 @@ transfers, which is precisely the class of bug a bank cannot ship.
 
 Validation failures are never retried. An unbalanced block is unbalanced regardless of where in the
 chain it lands, so `record` throws immediately rather than burning attempts.
+
+### `validate`: a business rule checked against the state that will actually exist
+
+The optional third argument runs against a freshly read chain on every attempt, including retries
+after a losing race, not once before the first attempt. `@arka/payments` passes one that recomputes
+the sender's balance and today's spend from that same fresh read, closing a real bug found live: two
+individually valid concurrent transfers from the same account used to both pass a balance check read
+once beforehand, and both land, overdrawing the account (`services/payments/README.md` has the full
+repro). A `validate` failure throws immediately, the same as a structural validation failure: a fresh
+read that fails is already a genuine failure at that attempt, not a stale one worth retrying.
 
 ### Verification always starts at genesis
 

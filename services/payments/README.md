@@ -57,6 +57,30 @@ An ad hoc end-to-end run against real seeded data confirmed it under load a data
 introduces: firing the same key concurrently moved exactly 50.00, not 100.00, and the ledger still
 verified clean afterward.
 
+## A real overdraw, found live, closed the same way every other race here is
+
+Idempotency (above) only protects the same request from executing twice. It says nothing about two
+*different*, individually valid requests against the same account, and that gap was real: `#execute`
+used to read the sender's balance and daily limit once via `AccountsService.summary`, before calling
+`LedgerService.record`. `record` retries against a fresh head on a losing race, but it never re-checked
+balance or limit on retry, those were only ever checked before the first attempt.
+
+Found live, not by inspection (see `arka-ops/LOG.md`, 28 July): alice at 1000.00, two concurrent
+transfers of 600.00 each to bob, different idempotency keys, fired as two parallel processes. Both
+succeeded. Her balance afterward: -204.00.
+
+Fixed by moving the check inside the retry loop itself: `LedgerService.record` now takes an optional
+`validate` callback that runs against a freshly read chain on every attempt, not once beforehand.
+`#execute` passes one that recomputes balance and today's spend directly from that same fresh read, so
+a losing race that lands between this service's own read and its append gets checked against the state
+that actually exists at append time, not a snapshot from before the race. A failure here throws
+immediately, since a fresh read that fails is already a genuine failure, not a stale one worth retrying.
+
+`test/service.test.ts`'s `two genuinely concurrent transfers that would jointly overdraw an account`
+reproduces the live finding with `Promise.allSettled`: exactly one of the two 600.00 transfers lands,
+the other is rejected `INSUFFICIENT_FUNDS`, and alice's balance is asserted to land at exactly 400.00,
+never negative.
+
 ## FR-11: QR acceptance, without a saga
 
 `generateQrPayload` signs a payload (merchant account, amount, reference, expiry) with HMAC-SHA256,
