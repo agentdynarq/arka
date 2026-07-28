@@ -20,7 +20,13 @@ import { Test } from '@nestjs/testing'
 import { NestFactory } from '@nestjs/core'
 import { LedgerService, InMemoryLedgerStore } from '@arka/ledger'
 import { AccountsService, InMemoryAccountRegistry } from '@arka/accounts'
-import { PaymentsService, InMemoryIdempotencyStore, InMemoryLimitsStore, InMemoryAgentCashStore } from '@arka/payments'
+import {
+  PaymentsService,
+  InMemoryIdempotencyStore,
+  InMemoryLimitsStore,
+  InMemoryAgentCashStore,
+  InMemoryQrRedemptionStore,
+} from '@arka/payments'
 import type { TransferResult } from '@arka/payments'
 import { NotificationsService, InMemoryNotificationStore } from '@arka/notifications'
 import {
@@ -62,6 +68,7 @@ function buildTestServices() {
     idempotency: new InMemoryIdempotencyStore<TransferResult>(),
     limits: new InMemoryLimitsStore(),
     agentCash: new InMemoryAgentCashStore(),
+    qrRedemptions: new InMemoryQrRedemptionStore(),
     qrSigningKey: 'test-qr-signing-key',
   })
   const notifications = new NotificationsService({ store: new InMemoryNotificationStore() })
@@ -100,6 +107,7 @@ describe('identity http surface', () => {
     await accounts.open('customer:test-alice', 'cust-test-alice', 'Test Alice')
     await accounts.open('customer:test-bob', 'cust-test-bob', 'Test Bob')
     await accounts.open('agent:test-west', 'cust-agent-test-west', 'Test West Branch Agent')
+    await accounts.open('merchant:test-kade', 'cust-merchant-test-kade', 'Test Kade Stores')
     await built.ledger.record([
       { account: 'bank:reserve', direction: 'debit', amount: 5_000_00n },
       { account: 'customer:test-alice', direction: 'credit', amount: 5_000_00n },
@@ -565,6 +573,85 @@ describe('identity http surface', () => {
       body: JSON.stringify({ requestId, otpCode }),
     })
     assert.equal(correctAttempt.status, 201)
+  })
+
+  test('FR-11: a merchant generates a QR code with no login, a customer redeems it and the balance moves', async () => {
+    const generated = await fetch(`${baseUrl}/v1/payments/qr/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchantAccountId: 'merchant:test-kade', amount: '750', reference: 'order-http-1' }),
+    })
+    assert.equal(generated.status, 201)
+    const { token } = await generated.json()
+    assert.ok(typeof token === 'string' && token.length > 0)
+
+    const accessToken = await loginAndVerifyMfa(baseUrl, mfaSecret)
+    const before = await fetch(`${baseUrl}/v1/me/dashboard`, { headers: { Authorization: `Bearer ${accessToken}` } })
+    const balanceBefore = BigInt((await before.json()).accounts[0].balance)
+
+    const redeemed = await fetch(`${baseUrl}/v1/payments/qr/redeem`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}`, 'Idempotency-Key': 'qr-redeem-1' },
+      body: JSON.stringify({ customerAccountId: 'customer:test-alice', qrToken: token }),
+    })
+    assert.equal(redeemed.status, 201)
+    const result = await redeemed.json()
+    assert.equal(result.status, 'confirmed')
+
+    const after = await fetch(`${baseUrl}/v1/me/dashboard`, { headers: { Authorization: `Bearer ${accessToken}` } })
+    const balanceAfter = BigInt((await after.json()).accounts[0].balance)
+    assert.equal(balanceAfter, balanceBefore - 750n)
+  })
+
+  test('FR-11: redeeming the same QR code again with a different idempotency key is rejected, the first redemption stands', async () => {
+    const generated = await fetch(`${baseUrl}/v1/payments/qr/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchantAccountId: 'merchant:test-kade', amount: '200', reference: 'order-http-2' }),
+    })
+    const { token } = await generated.json()
+    const accessToken = await loginAndVerifyMfa(baseUrl, mfaSecret)
+
+    const first = await fetch(`${baseUrl}/v1/payments/qr/redeem`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}`, 'Idempotency-Key': 'qr-redeem-2a' },
+      body: JSON.stringify({ customerAccountId: 'customer:test-alice', qrToken: token }),
+    })
+    assert.equal(first.status, 201)
+
+    const second = await fetch(`${baseUrl}/v1/payments/qr/redeem`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}`, 'Idempotency-Key': 'qr-redeem-2b' },
+      body: JSON.stringify({ customerAccountId: 'customer:test-alice', qrToken: token }),
+    })
+    assert.equal(second.status, 400)
+    assert.equal((await second.json()).code, 'QR_ALREADY_REDEEMED')
+  })
+
+  test('redeeming a QR code from an account the session does not own is rejected', async () => {
+    const generated = await fetch(`${baseUrl}/v1/payments/qr/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchantAccountId: 'merchant:test-kade', amount: '100', reference: 'order-http-3' }),
+    })
+    const { token } = await generated.json()
+    const accessToken = await loginAndVerifyMfa(baseUrl, mfaSecret)
+
+    const response = await fetch(`${baseUrl}/v1/payments/qr/redeem`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}`, 'Idempotency-Key': 'qr-redeem-3' },
+      body: JSON.stringify({ customerAccountId: 'customer:test-bob', qrToken: token }),
+    })
+    assert.equal(response.status, 403)
+  })
+
+  test('redeeming with no session at all is rejected', async () => {
+    const response = await fetch(`${baseUrl}/v1/payments/qr/redeem`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Idempotency-Key': 'qr-redeem-4' },
+      body: JSON.stringify({ customerAccountId: 'customer:test-alice', qrToken: 'anything' }),
+    })
+    assert.equal(response.status, 401)
   })
 })
 

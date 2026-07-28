@@ -19,6 +19,7 @@ import { isPostgresReachable } from '@arka/ledger'
 import { PgIdempotencyStore } from '../src/pg-idempotency-store.ts'
 import { PgLimitsStore } from '../src/pg-limits-store.ts'
 import { PgAgentCashStore } from '../src/pg-agent-cash-store.ts'
+import { PgQrRedemptionStore } from '../src/pg-qr-redemption-store.ts'
 
 const CONNECTION_STRING =
   process.env.TEST_CELL1_DATABASE_URL ?? 'postgres://arka_cell1:change-me-cell1@localhost:5433/arka_cell1'
@@ -32,18 +33,21 @@ describe(
     let idempotency: PgIdempotencyStore<{ ok: true; value: number }>
     let limits: PgLimitsStore
     let agentCash: PgAgentCashStore
+    let qrRedemptions: PgQrRedemptionStore
 
     before(async () => {
       idempotency = new PgIdempotencyStore(CONNECTION_STRING)
-      await idempotency.resetSchema() // owns the schema; limits and agentCash reuse what this creates
+      await idempotency.resetSchema() // owns the schema; limits, agentCash and qrRedemptions reuse what this creates
       limits = new PgLimitsStore(CONNECTION_STRING)
       agentCash = new PgAgentCashStore(CONNECTION_STRING)
+      qrRedemptions = new PgQrRedemptionStore(CONNECTION_STRING)
     })
 
     after(async () => {
       await idempotency.close()
       await limits.close()
       await agentCash.close()
+      await qrRedemptions.close()
     })
 
     describe('PgIdempotencyStore', () => {
@@ -179,6 +183,39 @@ describe(
         const results = await Promise.all(Array.from({ length: 10 }, () => agentCash.consume(r.requestId)))
         const wins = results.filter(Boolean)
         assert.equal(wins.length, 1, 'exactly one concurrent consume should win, this is the whole point of FR-16 OTP single-use')
+      })
+    })
+
+    describe('PgQrRedemptionStore', () => {
+      test("claiming an unclaimed token returns the caller's own key", async () => {
+        const hash = `hash-${Math.random().toString(36).slice(2)}`
+        const owner = await qrRedemptions.claimOrGetOwner(hash, 'key-a')
+        assert.equal(owner, 'key-a')
+      })
+
+      test('claiming an already-claimed token with the same key returns that key, not a conflict', async () => {
+        const hash = `hash-${Math.random().toString(36).slice(2)}`
+        await qrRedemptions.claimOrGetOwner(hash, 'key-a')
+        const owner = await qrRedemptions.claimOrGetOwner(hash, 'key-a')
+        assert.equal(owner, 'key-a', 'a genuine retry with the same idempotency key must not be rejected')
+      })
+
+      test('claiming an already-claimed token with a different key returns the original owner', async () => {
+        const hash = `hash-${Math.random().toString(36).slice(2)}`
+        await qrRedemptions.claimOrGetOwner(hash, 'key-a')
+        const owner = await qrRedemptions.claimOrGetOwner(hash, 'key-b')
+        assert.equal(owner, 'key-a', 'the second, different key must see the first key as the owner, not overwrite it')
+      })
+
+      test('ten genuinely concurrent claims for the same token with ten different keys, fired with Promise.all against a real database, all agree on one owner', async () => {
+        const hash = `hash-${Math.random().toString(36).slice(2)}`
+        const keys = Array.from({ length: 10 }, (_, i) => `key-${i}`)
+
+        const owners = await Promise.all(keys.map((key) => qrRedemptions.claimOrGetOwner(hash, key)))
+
+        const distinctOwners = new Set(owners)
+        assert.equal(distinctOwners.size, 1, 'every concurrent caller must agree on exactly one owner, this is the whole point of FR-11 single-use redemption')
+        assert.ok(keys.includes([...distinctOwners][0]!))
       })
     })
   }

@@ -139,7 +139,7 @@ export default function DashboardPage() {
           )}
 
           <div className="ui-tile-grid">
-            <Tile icon="QR" label="Pay with QR" onClick={() => router.push('/transfer')} />
+            <Tile icon="QR" label="Pay with QR" onClick={() => router.push('/qr')} />
             <Tile icon="ST" label="Statements" onClick={() => router.push('/dashboard')} />
             <Tile icon="LM" label="Limits" onClick={() => router.push('/agent')} />
             <Tile icon="AG" label="Find an agent" onClick={() => router.push('/agent')} />

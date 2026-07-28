@@ -47,6 +47,8 @@ principle as `reVerificationResult.livenessSimulated`.
 | POST | `/v1/notifications/:notificationId/read` | Bearer-guarded, rejects a notification belonging to a different customer |
 | POST | `/v1/payments/agent-cash/request` | FR-16. Unauthenticated, same precedent as QR generation: no agent identity system exists in this scope. Writes the OTP into the customer's own inbox, never returns it in the response |
 | POST | `/v1/payments/agent-cash/complete` | FR-16. `Idempotency-Key` required. Authorised by the OTP itself, not a session |
+| POST | `/v1/payments/qr/generate` | FR-11. Unauthenticated: no merchant identity system exists in this scope, the same reason agent-cash's `request` has none |
+| POST | `/v1/payments/qr/redeem` | FR-11. Bearer-guarded, ownership-checked on `customerAccountId`, `Idempotency-Key` required. This one moves a real customer's money, unlike `generate`, so it is guarded exactly like `/v1/payments/transfers` |
 
 `AgentCashController` is unauthenticated on purpose (`src/payments/agent-cash.controller.ts`): there is
 no agent login system built in this scope, the same reason merchant QR generation has none either.
@@ -68,14 +70,16 @@ as `apps/gateway`. It overrides `IdentityService`, `AccountsService`, `PaymentsS
 is already proven exhaustively by each service's own `pg-stores.integration.test.ts`, and running every
 package's Postgres-touching tests concurrently under `turbo run test` would race to reset the same
 schemas. This file's job is the HTTP boundary: request validation, the guard, ownership checks, and the
-full journeys wired together for real, over the network, not asserted against pieces in isolation. 20
+full journeys wired together for real, over the network, not asserted against pieces in isolation. 24
 tests: re-verify to dashboard (screen W1), the transfer-to-a-new-payee-triggers-step-up-then-succeeds
 round trip (screens W2 and W3), a familiar-payee transfer notifying both sender and receiver (FR-19), the
 notification inbox and its ownership check, the daily-limit-change flow requiring step-up and raising a
 security alert (FR-12, FR-20), agent cash-in with the OTP read from the customer's own notification
 inbox exactly as a real customer would (FR-16), including a wrong-OTP rejection followed by a successful
-retry with the right one, and `?limit=` (FR-15) capping history to the newest lines while rejecting
-anything not a positive integer.
+retry with the right one, `?limit=` (FR-15) capping history to the newest lines while rejecting
+anything not a positive integer, and a merchant generating a QR code with no login followed by a real
+customer redemption that moves the balance (FR-11), including redeeming the same code twice with two
+different idempotency keys correctly rejecting the second.
 
 The login rate limiter is configured generously for this file specifically (the default, 10 per 60s, is
 correct in production and proven directly in `services/identity`'s own tests). This suite logs the same
@@ -88,6 +92,12 @@ Manually verified once more beyond the automated suite: booted the real app agai
 signed in through the actual browser UI as `alice`, sent a transfer to a brand-new payee, watched the
 step-up modal explain why it appeared, completed it with a live TOTP code, and confirmed the dashboard's
 balance and history updated correctly afterward.
+
+Verified again for FR-11 (screen W4, `apps/web/src/app/qr/page.tsx`): generated a QR code as
+`merchant:kade` with no login, copied the signed token into the redeem form, paid as `alice` from a real
+signed-in session, and watched the balance drop by exactly the QR's amount with a real ledger block
+number back. Redeeming the identical code again with a different idempotency key correctly failed with
+`QR_ALREADY_REDEEMED`, both against the running server directly with curl and through the browser.
 
 Verified again for FR-15 and FR-16 together (screen W4, `apps/web/src/app/agent/page.tsx`): turned on
 low-bandwidth mode there, confirmed the dashboard immediately showed only the 10 newest lines with a

@@ -35,3 +35,16 @@ CREATE TABLE IF NOT EXISTS payments.agent_cash_requests (
   expires_at          text NOT NULL,
   consumed_at         text
 );
+
+-- FR-11: which signed QR tokens have already been redeemed, and by which
+-- idempotency key. signQrPayload is pure, so the same payload always signs
+-- to the same token; this table is what makes redemption single-use rather
+-- than just signature-valid. Storing the owning key (not just a boolean)
+-- lets a genuine retry with the same key still replay correctly through
+-- transfer()'s own idempotency store, while a different key on an
+-- already-claimed token is rejected. See src/pg-qr-redemption-store.ts.
+CREATE TABLE IF NOT EXISTS payments.qr_redemptions (
+  token_hash       text PRIMARY KEY,
+  idempotency_key  text NOT NULL,
+  redeemed_at      text NOT NULL
+);
