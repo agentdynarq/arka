@@ -51,6 +51,8 @@
   --palette-ops-border: #22304c;
   --palette-ops-text-secondary: #8fa1bc;
   --palette-ops-text-tertiary: #c7d2e4;
+  --palette-ops-green-tint: #0c2b22;
+  --palette-ops-green-text: #6ee7b7;
 
   /* ---- Primitives: type ----
    * var(--font-space-grotesk) etc. are supplied by next/font/google in each
@@ -117,6 +119,13 @@
   --color-info: var(--palette-teal-600);
   --color-info-tint: var(--palette-teal-tint);
 
+  /* A large status banner (W6's "chain verified") reads differently from a
+   * small Badge pill: pills stay a light tint even in the dark ops register
+   * (the wireframe shows this deliberately), a full-width banner does not. */
+  --color-banner-success-bg: var(--palette-green-tint);
+  --color-banner-success-border: var(--palette-green-500);
+  --color-banner-success-text: var(--palette-green-700);
+
   --color-focus-ring: var(--palette-teal-600);
 
   /* ---- Semantic: type scale ---- */
@@ -154,4 +163,8 @@
   --color-accent-hover: var(--palette-teal-700);
   --color-accent-tint: var(--palette-ops-bg);
   --color-accent-text: var(--palette-white);
+
+  --color-banner-success-bg: var(--palette-ops-green-tint);
+  --color-banner-success-border: var(--palette-green-500);
+  --color-banner-success-text: var(--palette-ops-green-text);
 }

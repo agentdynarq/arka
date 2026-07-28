@@ -44,10 +44,12 @@ test('quarantine under dual approval, and the other Cell keeps serving', async (
 
     // `.last()`: the audit trail is append-only and may already carry entries
     // from earlier runs, so this checks the most recent matching row rather
-    // than requiring there be exactly one.
-    const trailRows = page1.getByTestId('audit-trail').locator('tbody tr')
-    await expect(trailRows.filter({ hasText: 'quarantine.requested' }).last()).toBeVisible()
-    await expect(trailRows.filter({ hasText: 'quarantine.approved' }).last()).toBeVisible()
+    // than requiring there be exactly one. Selects on the real action string
+    // (`data-action`, `services/recovery`'s own value), not the human-readable
+    // description text, so a copy change alone can't silently break this.
+    const trail = page1.getByTestId('audit-trail')
+    await expect(trail.locator('[data-action="quarantine.requested"]').last()).toBeVisible()
+    await expect(trail.locator('[data-action="quarantine.approved"]').last()).toBeVisible()
 
     // Find one customer id the gateway's stable hash routes to cell-1 and one to cell-2.
     let cell1CustomerId: string | undefined

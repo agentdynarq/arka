@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { fetchAllIntegrity, fetchIntegrity, integrityExportUrl, ApiError } from '@/lib/api'
 import type { IntegrityEvidence } from '@/lib/api'
 import { Main, Panel, Field, SelectField, Button, Alert, Badge, Skeleton } from '@arka/ui'
@@ -9,8 +10,21 @@ import { Main, Panel, Field, SelectField, Button, Alert, Badge, Skeleton } from 
  * Screen W6: on-demand ledger integrity verification with export (FR-23).
  * Follows `docs/RUNBOOK.md` P1: select the Cell and the block range (default
  * genesis to head), run verification, export the evidence.
+ *
+ * Matched to the real Phase 1 wireframe (get_design_context on node 11:2336).
+ * The wireframe also shows a "Latest blocks" row of individual block cards
+ * and a "Published integrity checkpoints" table with named, scheduled
+ * checkpoint IDs (CP-2065-07-22-A style). Neither has a real data source in
+ * this build: `LedgerService`'s public API (`services/ledger/src/service.ts`)
+ * has no method returning a list of recent blocks, only the aggregate
+ * `VerifyResult` this page already uses, and there is no scheduled
+ * checkpoint-publishing concept anywhere in the data model, only the
+ * on-demand verification already built here. Rather than invent either,
+ * this keeps showing the real on-demand verification, restyled to the
+ * wireframe's visual language (the chain-verified banner, dark ops cards).
  */
-export default function IntegrityPage() {
+function IntegrityPageInner() {
+  const searchParams = useSearchParams()
   const [overview, setOverview] = useState<IntegrityEvidence[] | null>(null)
   const [selectedCellId, setSelectedCellId] = useState('')
   const [upTo, setUpTo] = useState('')
@@ -22,16 +36,43 @@ export default function IntegrityPage() {
     try {
       const all = await fetchAllIntegrity()
       setOverview(all)
-      setSelectedCellId((current) => current || all[0]?.cellId || '')
+      const preselect = searchParams.get('cell')
+      setSelectedCellId((current) => current || (preselect && all.some((e) => e.cellId === preselect) ? preselect : all[0]?.cellId || ''))
       setError(null)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not reach the Recovery Console API')
     }
-  }, [])
+  }, [searchParams])
 
   useEffect(() => {
     loadOverview()
   }, [loadOverview])
+
+  const runVerification = useCallback(
+    async (cellId: string, upToValue?: number) => {
+      if (!cellId) return
+      setBusy(true)
+      setError(null)
+      try {
+        const result = await fetchIntegrity(cellId, upToValue)
+        setEvidence(result)
+      } catch (err) {
+        setError(err instanceof ApiError ? `${err.code}: ${err.message}` : 'Verification failed')
+      } finally {
+        setBusy(false)
+      }
+    },
+    []
+  )
+
+  // A Cell passed in via ?cell= (screen W5's "Inspect" button) runs its
+  // verification immediately rather than waiting for another click, so
+  // "Inspect" actually shows something on arrival.
+  useEffect(() => {
+    const preselect = searchParams.get('cell')
+    if (preselect && selectedCellId === preselect) runVerification(preselect)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCellId])
 
   function parsedUpTo(): number | undefined {
     if (upTo.trim() === '') return undefined
@@ -39,23 +80,9 @@ export default function IntegrityPage() {
     return Number.isFinite(value) ? value : undefined
   }
 
-  async function runVerification() {
-    if (!selectedCellId) return
-    setBusy(true)
-    setError(null)
-    try {
-      const result = await fetchIntegrity(selectedCellId, parsedUpTo())
-      setEvidence(result)
-    } catch (err) {
-      setError(err instanceof ApiError ? `${err.code}: ${err.message}` : 'Verification failed')
-    } finally {
-      setBusy(false)
-    }
-  }
-
   return (
     <Main size="dashboard">
-      <Panel title="Integrity audit" subtitle="On-demand ledger verification with export (FR-23). See docs/RUNBOOK.md P1.">
+      <Panel title="Ledger integrity" subtitle="On-demand verification with export (FR-23). See docs/RUNBOOK.md P1.">
         {error && <Alert>{error}</Alert>}
       </Panel>
 
@@ -97,7 +124,7 @@ export default function IntegrityPage() {
             value={upTo}
             onChange={(event) => setUpTo(event.target.value)}
           />
-          <Button disabled={busy || !selectedCellId} onClick={runVerification}>
+          <Button disabled={busy || !selectedCellId} onClick={() => runVerification(selectedCellId, parsedUpTo())}>
             {busy ? 'Verifying...' : 'Run verification'}
           </Button>
         </div>
@@ -105,6 +132,46 @@ export default function IntegrityPage() {
 
       {evidence && (
         <Panel title={`Evidence: ${evidence.cellId}`}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 16,
+              flexWrap: 'wrap',
+              padding: 'var(--space-4)',
+              borderRadius: 'var(--radius-md)',
+              border: `1.4px solid ${evidence.result.ok ? 'var(--color-banner-success-border)' : 'var(--color-danger)'}`,
+              background: evidence.result.ok ? 'var(--color-banner-success-bg)' : 'var(--color-danger-tint)',
+              marginBottom: 'var(--space-4)',
+            }}
+          >
+            <div>
+              <p
+                style={{
+                  margin: 0,
+                  fontWeight: 600,
+                  color: evidence.result.ok ? 'var(--color-banner-success-text)' : 'var(--color-danger)',
+                }}
+              >
+                {evidence.result.ok
+                  ? `Chain verified: ${evidence.result.records.toLocaleString()} records · 0 breaks`
+                  : `Chain broken at block ${evidence.result.brokenAt}: ${evidence.result.reason}`}
+              </p>
+              <p className="ui-meta" style={{ marginTop: 4 }}>
+                Balances are computed live from this chain on every read, never cached separately, so there is no stored
+                projection to diverge from it.
+              </p>
+            </div>
+            <a
+              className="ui-button ui-button--primary ui-button--auto"
+              href={integrityExportUrl(evidence.cellId, evidence.upTo ?? undefined)}
+              data-testid="evidence-export"
+            >
+              Export evidence
+            </a>
+          </div>
+
           <table className="ui-table ui-table--attributes">
             <tbody>
               <tr>
@@ -143,13 +210,16 @@ export default function IntegrityPage() {
               )}
             </tbody>
           </table>
-          <div style={{ marginTop: 16 }}>
-            <a className="ui-button ui-button--primary ui-button--auto" href={integrityExportUrl(evidence.cellId, evidence.upTo ?? undefined)}>
-              Export evidence
-            </a>
-          </div>
         </Panel>
       )}
     </Main>
+  )
+}
+
+export default function IntegrityPage() {
+  return (
+    <Suspense fallback={<Main size="dashboard" />}>
+      <IntegrityPageInner />
+    </Suspense>
   )
 }
