@@ -115,7 +115,7 @@ export default function Home() {
               <div className="landing-terminal__line">
                 <span className="landing-terminal__prompt">$</span> pnpm verify-ledger
               </div>
-              <div className="landing-terminal__result">walks every block, prints the chain and any break — real hash chain, not a claim</div>
+              <div className="landing-terminal__result">walks every block, prints the chain and any break, real hash chain, not a claim</div>
               <div className="landing-terminal__line" style={{ marginTop: '12px' }}>
                 <span className="landing-terminal__prompt">$</span> pnpm test
               </div>
