@@ -19,10 +19,10 @@ import { currentAliceTotpCode } from './alice-totp.ts'
 test('re-verify, MFA, dashboard balance, and a transfer to an existing payee', async ({ page }) => {
   await page.goto(`${BASE_URLS.web}/reverify`)
 
-  await expect(page.getByRole('heading', { name: 'Regain access' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Re-verify your identity' })).toBeVisible()
   await page.locator('#customerId').fill('cust-alice')
   await page.locator('#registryDocumentId').fill('DOC-ALICE-001')
-  await page.getByRole('button', { name: 'Re-verify identity' }).click()
+  await page.getByRole('button', { name: 'Continue to sign in' }).click()
 
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
   await page.locator('#username').fill('alice')
@@ -31,27 +31,27 @@ test('re-verify, MFA, dashboard balance, and a transfer to an existing payee', a
 
   await expect(page.getByRole('heading', { name: 'Verify your identity' })).toBeVisible()
   const totpCode = await currentAliceTotpCode()
-  await page.locator('#totpCode').fill(totpCode)
+  for (const digit of totpCode) await page.keyboard.type(digit)
   await page.getByRole('button', { name: 'Verify and continue' }).click()
 
   await expect(page).toHaveURL(`${BASE_URLS.web}/dashboard`)
-  await expect(page.getByRole('heading', { name: 'Welcome back, alice' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Good to see you, alice' })).toBeVisible()
 
   const balanceCard = page.getByTestId('balance-card').first()
   await expect(balanceCard).toBeVisible()
   const balanceBefore = await balanceCard.getByTestId('balance-amount').innerText()
 
-  await page.getByRole('button', { name: 'Send money' }).click()
+  await page.getByRole('button', { name: 'Send', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Send money' })).toBeVisible()
   await page.locator('#to').fill('customer:bob')
   await page.locator('#amount').fill('10.00')
-  await page.getByRole('button', { name: 'Send' }).click()
+  await page.getByRole('button', { name: 'Send', exact: true }).click()
 
   await expect(page.getByRole('heading', { name: 'Transfer confirmed' })).toBeVisible()
   await expect(page.getByText(/Ledger block #\d+, confirmed immediately\./)).toBeVisible()
 
   await page.getByRole('button', { name: 'Back to dashboard' }).click()
-  await expect(page.getByRole('heading', { name: 'Welcome back, alice' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Good to see you, alice' })).toBeVisible()
   const balanceAfter = await page.getByTestId('balance-card').first().getByTestId('balance-amount').innerText()
   expect(balanceAfter).not.toEqual(balanceBefore)
 })

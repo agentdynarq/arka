@@ -1,19 +1,21 @@
 export interface StepperProps {
-  readonly steps: number
+  readonly steps: readonly string[]
   /** Zero-based index of the current step. */
   readonly current: number
 }
 
-/** The three-dot progress bar on W1's re-verify to sign-in to MFA journey, generalised to any fixed-length flow. */
+/** The numbered-circle progress indicator on W1's re-verify-to-sign-in-to-MFA journey: a circle per step, a connecting line, a label. */
 export function Stepper({ steps, current }: StepperProps) {
   return (
     <div className="ui-stepper">
-      {Array.from({ length: steps }, (_, index) => (
-        <div
-          key={index}
-          className="ui-stepper__dot"
-          data-state={index === current ? 'active' : index < current ? 'done' : 'pending'}
-        />
+      {steps.map((label, index) => (
+        <div className="ui-stepper__step" key={label}>
+          <div className="ui-stepper__item" data-state={index === current ? 'active' : index < current ? 'done' : 'pending'}>
+            <span className="ui-stepper__circle">{index + 1}</span>
+            <span className="ui-stepper__label">{label}</span>
+          </div>
+          {index < steps.length - 1 ? <span className="ui-stepper__connector" /> : null}
+        </div>
       ))}
     </div>
   )
