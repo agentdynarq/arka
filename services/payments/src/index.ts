@@ -37,4 +37,8 @@ export type { AgentCashStore, AgentCashRow } from './agent-cash-store.ts'
 export { InMemoryAgentCashStore } from './memory-agent-cash-store.ts'
 export { PgAgentCashStore } from './pg-agent-cash-store.ts'
 
+export type { QrRedemptionStore } from './qr-redemption-store.ts'
+export { InMemoryQrRedemptionStore } from './memory-qr-redemption-store.ts'
+export { PgQrRedemptionStore } from './pg-qr-redemption-store.ts'
+
 export { signQrPayload, verifyQrPayload } from './qr.ts'

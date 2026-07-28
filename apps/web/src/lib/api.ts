@@ -230,6 +230,35 @@ export function completeAgentCash(idempotencyKey: string, requestId: string, otp
   return post('/v1/payments/agent-cash/complete', { requestId, otpCode }, { 'Idempotency-Key': idempotencyKey })
 }
 
+export interface QrGenerateResult {
+  token: string
+  expiresAt: string
+}
+
+/** FR-11, screen W4. Unauthenticated, same as the backend: no merchant login system exists in this scope. */
+export function generateQr(merchantAccountId: string, amountMinorUnits: string, reference: string): Promise<QrGenerateResult> {
+  return post('/v1/payments/qr/generate', { merchantAccountId, amount: amountMinorUnits, reference })
+}
+
+export interface QrRedeemResult {
+  transferId: string
+  status: 'confirmed'
+  ledgerBlockSeq: number
+}
+
+export function redeemQr(
+  accessToken: string,
+  idempotencyKey: string,
+  customerAccountId: string,
+  qrToken: string
+): Promise<QrRedeemResult> {
+  return post(
+    '/v1/payments/qr/redeem',
+    { customerAccountId, qrToken },
+    { Authorization: `Bearer ${accessToken}`, 'Idempotency-Key': idempotencyKey }
+  )
+}
+
 export function requestStepUpChallenge(accessToken: string, reason: ActionChallenge['reason']): Promise<ActionChallenge> {
   return post('/v1/identity/step-up/challenge', { reason }, { Authorization: `Bearer ${accessToken}` })
 }

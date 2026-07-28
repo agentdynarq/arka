@@ -1,4 +1,4 @@
-import { randomUUID, timingSafeEqual } from 'node:crypto'
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto'
 import { PaymentsError } from './types.ts'
 import type {
   TransferRequest,
@@ -14,6 +14,7 @@ import type {
 import type { IdempotencyStore } from './idempotency-store.ts'
 import type { LimitsStore } from './limits-store.ts'
 import type { AgentCashStore } from './agent-cash-store.ts'
+import type { QrRedemptionStore } from './qr-redemption-store.ts'
 import { signQrPayload, verifyQrPayload } from './qr.ts'
 import type { AccountsService } from '@arka/accounts'
 import type { LedgerService } from '@arka/ledger'
@@ -30,6 +31,7 @@ export interface PaymentsServiceOptions {
   readonly idempotency: IdempotencyStore<TransferResult>
   readonly limits: LimitsStore
   readonly agentCash: AgentCashStore
+  readonly qrRedemptions: QrRedemptionStore
   /** Signs and verifies FR-11 QR payloads. Per-Cell, same as the ledger's signing key. */
   readonly qrSigningKey: string
   /** How long a concurrent caller waits for the claimant to finish, in milliseconds. */
@@ -54,6 +56,7 @@ export class PaymentsService {
   readonly #idempotency: IdempotencyStore<TransferResult>
   readonly #limits: LimitsStore
   readonly #agentCash: AgentCashStore
+  readonly #qrRedemptions: QrRedemptionStore
   readonly #qrSigningKey: string
   readonly #idempotencyWaitMs: number
   readonly #defaultDailyLimit: bigint
@@ -66,6 +69,7 @@ export class PaymentsService {
     this.#idempotency = options.idempotency
     this.#limits = options.limits
     this.#agentCash = options.agentCash
+    this.#qrRedemptions = options.qrRedemptions
     this.#qrSigningKey = options.qrSigningKey
     this.#idempotencyWaitMs = options.idempotencyWaitMs ?? 5000
     this.#defaultDailyLimit = options.defaultDailyLimit ?? DEFAULT_DAILY_LIMIT
@@ -187,20 +191,31 @@ export class PaymentsService {
   /**
    * FR-11: a customer redeems a scanned QR code.
    *
-   * Verifying the QR signature and expiry happens first, then redemption is
-   * exactly a `transfer()` call from the customer to the merchant, keyed on
-   * the caller's idempotency key. There is no separate "consumed QR tokens"
-   * table and no compensating action to write: the transfer this delegates
-   * to is already the one place a duplicate redemption gets caught,
-   * `IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_REQUEST` if the same code is
-   * scanned with a different key and a different amount somehow resulted,
-   * or a replayed result if scanned twice with the same key. A saga with a
-   * compensating step only earns its complexity when a single state change
-   * cannot be made atomic; a QR redemption is exactly one ledger append, and
-   * that is already atomic.
+   * Verifying the QR signature and expiry happens first, then the token's
+   * one redemption claim is atomically resolved before anything moves:
+   * `signQrPayload` is pure, so the same payload always signs to the same
+   * token, and `transfer()`'s own idempotency protection only ever guards
+   * one key against itself. Without this, scanning the same code twice with
+   * two *different* idempotency keys would look like two unrelated requests
+   * to `transfer()` and genuinely move money twice off one QR code. Keying
+   * the claim by which idempotency key holds it, not a plain boolean, keeps
+   * a genuine retry (same key, e.g. a client timeout) working exactly like
+   * every other idempotent call here: it still reaches `transfer()` and
+   * replays the cached result, rather than being rejected as a duplicate of
+   * itself. Once the claim resolves to this call's own key, redemption is
+   * exactly a `transfer()` call from the customer to the merchant: no saga,
+   * no compensating action, a QR redemption is exactly one ledger append
+   * and that is already atomic.
    */
   async redeemQr(request: RedeemQrRequest): Promise<TransferResult> {
     const payload = verifyQrPayload(request.qrToken, this.#qrSigningKey, this.#now)
+
+    const tokenHash = createHash('sha256').update(request.qrToken, 'utf8').digest('hex')
+    const owner = await this.#qrRedemptions.claimOrGetOwner(tokenHash, request.idempotencyKey)
+    if (owner !== request.idempotencyKey) {
+      throw new PaymentsError('QR_ALREADY_REDEEMED', 'This QR code has already been redeemed')
+    }
+
     return this.transfer({
       idempotencyKey: request.idempotencyKey,
       fromAccountId: request.customerAccountId,

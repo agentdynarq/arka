@@ -83,9 +83,19 @@ exact steps to demonstrate this in the UI]`
 Limits are viewable and changeable in settings. Changing a limit is itself a high-risk action and
 requires step-up authentication.
 
-### 3.5 Merchant QR acceptance
+### 3.5 Merchant QR acceptance (W4)
 
-`[FILL: merchant flow, generate QR, customer scans, instant confirmation]`
+1. On the "Generate a QR code" screen, the merchant enters their own account, an amount, and a
+   reference, then generates. There is no merchant login in this scope: any real account id can
+   generate a code, the same simplification agent cash-in makes for agents.
+2. This build shows the signed code as text rather than a scannable barcode image, labelled as such: a
+   real device would render this as a QR code, but generating and reading barcode images is outside
+   this build's scope and would only have simulated the interesting part.
+3. The customer copies the code into "Redeem a QR code" from their own signed-in account and confirms.
+   The transfer completes immediately and appears in their history with its ledger status, exactly like
+   any other transfer.
+4. The same code cannot be redeemed a second time, even with a different attempt id, and even if two
+   redemptions are fired at the same moment.
 
 ### 3.6 Agent cash-in and cash-out (W4)
 

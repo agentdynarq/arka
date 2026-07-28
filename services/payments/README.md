@@ -68,14 +68,34 @@ before parsing anything, the same discipline `verifyWorkloadToken` uses, and dis
 code" for the ordinary case of a stale scan.
 
 `redeemQr` verifies the token, then delegates to `transfer()`, keyed on the caller's idempotency key.
-There is no separate "consumed QR tokens" table and no compensating action, because a QR redemption is
-exactly one ledger append, already atomic. A saga only earns its complexity when a single state change
-cannot be made atomic on its own; redeeming a QR is not that case. Where a real saga belongs is the
-multi-step agent cash-in/cash-out flow (FR-16, 30 July scope), which genuinely has more than one
-state change to coordinate.
+No compensating action: a QR redemption is exactly one ledger append, already atomic. A saga only earns
+its complexity when a single state change cannot be made atomic on its own; redeeming a QR is not that
+case. Where a real saga would belong is a genuinely multi-step flow with more than one state change to
+coordinate; nothing in this build's actual scope turned out to need one, agent cash-in/cash-out (FR-16)
+included, see that section below.
 
 Because redemption is a `transfer()` under the hood, it is automatically subject to the same balance
 check and daily limit as any other transfer, tested directly in `test/service.test.ts`.
+
+### A real race, closed the same way every other race in this codebase is
+
+`signQrPayload` is pure: the same payload always signs to the same token. The first version of
+`redeemQr` verified the token and delegated straight to `transfer()`, with no record that a given token
+had ever been redeemed before. `transfer()`'s own idempotency protection only ever guards one key
+against itself, so the same scanned code, submitted twice with two *different* idempotency keys (a
+customer's client retrying without reusing the key, or the code genuinely scanned twice), looked like
+two unrelated requests and could move money twice off one QR code. There was never really "no consumed
+QR tokens table" in the sense that mattered; there just wasn't one yet.
+
+Fixed with `QrRedemptionStore`, the same atomic-claim shape every other race in this codebase closes
+with (`PgIdempotencyStore.reserve`, the quarantine dual-approval `UPDATE`, `AgentCashStore.consume`):
+`claimOrGetOwner(tokenHash, idempotencyKey)` atomically inserts a claim for the caller's key if none
+exists, and returns whichever key actually holds the claim. The caller compares the result to its own
+key: equal means proceed (either the first redemption, or a genuine retry with the same key, which
+still needs to work exactly like every other idempotent call here); different means someone already
+redeemed this token, rejected as `QR_ALREADY_REDEEMED` before `transfer()` is ever called. Proven with a
+sequential same-token-different-keys test, a genuine `Promise.allSettled` race between two different
+keys, and a ten-way concurrent claim against real Postgres.
 
 ## FR-12: daily limits
 
@@ -142,6 +162,7 @@ wins.
 | `QR_EXPIRED` | A scanned QR code's `expiresAt` has passed |
 | `QR_SIGNATURE_INVALID` | A scanned QR code's signature does not match its contents |
 | `QR_MALFORMED` | A scanned QR code is not shaped like one this service issued |
+| `QR_ALREADY_REDEEMED` | The token was already redeemed, including by a concurrent call that won the race |
 | `AGENT_REQUEST_NOT_FOUND` | `completeAgentCash` called with an unknown `requestId` |
 | `AGENT_REQUEST_EXPIRED` | The OTP window (`agentCashTtlSeconds`, default 5 minutes) has passed |
 | `AGENT_REQUEST_ALREADY_USED` | The request was already consumed, including by a concurrent call that won the race |

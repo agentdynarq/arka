@@ -35,16 +35,22 @@ const DISPLAY_NAMES: Record<string, string> = {
   'customer:chandi': 'Chandi Fernando',
   'customer:deepal': 'Deepal Jayasuriya',
   'agent:west': 'Agent, West Region',
+  'merchant:kade': 'Kade Stores',
 }
 
 /**
- * Only Cell 1 gets an agent float, matching what the wireframes actually
- * show demoed live: FR-16 (agent cash-in/cash-out, screen W4) walks through
- * `customer:alice`, which only exists in Cell 1. A no-cross-cell-reads
- * platform has no use for an agent account in a Cell nothing demos against.
+ * Only Cell 1 gets an agent float and a merchant account, matching what the
+ * wireframes actually show demoed live: FR-16 (agent cash-in/cash-out) and
+ * FR-11 (QR acceptance, both screen W4) walk through `customer:alice`,
+ * which only exists in Cell 1. A no-cross-cell-reads platform has no use
+ * for either in a Cell nothing demos against.
  */
 const AGENT_ACCOUNT_BY_CELL: Record<string, string> = {
   'cell-1': 'agent:west',
+}
+
+const MERCHANT_ACCOUNT_BY_CELL: Record<string, string> = {
+  'cell-1': 'merchant:kade',
 }
 
 function opening(account: string, amount: bigint): Entry[] {
@@ -81,7 +87,7 @@ for (const config of loadCellConfigs()) {
     }
 
     const [first, second] = CUSTOMERS_BY_CELL[config.cellId] ?? ['customer:a', 'customer:b']
-    const customerIdOf = (accountId: string) => accountId.replace(/^(customer|agent):/, 'cust-')
+    const customerIdOf = (accountId: string) => accountId.replace(/^(customer|agent|merchant):/, 'cust-')
 
     await accounts.open(first, customerIdOf(first), DISPLAY_NAMES[first] ?? first)
     await accounts.open(second, customerIdOf(second), DISPLAY_NAMES[second] ?? second)
@@ -103,9 +109,16 @@ for (const config of loadCellConfigs()) {
       await ledger.record(opening(agentAccount, 5_000_00n))
     }
 
-    console.log(
-      `${config.cellId}: seeded ${await ledger.count()} blocks (${first}, ${second}${agentAccount ? `, ${agentAccount}` : ''})`
-    )
+    const merchantAccount = MERCHANT_ACCOUNT_BY_CELL[config.cellId]
+    if (merchantAccount) {
+      // No opening deposit: a merchant's balance should read zero until a
+      // real QR redemption credits it, so the FR-11 demo shows a genuine
+      // before/after rather than an already-inflated number.
+      await accounts.open(merchantAccount, customerIdOf(merchantAccount), DISPLAY_NAMES[merchantAccount] ?? merchantAccount)
+    }
+
+    const extras = [agentAccount, merchantAccount].filter(Boolean)
+    console.log(`${config.cellId}: seeded ${await ledger.count()} blocks (${first}, ${second}${extras.length ? `, ${extras.join(', ')}` : ''})`)
   } finally {
     await ledgerStore.close()
     await accountRegistry.close()

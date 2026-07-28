@@ -8,6 +8,7 @@ import { PaymentsService } from '../src/service.ts'
 import { InMemoryIdempotencyStore } from '../src/memory-idempotency-store.ts'
 import { InMemoryLimitsStore } from '../src/memory-limits-store.ts'
 import { InMemoryAgentCashStore } from '../src/memory-agent-cash-store.ts'
+import { InMemoryQrRedemptionStore } from '../src/memory-qr-redemption-store.ts'
 import { PaymentsError } from '../src/types.ts'
 import type { TransferResult } from '../src/types.ts'
 
@@ -21,6 +22,7 @@ async function newFundedPayments(
   accounts: AccountsService
   limits: InMemoryLimitsStore
   agentCash: InMemoryAgentCashStore
+  qrRedemptions: InMemoryQrRedemptionStore
 }> {
   const ledger = new LedgerService(new InMemoryLedgerStore(), { cellId: 'cell-1' })
   const accounts = new AccountsService({ registry: new InMemoryAccountRegistry(), ledger })
@@ -38,19 +40,21 @@ async function newFundedPayments(
 
   const limits = new InMemoryLimitsStore()
   const agentCash = new InMemoryAgentCashStore()
+  const qrRedemptions = new InMemoryQrRedemptionStore()
   const payments = new PaymentsService({
     accounts,
     ledger,
     idempotency: new InMemoryIdempotencyStore<TransferResult>(),
     limits,
     agentCash,
+    qrRedemptions,
     qrSigningKey: TEST_QR_SIGNING_KEY,
     ...(options.idempotencyWaitMs !== undefined ? { idempotencyWaitMs: options.idempotencyWaitMs } : {}),
     ...(options.defaultDailyLimit !== undefined ? { defaultDailyLimit: options.defaultDailyLimit } : {}),
     ...(options.agentCashTtlSeconds !== undefined ? { agentCashTtlSeconds: options.agentCashTtlSeconds } : {}),
     ...(options.now !== undefined ? { now: options.now } : {}),
   })
-  return { payments, ledger, accounts, limits, agentCash }
+  return { payments, ledger, accounts, limits, agentCash, qrRedemptions }
 }
 
 describe('transfer', () => {
@@ -263,6 +267,7 @@ describe('idempotency (FR-13)', () => {
       idempotency: store,
       limits: new InMemoryLimitsStore(),
       agentCash: new InMemoryAgentCashStore(),
+      qrRedemptions: new InMemoryQrRedemptionStore(),
       qrSigningKey: TEST_QR_SIGNING_KEY,
       idempotencyWaitMs: 60,
     })
@@ -456,6 +461,51 @@ describe('QR acceptance (FR-11)', () => {
 
     assert.equal(a.transferId, b.transferId)
     assert.equal((await accounts.summary('merchant:kade')).balance, 75_00n, 'not 150.00')
+  })
+
+  test('redeeming the same QR code twice with two different idempotency keys moves money once, the second rejected', async () => {
+    const { payments, accounts } = await newFundedPayments()
+    await accounts.open('merchant:kade', 'cust-merchant', 'Kade Stores')
+
+    const { token } = payments.generateQrPayload({
+      merchantAccountId: 'merchant:kade',
+      amount: 75_00n,
+      reference: 'order-1',
+      ttlSeconds: 300,
+    })
+
+    const first = await payments.redeemQr({ idempotencyKey: 'redeem-a', customerAccountId: 'customer:alice', qrToken: token })
+    assert.equal(first.status, 'confirmed')
+
+    await assert.rejects(
+      () => payments.redeemQr({ idempotencyKey: 'redeem-b', customerAccountId: 'customer:alice', qrToken: token }),
+      (e: unknown) => e instanceof PaymentsError && e.code === 'QR_ALREADY_REDEEMED'
+    )
+    assert.equal((await accounts.summary('merchant:kade')).balance, 75_00n, 'not 150.00, the second redemption never ran')
+  })
+
+  test('genuinely concurrent redemption of the same QR code with two different idempotency keys still moves money once', async () => {
+    const { payments, accounts } = await newFundedPayments()
+    await accounts.open('merchant:kade', 'cust-merchant', 'Kade Stores')
+
+    const { token } = payments.generateQrPayload({
+      merchantAccountId: 'merchant:kade',
+      amount: 75_00n,
+      reference: 'order-1',
+      ttlSeconds: 300,
+    })
+
+    const results = await Promise.allSettled([
+      payments.redeemQr({ idempotencyKey: 'redeem-a', customerAccountId: 'customer:alice', qrToken: token }),
+      payments.redeemQr({ idempotencyKey: 'redeem-b', customerAccountId: 'customer:alice', qrToken: token }),
+    ])
+
+    const fulfilled = results.filter((r) => r.status === 'fulfilled')
+    const rejected = results.filter((r) => r.status === 'rejected')
+    assert.equal(fulfilled.length, 1, 'exactly one redemption should have gone through')
+    assert.equal(rejected.length, 1)
+    assert.ok(rejected[0]!.reason instanceof PaymentsError && rejected[0]!.reason.code === 'QR_ALREADY_REDEEMED')
+    assert.equal((await accounts.summary('merchant:kade')).balance, 75_00n)
   })
 
   test('redeeming an expired QR code fails without touching any balance', async () => {
