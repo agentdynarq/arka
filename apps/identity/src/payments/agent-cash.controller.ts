@@ -1,8 +1,9 @@
-import { Body, Controller, Headers, HttpException, HttpStatus, Inject, Post } from '@nestjs/common'
+import { Body, Controller, Headers, HttpException, HttpStatus, Inject, Post, UseGuards } from '@nestjs/common'
 import { AccountsService } from '@arka/accounts'
 import { PaymentsService, PaymentsError } from '@arka/payments'
 import type { AgentCashDirection } from '@arka/payments'
 import { NotificationsService } from '@arka/notifications'
+import { QuarantineGuard } from '../recovery/quarantine.guard.ts'
 
 export interface AgentCashRequestHttpResult {
   readonly requestId: string
@@ -70,6 +71,7 @@ export class AgentCashController {
   }
 
   @Post('complete')
+  @UseGuards(QuarantineGuard)
   async complete(
     @Headers('idempotency-key') idempotencyKey: string | undefined,
     @Body() body: { requestId?: unknown; otpCode?: unknown }
