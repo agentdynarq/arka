@@ -116,7 +116,7 @@ function throwAsHttpException(error: unknown): never {
     // expired or invalid proof is 401 (AGENT_REQUEST_EXPIRED/AGENT_OTP_INVALID
     // there, QR_EXPIRED/QR_SIGNATURE_INVALID here), an already-consumed
     // single-use resource is a plain 400 (AGENT_REQUEST_ALREADY_USED there,
-    // QR_ALREADY_REDEEMED here), not a 401 — nothing about the caller's own
+    // QR_ALREADY_REDEEMED here), not a 401, nothing about the caller's own
     // credentials was wrong, the QR code itself was just already spent.
     const status =
       error.code === 'INSUFFICIENT_FUNDS' || error.code === 'DAILY_LIMIT_EXCEEDED'

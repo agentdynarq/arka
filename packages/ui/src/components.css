@@ -912,6 +912,10 @@ body {
   background: var(--color-warning);
 }
 
+.ui-timeline-item__dot--danger {
+  background: var(--color-danger);
+}
+
 .ui-timeline-item__time {
   font-size: var(--text-xs);
   font-weight: 600;

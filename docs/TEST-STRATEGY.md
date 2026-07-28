@@ -52,9 +52,20 @@ Each of these is a named test:
 - **Idempotency.** The same payment request fired twice moves money exactly once and returns the same
   result both times. This is tested at the integration level against a real database, because the
   guarantee lives in a uniqueness constraint, not in application logic.
-- **Saga compensation.** A multi-step transfer with an injected failure at each step leaves no money
-  in limbo. One test per failure point.
-- **Concurrency.** Parallel transfers from the same account cannot overdraw it.
+- **Concurrency, same request.** The same idempotency key fired concurrently still transfers money
+  exactly once (`services/payments/test/service.test.ts`).
+- **Concurrency, different requests.** Two genuinely concurrent transfers from the same account,
+  different idempotency keys, cannot jointly overdraw it: `LedgerService.record`'s optional `validate`
+  callback re-reads and re-checks balance and daily limit on every append attempt, including retries
+  against a fresh head, not just once beforehand. A live test found this was not true until 28 July
+  (`../arka-ops/LOG.md`): two concurrent 600.00 transfers each valid against a 1000.00 starting balance
+  both landed, taking the account to -200.00. Fixed the same day; `services/payments/test/service.test.ts`
+  reproduces the exact finding and asserts exactly one of the two lands, the other rejects
+  `INSUFFICIENT_FUNDS`.
+
+No saga was ever built, so there is no saga-compensation test suite; every money-movement path this
+build shipped reduces to one atomic ledger append (`services/payments/README.md`'s FR-11 and FR-16
+sections). Recorded as a deliberate divergence in `docs/ARCHITECTURE.md` section 8, not a gap.
 
 ## Authentication
 
@@ -77,6 +88,13 @@ document.
 - No credential in Cell 1's configuration authenticates against Cell 2's database or Redis.
 - No service source file branches on `CELL_ID`.
 - A quarantined Cell rejects writes and continues to serve reads, while the other Cell is unaffected.
+  Enforced by `QuarantineGuard` (`apps/identity/src/recovery/quarantine.guard.ts`) on the four real
+  money-moving endpoints (`TransfersController`, `AgentCashController.complete`, `QrController.redeem`,
+  `LimitsController.change`), asked directly of `apps/recovery` keyed by the process's own `CELL_ID`,
+  and fails closed (`503`) if the check itself cannot complete, rather than assuming "not quarantined".
+  `apps/identity/test/http.integration.test.ts` reproduces the exact live finding that motivated this
+  (`../arka-ops/LOG.md`, 28 July): a transfer against a quarantined Cell rejects `403 CELL_QUARANTINED`,
+  a read against the same Cell still succeeds, and a transfer succeeds again once lifted.
 
 ## CI gates
 

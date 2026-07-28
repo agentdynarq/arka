@@ -47,7 +47,7 @@ move money. Every other Cell is untouched and its customers notice nothing.
 
 **Steps.**
 
-1. Open the Recovery Console, screen W5. Confirm the Cell's health status and the anomaly feed.
+1. Open the Recovery Console, screen W5. Confirm the Cell's health status and the audit trail.
 2. Request quarantine on the affected Cell. State the reason. The reason is recorded.
 3. **Dual approval.** A second operator approves from their own session. The action does not take
    effect on one person's authority. This is deliberate and is not to be bypassed.
@@ -88,6 +88,13 @@ failed rebuild, not a partial success.
 ---
 
 ## P4. Suspected key compromise
+
+**Not implemented in Phase 2.** This procedure describes the target design (ADR 0003), not a
+capability this build actually has. There is no per-Cell ledger signing key in the current code, and
+no quorum ceremony tooling: the ledger's tamper-evidence today is its hash chain alone, verified by
+walking it and recomputing every hash (P1), not a cryptographic signature. Steps below are recorded
+as the intended procedure for when a real key exists, so a reviewer sees the design honestly rather
+than a step that would fail if actually attempted. Genuine Phase 3 scope, not silently dropped.
 
 **Trigger.** Reason to believe a Cell's signing key is exposed.
 

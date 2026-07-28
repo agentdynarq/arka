@@ -123,7 +123,7 @@ Then open:
 | Surface | URL |
 |---|---|
 | Customer app | http://localhost:3000 |
-| Recovery Console | http://localhost:3001 |
+| Recovery Console | http://localhost:3300 |
 | API gateway | http://localhost:8080 |
 
 Demo credentials for every persona are in [USER-GUIDE.md](USER-GUIDE.md).
@@ -176,8 +176,10 @@ Full approach in [docs/TEST-STRATEGY.md](docs/TEST-STRATEGY.md).
 
 Phase 2 delivers the eighteen Must-priority requirements from the Phase 1 blueprint. Deliberately not
 built yet, and named rather than omitted: anomaly detection beyond rate limiting, multi-language
-support, recurring payments, offline vouchers, and cloud deployment via Terraform. Phase 3 adds the
-deployment, the chaos rehearsal, and the live quarantine demonstration.
+support, recurring payments, offline vouchers, cloud deployment via Terraform, and the per-Cell signing
+keys and 3-of-5 quorum ceremony described above (today's tamper-evidence is the hash chain alone,
+walked and recomputed on demand). Phase 3 adds the deployment, the chaos rehearsal, and the live
+quarantine demonstration.
 
 ## Team
 

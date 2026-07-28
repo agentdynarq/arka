@@ -11,17 +11,20 @@
  */
 import { test, describe, before, after } from 'node:test'
 import assert from 'node:assert/strict'
-import { isPostgresReachable } from '@arka/ledger'
+import { isPostgresReachable, ensureTestDatabase } from '@arka/ledger'
 
 import { PgQuarantineStore } from '../src/pg-quarantine-store.ts'
 import { PgAuditTrailStore } from '../src/pg-audit-trail-store.ts'
 import { appendAuditRecord } from '../src/audit-hash.ts'
 
-const CONNECTION_STRING =
+const BASE_CONNECTION_STRING =
   process.env.TEST_CONTROL_PLANE_DATABASE_URL ??
   'postgres://arka_control:change-me-control-plane@localhost:5435/arka_control'
 
-const reachable = await isPostgresReachable(CONNECTION_STRING)
+const reachable = await isPostgresReachable(BASE_CONNECTION_STRING)
+// A genuinely separate database from the one `pnpm seed` populates: resetSchema()
+// below must never touch demo data. See ensureTestDatabase's doc comment.
+const CONNECTION_STRING = reachable ? await ensureTestDatabase(BASE_CONNECTION_STRING, 'arka_control_test') : BASE_CONNECTION_STRING
 const skip = reachable ? false : `no reachable Postgres at ${CONNECTION_STRING}, run docker compose up first`
 
 describe('Recovery Postgres stores, against a real Postgres', { skip }, () => {

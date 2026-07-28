@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node --experimental-strip-types dist/main.js",
-    "dev": "tsc -p tsconfig.json --watch",
+    "dev": "tsc -p tsconfig.json && node --experimental-strip-types --watch dist/main.js",
     "typecheck": "tsc --noEmit",
     "pretest": "tsc -p tsconfig.json",
     "test": "node --experimental-strip-types --test test/*.test.ts"

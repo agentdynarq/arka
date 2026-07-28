@@ -18,14 +18,19 @@ Reads `DATABASE_URL` (falls back to Cell 1's local compose port), `CELL_ID` (def
 `IDENTITY_PORT` (default `3001`), and `RECOVERY_URL` (default `http://localhost:3002`, where this
 process asks whether its own Cell is quarantined before a risky write; see FR-22 below).
 
-On every non-production boot it seeds one demo customer, `alice`, aligned with lane A's
-`scripts/seed.ts` data (`customer:alice` / `cust-alice`, Cell 1), plus a matching FR-01 registry entry,
-and prints a fresh valid TOTP code to the console (the password itself is never printed; see below).
-This is a demo convenience, guarded by `NODE_ENV !== 'production'` and labelled loudly, same honesty
-principle as `reVerificationResult.livenessSimulated`.
+On every non-production boot it seeds one demo customer matching whichever `CELL_ID` it is running
+against, aligned with lane A's `scripts/seed.ts` (`CUSTOMERS_BY_CELL`): `alice` / `cust-alice` for
+Cell 1, `chandi` / `cust-chandi` for Cell 2, plus a matching FR-01 registry entry, and prints a fresh
+valid TOTP code to the console (the password itself is never printed; see below). Cell-aware on
+purpose: this used to hardcode `alice` regardless of `CELL_ID`, so an instance pointed at Cell 2 would
+create a login with no matching account there, authenticating fine but showing an empty dashboard
+rather than a real second-customer demo. This is a demo convenience, guarded by
+`NODE_ENV !== 'production'` and labelled loudly, same honesty principle as
+`reVerificationResult.livenessSimulated`.
 
-**Demo credentials:** username `alice`, password `demo-password-123`. Re-verify (FR-01) with customerId
-`cust-alice`, registryDocumentId `DOC-ALICE-001`.
+**Demo credentials:** password `demo-password-123` for both. Cell 1: username `alice`, re-verify
+(FR-01) with customerId `cust-alice`, registryDocumentId `DOC-ALICE-001`. Cell 2: username `chandi`,
+re-verify with customerId `cust-chandi`, registryDocumentId `DOC-CHANDI-001`.
 
 ## Endpoints
 
