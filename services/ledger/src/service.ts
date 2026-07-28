@@ -67,12 +67,37 @@ export class LedgerService {
    *
    * Validation failures are not retried. An unbalanced block will be unbalanced
    * on the next attempt too, so it throws immediately.
+   *
+   * `validate`, if given, runs against a freshly read chain on every attempt,
+   * not only before the first one. A caller that checks a business rule
+   * (sufficient funds, a daily limit) against a balance read once before
+   * calling `record` is checking a balance that can already be stale by the
+   * time this actually appends: two individually-valid concurrent transfers
+   * from the same account can both pass that earlier check and both land,
+   * overdrawing the account (found live, see arka-ops/LOG.md 28 July). Passing
+   * the check in here closes that: it re-reads and re-validates against the
+   * current head on every attempt, including retries after a losing race, the
+   * same way the append itself already retries against a moved head. A
+   * failure here throws immediately and is not retried, since it is already a
+   * genuine failure against the freshest state this attempt could see.
    */
-  async record(entries: readonly Entry[], at?: string): Promise<Block> {
+  async record(
+    entries: readonly Entry[],
+    at?: string,
+    validate?: (blocks: readonly Block[]) => void
+  ): Promise<Block> {
     let lastConflict: LedgerConflictError | null = null
 
     for (let attempt = 0; attempt < this.#maxAppendAttempts; attempt++) {
-      const head = await this.#store.head()
+      let head: Block | null
+      if (validate) {
+        const blocks = await this.#store.read()
+        validate(blocks)
+        head = blocks.at(-1) ?? null
+      } else {
+        head = await this.#store.head()
+      }
+
       const block = appendBlock(head, entries, at)
 
       try {

@@ -17,7 +17,7 @@ import type { AgentCashStore } from './agent-cash-store.ts'
 import type { QrRedemptionStore } from './qr-redemption-store.ts'
 import { signQrPayload, verifyQrPayload } from './qr.ts'
 import type { AccountsService } from '@arka/accounts'
-import type { LedgerService } from '@arka/ledger'
+import type { LedgerService, Block } from '@arka/ledger'
 
 /** LKR 500,000.00 in minor units. A placeholder platform default, overridable per account via FR-12. */
 const DEFAULT_DAILY_LIMIT = 500_000_00n
@@ -303,29 +303,44 @@ export class PaymentsService {
   }
 
   async #execute(request: TransferRequest): Promise<TransferResult> {
-    const from = await this.#accounts.summary(request.fromAccountId)
+    // Existence checks only: both accounts must be real. The balance and
+    // daily-limit checks used to live here too, read once before recording,
+    // but that balance can already be stale by the time record() actually
+    // appends. Two individually-valid concurrent transfers from the same
+    // account could both pass this early check and both land, overdrawing
+    // the account (found live, see arka-ops/LOG.md 28 July). Moved into
+    // record()'s validate callback, which re-reads and re-checks on every
+    // attempt, including retries, instead of once up front.
+    await this.#accounts.summary(request.fromAccountId)
     await this.#accounts.summary(request.toAccountId)
 
-    if (from.balance < request.amount) {
-      throw new PaymentsError(
-        'INSUFFICIENT_FUNDS',
-        `Account "${request.fromAccountId}" holds ${from.balance}, cannot transfer ${request.amount}`
-      )
-    }
-
     const limit = await this.#limitFor(request.fromAccountId)
-    const spentToday = await this.#spentToday(request.fromAccountId)
-    if (spentToday + request.amount > limit) {
-      throw new PaymentsError(
-        'DAILY_LIMIT_EXCEEDED',
-        `Account "${request.fromAccountId}" has spent ${spentToday} of a ${limit} daily limit, cannot transfer ${request.amount} more`
-      )
-    }
+    const todayPrefix = this.#now().toISOString().slice(0, 10)
 
-    const block = await this.#ledger.record([
-      { account: request.fromAccountId, direction: 'debit', amount: request.amount },
-      { account: request.toAccountId, direction: 'credit', amount: request.amount },
-    ])
+    const block = await this.#ledger.record(
+      [
+        { account: request.fromAccountId, direction: 'debit', amount: request.amount },
+        { account: request.toAccountId, direction: 'credit', amount: request.amount },
+      ],
+      undefined,
+      (blocks) => {
+        const { balance, spentToday } = accountState(blocks, request.fromAccountId, todayPrefix)
+
+        if (balance < request.amount) {
+          throw new PaymentsError(
+            'INSUFFICIENT_FUNDS',
+            `Account "${request.fromAccountId}" holds ${balance}, cannot transfer ${request.amount}`
+          )
+        }
+
+        if (spentToday + request.amount > limit) {
+          throw new PaymentsError(
+            'DAILY_LIMIT_EXCEEDED',
+            `Account "${request.fromAccountId}" has spent ${spentToday} of a ${limit} daily limit, cannot transfer ${request.amount} more`
+          )
+        }
+      }
+    )
 
     return { transferId: randomUUID(), status: 'confirmed', ledgerBlockSeq: block.seq, ledgerBlockHash: block.hash }
   }
@@ -386,6 +401,37 @@ function fingerprintOf(request: TransferRequest): string {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * `accountId`'s balance and today's total outgoing debits, both computed
+ * directly from an already-fetched `blocks` snapshot rather than issuing a
+ * separate read. This is what lets `#execute`'s `record()` validate callback
+ * check both against the exact same fresh chain the append attempt is about
+ * to use, on every attempt, instead of against a balance read earlier that
+ * could already be stale.
+ */
+function accountState(
+  blocks: readonly Block[],
+  accountId: string,
+  todayPrefix: string
+): { balance: bigint; spentToday: bigint } {
+  let balance = 0n
+  let spentToday = 0n
+
+  for (const block of blocks) {
+    for (const entry of block.entries) {
+      if (entry.account !== accountId) continue
+      if (entry.direction === 'credit') {
+        balance += entry.amount
+        continue
+      }
+      balance -= entry.amount
+      if (block.at.slice(0, 10) === todayPrefix) spentToday += entry.amount
+    }
+  }
+
+  return { balance, spentToday }
 }
 
 /** A 6-digit OTP, zero-padded, matching the fixed-width digit codes `@arka/identity` uses for TOTP. */
