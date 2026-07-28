@@ -14,7 +14,7 @@ export { LedgerConflictError } from './store.ts'
 export type { LedgerStore } from './store.ts'
 
 export { InMemoryLedgerStore } from './memory-store.ts'
-export { PgLedgerStore, isPostgresReachable } from './pg-store.ts'
+export { PgLedgerStore, isPostgresReachable, ensureTestDatabase } from './pg-store.ts'
 
 export type { Block, Entry, Direction, VerifyResult, LedgerErrorCode } from './ledger-core.ts'
 export { LedgerError } from './ledger-core.ts'

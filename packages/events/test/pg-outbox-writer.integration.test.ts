@@ -10,11 +10,11 @@ import { randomUUID } from 'node:crypto'
 import { PgOutboxWriter } from '../src/pg-outbox-writer.ts'
 import type { DomainEvent } from '../src/types.ts'
 
-const CONNECTION_STRING =
+const BASE_CONNECTION_STRING =
   process.env.TEST_CELL1_DATABASE_URL ?? 'postgres://arka_cell1:change-me-cell1@localhost:5433/arka_cell1'
 
-async function isReachable(): Promise<boolean> {
-  const probe = new Pool({ connectionString: CONNECTION_STRING, connectionTimeoutMillis: 1000 })
+async function isReachable(connectionString: string): Promise<boolean> {
+  const probe = new Pool({ connectionString, connectionTimeoutMillis: 1000 })
   try {
     await probe.query('SELECT 1')
     return true
@@ -23,6 +23,32 @@ async function isReachable(): Promise<boolean> {
   } finally {
     await probe.end()
   }
+}
+
+/**
+ * A local copy of `@arka/ledger`'s `ensureTestDatabase`: this package sits
+ * below services in the dependency graph (services depend on packages, not
+ * the reverse), so it cannot import from `@arka/ledger`. Creates
+ * `databaseName` on the same server as `connectionString` if it does not
+ * exist yet, so this suite gets a genuinely separate database from the one
+ * `pnpm seed` populates instead of colliding with demo data.
+ */
+async function ensureTestDatabase(connectionString: string, databaseName: string): Promise<string> {
+  const target = new URL(connectionString)
+  const admin = new URL(connectionString)
+  admin.pathname = '/postgres'
+
+  const adminPool = new Pool({ connectionString: admin.toString(), connectionTimeoutMillis: 2000 })
+  try {
+    await adminPool.query(`CREATE DATABASE "${databaseName}"`)
+  } catch (error) {
+    if ((error as { code?: string }).code !== '42P04') throw error // 42P04: database already exists
+  } finally {
+    await adminPool.end()
+  }
+
+  target.pathname = `/${databaseName}`
+  return target.toString()
 }
 
 function event(overrides: Partial<DomainEvent> = {}): DomainEvent {
@@ -35,7 +61,8 @@ function event(overrides: Partial<DomainEvent> = {}): DomainEvent {
   }
 }
 
-const reachable = await isReachable()
+const reachable = await isReachable(BASE_CONNECTION_STRING)
+const CONNECTION_STRING = reachable ? await ensureTestDatabase(BASE_CONNECTION_STRING, 'arka_cell1_test') : BASE_CONNECTION_STRING
 
 describe(
   'PgOutboxWriter, against a real Postgres',
