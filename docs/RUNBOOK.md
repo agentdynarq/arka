@@ -39,6 +39,14 @@ a clean result or the exact sequence number of the first break. A break reports 
 
 ## P2. Quarantine a Cell
 
+**Known gap, not yet fixed (flagged in `../arka-ops/TASKS.md`, 28 July).** Verified live: quarantine
+correctly flips the health map and rejects a write through `apps/gateway`'s `write-check` endpoint, but
+a real customer transfer fired directly against the quarantined Cell's own `apps/identity` still
+succeeds, since `TransfersController` and its siblings never check quarantine state. Do not rehearse
+step 4 below ("a write attempt against the quarantined Cell is rejected") against a real transfer
+through `apps/web` until this is fixed, it will not behave as written. The gateway `write-check`
+endpoint itself does work correctly.
+
 **Trigger.** A Cell shows sustained anomalous behaviour, a confirmed compromise, or a bad deploy that
 cannot be rolled back quickly.
 
@@ -88,6 +96,13 @@ failed rebuild, not a partial success.
 ---
 
 ## P4. Suspected key compromise
+
+**Not implemented in Phase 2.** This procedure describes the target design (ADR 0003), not a
+capability this build actually has. There is no per-Cell ledger signing key in the current code, and
+no quorum ceremony tooling: the ledger's tamper-evidence today is its hash chain alone, verified by
+walking it and recomputing every hash (P1), not a cryptographic signature. Steps below are recorded
+as the intended procedure for when a real key exists, so a reviewer sees the design honestly rather
+than a step that would fail if actually attempted. Genuine Phase 3 scope, not silently dropped.
 
 **Trigger.** Reason to believe a Cell's signing key is exposed.
 

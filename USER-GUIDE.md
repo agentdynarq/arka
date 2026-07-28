@@ -25,8 +25,13 @@ so that everything below matches what you will actually see.
 | Surface | URL | Who it is for |
 |---|---|---|
 | Customer app | http://localhost:3000 | Customers, merchants, agents |
-| Recovery Console | http://localhost:3001 | Bank operators |
-| API gateway | http://localhost:8080 | Direct API access, OpenAPI at `/docs` |
+| Recovery Console | http://localhost:3300 | Bank operators |
+| API gateway | http://localhost:8080 | The Cell Router; the write-check enforcement point quarantine relies on (`docs/RUNBOOK.md` P2). No OpenAPI docs endpoint yet, that is deferred (section 6) |
+
+The customer app and Recovery Console each call their own Cell's backend API directly rather than
+through the gateway (`apps/identity` on `:3001`, `apps/recovery` on `:3002`), matching
+`docs/adr/0006`. Worth knowing if you are curling the API directly rather than clicking through the
+UI.
 
 ## 2. Demo accounts
 
@@ -34,15 +39,28 @@ Every account below is seeded. Passwords are demo values and the data is fiction
 
 | Persona | Login | Password | MFA code | Cell |
 |---|---|---|---|---|
-| Returning customer | `[FILL]` | `[FILL]` | `[FILL]` | cell-1 |
-| Second customer, different Cell | `[FILL]` | `[FILL]` | `[FILL]` | cell-2 |
-| Merchant | `[FILL]` | `[FILL]` | `[FILL]` | cell-1 |
-| Authorised agent | `[FILL]` | `[FILL]` | `[FILL]` | cell-1 |
-| Operator one | `[FILL]` | `[FILL]` | `[FILL]` | control plane |
-| Operator two, for dual approval | `[FILL]` | `[FILL]` | `[FILL]` | control plane |
+| Returning customer | `alice` | `demo-password-123` | printed to Cell 1's identity server console at boot (fresh code, valid ~30s) | cell-1 |
+| Second customer, different Cell | `chandi` | `demo-password-123` | printed to Cell 2's identity server console at boot (fresh code, valid ~30s) | cell-2 |
+| Merchant | No login: authorisation is the signed QR token itself (3.5) | | | cell-1 |
+| Authorised agent | No login: authorisation is the customer's OTP (3.6) | | | cell-1 |
+| Operator one | No login: `operatorId` is typed directly into the console (4.2) | | | control plane |
+| Operator two, for dual approval | No login: a second, distinct `operatorId` typed directly into the console (4.2) | | | control plane |
 
 Two operator accounts exist because quarantine requires dual approval and cannot be completed by one
 person. That is deliberate, not a gap in the demo data.
+
+Merchant and agent have no identity system in this scope by design, not an oversight: FR-11's QR
+acceptance and FR-16's agent cash-in/cash-out are both unauthenticated at that role, because the
+security property they rely on is the OTP or the signed token, not a login. The Recovery Console has
+no operator login either, `operatorId` is free text (see `apps/console/src/app/health-map/page.tsx`'s
+own comment); RBAC and session auth already exist as real capabilities in `@arka/identity` and wiring
+them into the console is future work, not pretended here.
+
+The second customer's login is Cell 2's own seeded account, `chandi`, not `alice` again: each Cell
+seeds different customers (`scripts/seed.ts`'s `CUSTOMERS_BY_CELL`, cell-1 gets alice/bob, cell-2 gets
+chandi/deepal), and `apps/identity`'s demo bootstrap is Cell-aware for the same reason, so that a
+second identity server pointed at Cell 2 seeds a login that actually has a matching account there
+rather than an empty dashboard.
 
 ## 3. Customer journeys
 
@@ -75,8 +93,13 @@ Each transaction in the history shows its ledger confirmation status.
    authentication** appears and explains why it appeared.
 4. Confirm. The transfer completes and appears in history with its ledger status.
 
-To see idempotency working, retry an interrupted transfer. The money moves exactly once. `[FILL:
-exact steps to demonstrate this in the UI]`
+The web UI does not have a "simulate a retry" button; every submission generates a fresh idempotency
+key, by design, since a customer clicking Send twice on purpose is a new request, not a retry. The
+idempotency guarantee (FR-13) is proven directly: `services/payments/test/service.test.ts`'s "the same
+key fired concurrently transfers money exactly once" fires two identical `transfer()` calls with
+`Promise.all` against a real backing store and asserts exactly one execution lands. Run `pnpm test` to
+see it pass. Against a live server, firing the same `Idempotency-Key` twice at once moves the money
+once, not twice, and both responses return the identical `transferId`.
 
 ### 3.4 Daily limits
 
@@ -177,6 +200,10 @@ Named rather than omitted, so nothing here is a surprise:
 - Downloadable statements
 - Session and device revocation
 - Cloud deployment
+- OpenAPI documentation at the gateway
+- Per-Cell ledger signing keys and the 3-of-5 quorum root recovery ceremony (`docs/adr/0003`'s design,
+  `docs/RUNBOOK.md` P4). The ledger's tamper-evidence today is its hash chain alone, walked and
+  recomputed on demand (section 4.3); there is no cryptographic signing key to compromise or rotate yet
 
 The first three were declared deferred in the Phase 1 blueprint. The rest are Should or Could priority
 requirements, deferred so that all eighteen Must-priority requirements could be completed properly.
@@ -184,4 +211,47 @@ Reasoning is in `PHASE-2-PLAN.md`.
 
 ## 7. Troubleshooting
 
-`[FILL: common issues, ports in use, compose not starting, seed failing]`
+**Ports already in use.** The stack uses `3000` (customer app), `3001` (identity API), `3002`
+(recovery API), `3300` (Recovery Console), and `8080` (gateway). If one is already bound, everything
+else on it fails to start, sometimes with a misleading error from whichever process asked second. Find
+and stop the process holding the port, or override it (every port name in `.env` is a real environment
+variable, not a hardcoded value) before retrying.
+
+**`EACCES: permission denied` on a specific port (Windows).** Windows reserves ranges of ports
+dynamically for Hyper-V and WSL, and a port your machine reserved today may not be reserved tomorrow.
+Check what is currently excluded with:
+
+```bash
+netsh interface ipv4 show excludedportrange protocol=tcp
+```
+
+If the port an app wants falls inside a listed range, that is the cause, not a code defect. Pick a
+different port for that app (its `dev`/`start` script, or its `_PORT` environment variable) rather than
+fighting the exclusion.
+
+**A backend app (`gateway`, `identity`, `recovery`) briefly `EADDRINUSE`s right after a file save under
+`pnpm dev`.** These three run as `tsc` build followed by `node --watch dist/main.js`, so a save
+triggers a rebuild and a restart. On Windows the old process does not always release its socket before
+the new one tries to bind it, and the watcher retries on the next change. Save the file again, or
+restart `pnpm dev`, and it clears.
+
+**`docker compose up` reports a container unhealthy on the very first run.** Postgres's first-run
+initialisation (creating the data directory, running init scripts) has, on at least one machine this
+team develops on, taken longer than the healthcheck's retry budget before settling on its own. This is
+not a compose defect: check `docker compose ps` a little longer, or rerun `docker compose up -d`, before
+assuming something is actually broken.
+
+**`pnpm seed` prints "already seeded" and does nothing.** That is the intended idempotent behaviour, not
+a failure, it means both Cells already have deterministic demo data from a previous run. Use
+`pnpm seed --reset` to drop and rebuild every Cell's schema from scratch.
+
+**`pnpm seed` or any app can't reach Postgres at all.** `docker compose up -d` has to be running and
+healthy first (`docker compose ps`), and `.env` has to exist (`cp .env.example .env`, once, before the
+first run). Every service falls back to Cell 1's local compose connection string when `DATABASE_URL` is
+unset, which is convenient for a first run but can hide a genuinely missing `.env` on a second one.
+
+**Running a NestJS app (`gateway`, `identity`, `recovery`) directly instead of through `pnpm dev`.**
+`node --experimental-strip-types src/main.ts` fails with a `SyntaxError` on the first decorator
+(`@Module`, `@Controller`, ...): Node's type-stripping does not implement decorators. Build first
+(`pnpm build`), then run the compiled output (`pnpm start`), the same two steps `pnpm dev` already runs
+for you.
