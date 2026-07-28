@@ -15,6 +15,8 @@ recovery was never designed.
 
 Arka rebuilds digital banking so that class of disaster is structurally impossible.
 
+![How the 2065 collapse happened, and how Arka contains the same attack today](docs/media/architecture.gif)
+
 ## Three doctrines
 
 **Assume breach.** Every service-to-service call carries a short-lived workload identity. A process
@@ -84,6 +86,24 @@ LEDGER_SIGNING_KEY=<cell-1 key>
 
 This is what makes the isolation claim provable rather than asserted. Cell 1 holds no credential that
 can reach Cell 2, and adding Cell 3 is a config file, not a code change.
+
+Live against the real running stack, not staged: `docker exec`-ing from Cell 1's own container into
+Cell 2 fails on DNS resolution, because the two Cells share no network at all, then `pnpm verify-ledger`
+walks both Cells' real hash chains.
+
+![Two Cells with no route between them, and a live ledger verification](docs/media/isolation.gif)
+
+## Containing a real incident
+
+FR-22: an operator quarantines a Cell under dual approval (two distinct operators, neither alone), and
+every write against it is rejected while every read still succeeds, read-only, not down. This is the
+exact HTTP traffic, recorded live, no staging: a transfer succeeds, the Cell is quarantined, the
+identical transfer is rejected `403 CELL_QUARANTINED`, the dashboard still reads fine, the quarantine is
+lifted, and the transfer succeeds again.
+
+![A live quarantine: a transfer rejected mid-incident, and restored once lifted](docs/media/quarantine.gif)
+
+See [docs/media/README.md](docs/media/README.md) for how these were recorded and how to reproduce them.
 
 ## Quickstart
 
