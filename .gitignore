@@ -56,4 +56,6 @@ arka-submission.zip
 .cursor/
 .codex/
 .grok/
+.github/hooks/
+.github/skills/
 skills-lock.json
