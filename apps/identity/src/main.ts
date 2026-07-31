@@ -13,6 +13,13 @@ async function bootstrap(): Promise<void> {
   app.enableCors()
   await bootstrapDemoData(buildIdentityService())
 
+  if (process.env.DEMO_MFA_ENDPOINT_ENABLED === 'true') {
+    console.log('')
+    console.log('[DEMO MODE] GET /v1/auth/demo/mfa-code is ENABLED. Returns a live TOTP code for any demo')
+    console.log('[DEMO MODE] username with no auth. Judge convenience only, never set this in production.')
+    console.log('')
+  }
+
   const port = process.env.IDENTITY_PORT ? Number(process.env.IDENTITY_PORT) : 3001
   await app.listen(port)
   console.log(`identity listening on :${port}`)
