@@ -75,9 +75,9 @@
   --space-7: 48px;
   --space-8: 64px;
 
-  --radius-sm: 8px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  --radius-sm: var(--institutional-radius);
+  --radius-md: var(--institutional-radius);
+  --radius-lg: var(--institutional-radius);
   --radius-pill: 999px;
 
   --shadow-sm: 0px 1px 3px 0px rgba(15, 28, 48, 0.05);
@@ -87,35 +87,55 @@
   --transition-fast: 120ms ease;
   --transition-base: 200ms ease;
 
-  /* ---- Semantic: surface ---- */
-  --color-bg-canvas: var(--palette-ink-100);
-  --color-bg-surface: var(--palette-white);
-  --color-bg-surface-raised: var(--palette-white);
-  --color-bg-tint: var(--palette-teal-tint);
-  --color-border: var(--palette-ink-200);
-  --color-border-strong: var(--palette-ink-200);
+  /* ---- Semantic: surface ----
+   * Repointed to the institutional primitives (see the comment on that block
+   * below): paper throughout, canvas and surface identical, cards read as
+   * paper with a hairline rule rather than a raised white card, matching the
+   * homepage's "paper is the default ground" rule. */
+  --color-bg-canvas: var(--institutional-paper);
+  --color-bg-surface: var(--institutional-paper);
+  --color-bg-surface-raised: var(--institutional-paper);
+  --color-bg-tint: color-mix(in srgb, var(--institutional-ink) 6%, var(--institutional-paper));
+  --color-border: var(--institutional-rule);
+  --color-border-strong: var(--institutional-rule);
 
   /* ---- Semantic: text ---- */
-  --color-text-primary: var(--palette-ink-900);
-  --color-text-secondary: var(--palette-ink-500);
-  --color-text-tertiary: var(--palette-ink-400);
+  --color-text-primary: var(--institutional-ink);
+  --color-text-secondary: var(--institutional-ink-soft);
+  /* No institutional tertiary primitive exists; computed rather than reusing
+     ink-soft unmodified, since ui-field__label and inactive ui-stepper labels
+     render this as real text at 4.5:1, not decoration (85% clears 4.65:1 on
+     paper, checked, not assumed). */
+  --color-text-tertiary: color-mix(in srgb, var(--institutional-ink-soft) 85%, var(--institutional-paper));
   --color-text-inverse: var(--palette-white);
 
   /* ---- Semantic: brand and status ---- */
-  --color-accent: var(--palette-navy-900);
-  --color-accent-hover: var(--palette-navy-950);
-  --color-accent-tint: var(--palette-teal-tint);
+  --color-accent: var(--institutional-ink);
+  --color-accent-hover: color-mix(in srgb, var(--institutional-ink) 85%, black);
+  --color-accent-tint: color-mix(in srgb, var(--institutional-ink) 6%, var(--institutional-paper));
   --color-accent-text: var(--palette-white);
 
-  --color-teal: var(--palette-teal-600);
-  --color-teal-strong: var(--palette-teal-700);
+  /* Not --institutional-verified: that primitive is reserved for
+     verification state only (see its own comment below), never a general
+     UI accent. --color-teal backs .ui-panel__eyebrow, rendered as real text
+     directly on paper; --palette-teal-600 only clears 3.46:1 there (checked,
+     fails AA), --palette-teal-700 clears 5.06:1. --color-teal-strong is
+     darkened further via color-mix so a teal-on-teal-strong hover state
+     (.ui-button--teal) stays visibly distinct instead of collapsing to the
+     same value, and still clears AA where it renders as text (icon labels
+     on --color-bg-tint, 5.30:1, checked). */
+  --color-teal: var(--palette-teal-700);
+  --color-teal-strong: color-mix(in srgb, var(--palette-teal-700) 90%, black);
 
   --color-success: var(--palette-green-700);
   --color-success-tint: var(--palette-green-tint);
   --color-warning: var(--palette-amber-700);
   --color-warning-tint: var(--palette-amber-tint);
-  --color-danger: var(--palette-red-600);
-  --color-danger-tint: var(--palette-red-tint);
+  /* --institutional-reject is explicitly the "403, text on paper" primitive:
+     5.48:1 on paper, checked, and 4.91:1 against the unchanged danger-tint
+     background badges and alerts already pair it with. */
+  --color-danger: var(--institutional-reject);
+  --color-danger-tint: color-mix(in srgb, var(--institutional-reject) 8%, var(--institutional-paper));
   --color-info: var(--palette-teal-600);
   --color-info-tint: var(--palette-teal-tint);
 
@@ -126,10 +146,21 @@
   --color-banner-success-border: var(--palette-green-500);
   --color-banner-success-text: var(--palette-green-700);
 
-  --color-focus-ring: var(--palette-teal-600);
+  /* Ink, not teal: focus and selection are generic UI chrome that lands on
+     paper as easily as on a plate, matching the homepage's own
+     `:focus-visible { outline: 2px solid var(--ink) }` rather than the
+     verification-only teal. */
+  --color-focus-ring: var(--institutional-ink);
 
-  /* ---- Semantic: type scale ---- */
-  --font-display: var(--font-display-stack);
+  /* ---- Semantic: type scale ----
+   * Falls back to Georgia/Times New Roman (the fallback baked into
+   * --institutional-font-serif itself): Source Serif 4 is only loaded
+   * scoped to apps/web/src/app/page.tsx today (see the comment on the
+   * institutional block below), and neither app's root layout.tsx is in
+   * this restyle's file ownership to add a second, app-wide font load to.
+   * The serif fallback is a deliberate, zero-risk choice here, not an
+   * oversight: no extra network request, no CLS. */
+  --font-display: var(--institutional-font-serif);
   --font-sans: var(--font-sans-stack);
   --font-mono: var(--font-mono-stack);
   --text-xs: 0.75rem;
@@ -210,23 +241,57 @@
  * so it stays on the same token names as everywhere else.
  */
 :root[data-surface='ops'] {
-  --color-bg-canvas: var(--palette-ops-bg);
-  --color-bg-surface: var(--palette-ops-surface);
-  --color-bg-surface-raised: var(--palette-ops-surface);
-  --color-bg-tint: var(--palette-ops-bg);
-  --color-border: var(--palette-ops-border);
-  --color-border-strong: var(--palette-ops-border);
+  /* Three plate tiers instead of two: --institutional-plate-fill-2 gives
+     "raised element" (ui-tile, cell cards that need to read a step above
+     their panel) a real value of its own instead of duplicating bg-surface. */
+  --color-bg-canvas: var(--institutional-plate);
+  --color-bg-surface: var(--institutional-plate-fill);
+  --color-bg-surface-raised: var(--institutional-plate-fill-2);
+  --color-bg-tint: color-mix(in srgb, var(--institutional-plate-ink) 10%, var(--institutional-plate-fill));
+  --color-border: var(--institutional-plate-line);
+  --color-border-strong: var(--institutional-plate-line);
 
-  --color-text-primary: var(--palette-white);
-  --color-text-secondary: var(--palette-ops-text-secondary);
-  --color-text-tertiary: var(--palette-ops-text-tertiary);
+  --color-text-primary: var(--institutional-plate-ink);
+  --color-text-secondary: var(--institutional-plate-ink-soft);
+  /* No separate institutional plate-tertiary primitive; plate-ink-soft
+     itself already clears 4.5:1 against all three plate tiers (4.87:1 on
+     the lightest, plate-fill-2, checked), so it is reused rather than
+     inventing a dimmer value nothing asked for. */
+  --color-text-tertiary: var(--institutional-plate-ink-soft);
 
-  --color-accent: var(--palette-teal-600);
-  --color-accent-hover: var(--palette-teal-700);
-  --color-accent-tint: var(--palette-ops-bg);
-  --color-accent-text: var(--palette-white);
+  /* A light rectangle set into the dark plate, mirroring the paper
+     register's dark-on-paper button: 14.21:1 for plate-on-plate-ink text,
+     checked. Not --institutional-verified: that primitive is reserved for
+     verification state only and is explicitly never a fill or button color
+     (see its definition comment below). */
+  --color-accent: var(--institutional-plate-ink);
+  --color-accent-hover: color-mix(in srgb, var(--institutional-plate-ink) 85%, var(--institutional-plate-line));
+  --color-accent-tint: color-mix(in srgb, var(--institutional-plate-ink) 10%, var(--institutional-plate-fill));
+  --color-accent-text: var(--institutional-plate);
 
-  --color-banner-success-bg: var(--palette-ops-green-tint);
-  --color-banner-success-border: var(--palette-green-500);
-  --color-banner-success-text: var(--palette-ops-green-text);
+  /* --color-danger/--color-warning/--color-info are deliberately left
+     unset here, inheriting the paper-register values above. Both are
+     always rendered as a self-contained pair with their own *-tint
+     background (badges, alerts, the integrity evidence banner), which
+     stays a light tint in this register on purpose (existing convention,
+     see --color-banner-success-* below); a plate-safe brightened variant
+     of either color would clear the dark-plate case but fail against that
+     unchanged light tint (checked: 1.85:1 and 1.87:1 respectively). The one
+     screen that rendered --color-warning as bare text directly on a plate
+     surface (health-map's pending-approval lines) was restyled to use the
+     existing Badge component instead, which sidesteps the conflict rather
+     than fighting it.
+
+     Ink, not teal, for the same reason as the paper register: generic UI
+     chrome, not a verification signal. */
+  --color-focus-ring: var(--institutional-plate-ink);
+
+  /* The one place --institutional-verified is actually used: W6's "chain
+     verified" banner is exactly the verification-state signal this
+     primitive was tuned for, on the dark plate ground it's tuned for.
+     5.88:1 for --institutional-verified as text on --institutional-plate-fill,
+     checked. Border only, not a fill, per that primitive's own rule. */
+  --color-banner-success-bg: var(--institutional-plate-fill);
+  --color-banner-success-border: var(--institutional-verified);
+  --color-banner-success-text: var(--institutional-verified);
 }
