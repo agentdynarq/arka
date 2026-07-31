@@ -13,6 +13,7 @@ import {
 import { QuarantineGuard } from './recovery/quarantine.guard.ts'
 import { QUARANTINE_CHECKER } from './recovery/quarantine-checker.ts'
 import { AuthController } from './auth/auth.controller.ts'
+import { DemoMfaController } from './auth/demo-mfa.controller.ts'
 import { StepUpController } from './auth/step-up.controller.ts'
 import { AccessTokenGuard } from './auth/access-token.guard.ts'
 import { ReVerifyController } from './reverify/reverify.controller.ts'
@@ -30,6 +31,7 @@ import { NotificationsController } from './notifications/notifications.controlle
   controllers: [
     HealthController,
     AuthController,
+    DemoMfaController,
     StepUpController,
     ReVerifyController,
     AccountOpeningController,

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { reVerify, login, verifyMfa, ApiError } from '@/lib/api'
 import { storeSession } from '@/lib/session'
 import { SplitHero, Stepper, Field, Button, Alert, OtpInput } from '@arka/ui'
+import { DemoMfaWidget } from '@/components/DemoMfaWidget'
 
 type Step = 're-verify' | 'login' | 'mfa'
 
@@ -123,9 +124,7 @@ export default function ReVerifyPage() {
 
         {step === 're-verify' && (
           <form onSubmit={handleReVerify}>
-            <h1 className="ui-panel__title" style={{ fontSize: '1.75rem' }}>
-              Re-verify your identity
-            </h1>
+            <h1 className="ui-panel__title">Re-verify your identity</h1>
             <p className="ui-panel__subtitle">
               We match you against the preserved customer registry. Liveness check is simulated.
             </p>
@@ -148,9 +147,7 @@ export default function ReVerifyPage() {
 
         {step === 'login' && (
           <form onSubmit={handleLogin}>
-            <h1 className="ui-panel__title" style={{ fontSize: '1.75rem' }}>
-              Sign in
-            </h1>
+            <h1 className="ui-panel__title">Sign in</h1>
             <p className="ui-panel__subtitle">Identity re-verified. Enter your credentials to continue.</p>
             <Field id="username" label="Username" value={username} onChange={(e) => setUsername(e.target.value)} required />
             <Field
@@ -169,16 +166,14 @@ export default function ReVerifyPage() {
 
         {step === 'mfa' && (
           <form onSubmit={handleMfa}>
-            <h1 className="ui-panel__title" style={{ fontSize: '1.75rem' }}>
-              Verify your identity
-            </h1>
+            <h1 className="ui-panel__title">Verify your identity</h1>
             <p className="ui-panel__subtitle">Enter the 6-digit code from your authenticator app.</p>
             <div style={{ marginBottom: 'var(--space-2)' }}>
               <OtpInput value={totpCode} onChange={setTotpCode} autoFocus />
             </div>
-            <p className="ui-field__hint" style={{ display: 'block', marginBottom: 'var(--space-4)' }}>
-              Local dev: the identity server logs a fresh valid code to its console on every boot.
-            </p>
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              <DemoMfaWidget username={username} />
+            </div>
             <Button type="submit" disabled={busy}>
               {busy ? 'Verifying...' : 'Verify and continue'}
             </Button>
