@@ -786,6 +786,12 @@ export default function Home() {
               Verified today with <code>docker compose up -d</code> against two local Cells. Phase 3 adds the
               deployment, the chaos rehearsal, and the live quarantine demonstration in front of a panel.
             </li>
+            <li className="dw-scope__item">
+              <strong>The in-app MFA code widget</strong>
+              A demo-only endpoint returns the current TOTP code so a judge without an authenticator app can
+              complete the FR-01&ndash;FR-03 journey. 404s unless explicitly enabled, logs a boot warning when
+              it is, and never touches the real verification path. Not present in production.
+            </li>
           </ul>
 
           <p className="dw-scope__note">
