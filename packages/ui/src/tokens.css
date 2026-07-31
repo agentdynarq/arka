@@ -141,6 +141,68 @@
 }
 
 /**
+ * Institutional primitives (Phase 2, from the marketing homepage's rebuild:
+ * apps/web/src/app/globals.css, the `.dw` scope). Added here so both frontends
+ * can reference the same values without duplicating hex codes; NOT yet wired
+ * into any --color-, --radius-, or --font- semantic alias above or in the
+ * ops register below — landing this block changes zero rendered pixels on any
+ * existing screen. Repointing the semantic aliases to these primitives is
+ * deliberately a separate, later change, made screen by screen, so a mistake
+ * is scoped to one screen rather than applied blind, everywhere, at once.
+ *
+ * Two sub-groups, because the homepage itself has two grounds:
+ *   --institutional-* : the light "paper" register (maps to the customer
+ *     register above — default :root).
+ *   --institutional-plate-* : the dark "plate" register (maps to the ops
+ *     register below — :root[data-surface='ops']).
+ *
+ * --institutional-verified is #40BFB5, not the originally-briefed #0E7C66:
+ * no single hue clears 4.5:1 text contrast against both a near-white paper
+ * and a near-black plate at once (the required luminance bands don't
+ * overlap — verified by computing both pairings). Every real use on the
+ * homepage sits on a dark plate, so the shipped value is tuned for that
+ * side. If a light-register (paper) use of this color is ever needed,
+ * #0E7C66 is the correct value THERE specifically — don't reuse
+ * --institutional-verified for it unmodified, recheck contrast for that
+ * pairing instead.
+ */
+:root {
+  /* Light "paper" register */
+  --institutional-paper: #f7f6f3;
+  --institutional-ink: #0a1e30;
+  --institutional-ink-soft: #465a6b;
+  --institutional-rule: #d9d5ce;
+  --institutional-reject: #b33a22; /* the 403, text on paper */
+
+  /* Dark "plate" register */
+  --institutional-plate: #0a1e30;
+  --institutional-plate-fill: #16324a;
+  --institutional-plate-fill-2: #1e3f5c;
+  --institutional-plate-line: #2f4d68;
+  --institutional-plate-ink: #e7ecef;
+  --institutional-plate-ink-soft: #9bb0bf;
+  --institutional-reject-plate: #e46944; /* graphical marks on a plate, not text */
+
+  /* Verification state only (see comment above): never a fill, button,
+     heading, or link color in either register. */
+  --institutional-verified: #40bfb5;
+
+  /* Type: Source Serif 4 for headings, Inter for body/UI (already loaded
+     app-wide via --font-inter), JetBrains Mono restricted to machine output
+     (already loaded app-wide via --font-jetbrains-mono). Source Serif 4 is
+     NOT loaded app-wide today — it's loaded scoped to
+     apps/web/src/app/page.tsx via next/font/google, so it fetches only for
+     "/". A screen adopting --institutional-font-serif must load the font
+     itself the same way, or this falls back to Georgia / Times New Roman. */
+  --institutional-font-serif: var(--font-source-serif, Georgia, 'Times New Roman', serif);
+
+  /* Radius: 3px throughout, not a scale — nearly square is the whole point
+     (no pill buttons, no pill cards). One value, unlike --radius-sm/md/lg
+     above, which is deliberately a scale for the older, rounder system. */
+  --institutional-radius: 3px;
+}
+
+/**
  * Screens W5/W6 (apps/console) are an operator instrument panel: a
  * deliberately darker register, exact values from the Figma wireframes
  * (bg #0a1020, surface #101a30, border #22304c). Opt in with
