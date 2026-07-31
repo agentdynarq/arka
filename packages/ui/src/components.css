@@ -68,6 +68,23 @@ body {
   gap: var(--space-4);
 }
 
+/* Pre-existing overflow, found the same way as the stepper's: the nav's five
+   items (four links, a badge, sign out, an avatar) never wrapped or scrolled
+   on their own, so the whole page grew wider than a narrow viewport instead.
+   AppTopbar.tsx's own content isn't touched here (no JSX change): the nav
+   scrolls horizontally within itself below 700px rather than the page
+   scrolling horizontally, the smallest fix that doesn't need a hamburger
+   menu redesign. */
+@media (max-width: 700px) {
+  .ui-topbar {
+    overflow-x: auto;
+  }
+
+  .ui-topbar__nav {
+    flex-shrink: 0;
+  }
+}
+
 .ui-topbar__link {
   font-size: var(--text-sm);
   font-weight: 600;
@@ -562,6 +579,32 @@ body {
   background: var(--color-border-strong);
 }
 
+/* Pre-existing overflow at narrow widths, found verifying reverify (W1) at
+   390px: the last step is `flex: 0 0 auto` and its label `white-space:
+   nowrap`, so a long final label ("Confirm access") ran past the viewport
+   edge with no way to shrink. Below 480px every step can shrink and wrap
+   its label instead of forcing one line, and the connectors give up their
+   minimum width first. */
+@media (max-width: 480px) {
+  .ui-stepper__step:last-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .ui-stepper__item {
+    white-space: normal;
+  }
+
+  .ui-stepper__label {
+    max-width: 11ch;
+  }
+
+  .ui-stepper__connector {
+    min-width: var(--space-2);
+    margin: 0 var(--space-2);
+  }
+}
+
 /* ---- Split hero (screen W1) ---- */
 
 .ui-split-hero {
@@ -968,6 +1011,56 @@ body {
 
 .ui-status-tile__dot--danger::after {
   background: var(--color-danger);
+}
+
+/* ---- Demo MFA widget (apps/web/src/components/DemoMfaWidget.tsx) ---- */
+
+.ui-mfa-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ui-mfa-trigger:hover {
+  color: var(--color-accent-hover);
+}
+
+.ui-mfa-trigger:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.ui-mfa-code {
+  margin: var(--space-3) 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-canvas);
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-align: center;
+  color: var(--color-text-primary);
+}
+
+.ui-mfa-code--command {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-align: left;
+  word-break: break-all;
 }
 
 /* ---- Row (history lines, list items) ---- */

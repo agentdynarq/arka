@@ -109,7 +109,7 @@ export default function DashboardPage() {
 
   return (
     <Main size="dashboard">
-      <h1 className="ui-panel__title" style={{ fontSize: '1.75rem', marginBottom: 4 }}>
+      <h1 className="ui-panel__title" style={{ marginBottom: 4 }}>
         Good to see you, {dashboard.username}
       </h1>
       <p className="ui-meta" style={{ marginBottom: 24 }}>

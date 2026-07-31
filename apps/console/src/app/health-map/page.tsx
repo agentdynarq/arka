@@ -214,9 +214,9 @@ export default function HealthMapPage() {
 
               {quarantine.state === 'pending_second_approval' && health.status !== 'quarantined' && (
                 <>
-                  <p className="ui-meta" style={{ color: 'var(--color-warning)', fontWeight: 600 }}>
-                    Pending quarantine, approved by: {quarantine.approvedBy.join(', ') || 'none yet'}. Needs a second, distinct
-                    operator.
+                  <p className="ui-meta" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontWeight: 600 }}>
+                    <Badge tone="warning">Pending quarantine</Badge>
+                    Approved by: {quarantine.approvedBy.join(', ') || 'none yet'}. Needs a second, distinct operator.
                   </p>
                   <Button
                     variant="danger"
@@ -230,8 +230,9 @@ export default function HealthMapPage() {
 
               {quarantine.state === 'quarantined' && (
                 <>
-                  <p className="ui-meta" style={{ color: 'var(--color-warning)', fontWeight: 600 }}>
-                    Quarantined. Approved by: {quarantine.approvedBy.join(', ')}.
+                  <p className="ui-meta" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontWeight: 600 }}>
+                    <Badge tone="warning">Quarantined</Badge>
+                    Approved by: {quarantine.approvedBy.join(', ')}.
                   </p>
                   <Button
                     variant="secondary"
@@ -245,8 +246,9 @@ export default function HealthMapPage() {
 
               {quarantine.state === 'pending_second_approval' && health.status === 'quarantined' && (
                 <>
-                  <p className="ui-meta" style={{ color: 'var(--color-warning)', fontWeight: 600 }}>
-                    Pending lift. Needs a second, distinct operator to approve.
+                  <p className="ui-meta" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontWeight: 600 }}>
+                    <Badge tone="warning">Pending lift</Badge>
+                    Needs a second, distinct operator to approve.
                   </p>
                   <Button
                     variant="secondary"

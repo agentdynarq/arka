@@ -37,13 +37,20 @@ contrast against both a near-white and a near-black ground at once — the
 required luminance ranges don't overlap), is in the comment directly above
 the token block in `tokens.css`. Read that before touching these values.
 
-**These primitives are additive only as of this commit.** No existing
-`--color-*`/`--radius-*`/`--font-*` semantic alias points at them yet, in
-either register, so nothing currently on screen has moved. Repointing the
-semantic aliases — light register for `apps/web`'s customer screens, ops
-register for `apps/console` — is separate, deliberate, later work, done one
-screen at a time so a mistake is scoped to one screen, not applied blind
-across both apps simultaneously.
+**The semantic aliases are now repointed to these primitives, in both
+registers.** `--color-bg-*`, `--color-text-*`, `--color-accent-*`,
+`--color-border-*`, `--color-focus-ring`, `--font-display` and
+`--radius-sm/md/lg` all resolve to `--institutional-*` (light) or
+`--institutional-plate-*` (ops) as of this commit; `--radius-pill` and the
+status colors (`--color-success/warning/danger/info` and their tints) were
+left alone; see the "why" comments directly on each alias in `tokens.css`
+for the reasoning, including the one deliberate exception:
+`--color-danger`/`--color-warning`/`--color-info` are not overridden in the
+ops register, because both institutional-reject and a plate-brightened
+warning fail contrast against the unchanged light-tint backgrounds badges
+and alerts already pair them with; a screen that needs one of these as bare
+text directly on a plate surface should use the existing `Badge` component
+instead of fighting that conflict at the token layer.
 
 ## Extending this
 
