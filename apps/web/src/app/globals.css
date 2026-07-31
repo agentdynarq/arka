@@ -40,6 +40,16 @@
   --reject: #b33a22;
   --reject-plate: #e46944;
 
+  /* Accent, not action: links, eyebrow numbers, hover states, a tint band
+     on two sections, dimension-line stroke work inside plates, small
+     annotation text. Never a button — the primary button stays navy fill,
+     white text, per the register's own rule (blue reads consumer-fintech
+     the moment it touches a CTA). Headings and body stay ink. */
+  --blue: #2c5f8a;
+  --blue-hover: #1f4666;
+  --blue-tint: #eaf1f7;
+  --blue-plate: #90b7d5; /* the same accent, lightened for a dark plate ground; decorative diagram stroke work only, never the packets or the void mark */
+
   /* ---- Plate primitives: the four dark technical figures only. ---- */
   --plate: #0a1e30;
   --plate-fill: #16324a; /* gateway / control-plane / terminal cards */
@@ -125,6 +135,13 @@
   position: relative;
 }
 
+/* One or two sections only, to break the uniform paper — not a pattern
+   applied broadly. Tint, not a new ground: headings and body inside stay
+   ink, only the section's own background shifts. */
+.dw-zone--tint {
+  background: var(--blue-tint);
+}
+
 .dw-zone::before {
   content: '';
   position: absolute;
@@ -163,7 +180,7 @@
 }
 
 .dw-eyebrow__n {
-  color: var(--ink);
+  color: var(--blue);
   margin-right: var(--s1);
 }
 
@@ -321,8 +338,8 @@
 }
 
 .dw-nav__links a:hover {
-  color: var(--ink);
-  border-bottom-color: var(--ink);
+  color: var(--blue);
+  border-bottom-color: var(--blue);
 }
 
 .dw-nav__actions {
@@ -376,16 +393,16 @@ a.dw-nav__secondary {
   font-size: 0.9375rem;
   letter-spacing: 0;
   text-transform: none;
-  color: var(--ink);
+  color: var(--blue);
   text-decoration: none;
-  border-bottom: 1px solid var(--ink);
+  border-bottom: 1px solid var(--blue);
   white-space: nowrap;
 }
 
 .dw-cta-secondary:hover,
 .dw-nav__secondary:hover {
-  color: var(--ink-soft);
-  border-bottom-color: var(--ink-soft);
+  color: var(--blue-hover);
+  border-bottom-color: var(--blue-hover);
 }
 
 /* ---- Hero ---- */
@@ -728,13 +745,13 @@ a.dw-spec__link {
   font-family: var(--font-sans);
   font-size: 0.85rem;
   font-weight: 500;
-  color: var(--ink);
+  color: var(--blue);
   text-decoration: none;
   border-bottom: 1px solid transparent;
 }
 
 .dw-spec__link:hover {
-  border-bottom-color: var(--ink);
+  border-bottom-color: var(--blue);
 }
 
 /* ---- Doctrine 03: right-aligned, the page's one right-flowing section,
@@ -1187,14 +1204,14 @@ a.dw-proof__link {
   font-size: 0.9rem;
   letter-spacing: 0;
   text-decoration: none;
-  color: var(--ink);
-  border-bottom: 1px solid var(--ink);
+  color: var(--blue);
+  border-bottom: 1px solid var(--blue);
   padding-bottom: 2px;
 }
 
 .dw-proof__link:hover {
-  color: var(--ink-soft);
-  border-bottom-color: var(--ink-soft);
+  color: var(--blue-hover);
+  border-bottom-color: var(--blue-hover);
 }
 
 .dw-proof__link-size {
