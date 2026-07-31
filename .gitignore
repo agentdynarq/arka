@@ -49,3 +49,13 @@ Thumbs.db
 
 # submission artifact, rebuilt on demand
 arka-submission.zip
+
+# local AI coding agent tooling, not part of the graded product
+.claude/
+.agents/
+.cursor/
+.codex/
+.grok/
+.github/hooks/
+.github/skills/
+skills-lock.json

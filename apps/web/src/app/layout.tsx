@@ -12,7 +12,12 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], weight: ['400'], vari
 
 export const metadata: Metadata = {
   title: 'Arka',
-  description: 'Banking that survives.',
+  description: 'A cell-isolated digital banking platform. One Cell compromised, zero customers lost.',
+  openGraph: {
+    title: 'Arka',
+    description: 'A cell-isolated digital banking platform. One Cell compromised, zero customers lost.',
+    type: 'website',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
