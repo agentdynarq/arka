@@ -42,7 +42,9 @@ test('re-verify, MFA, dashboard balance, and a transfer to an existing payee', a
   const balanceBefore = await balanceCard.getByTestId('balance-amount').innerText()
 
   await page.getByRole('button', { name: 'Send', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Send money' })).toBeVisible()
+  // Since the transfer screen became a full page, "Send money" titles both the page
+  // header and the form panel, so an unqualified match is a strict mode violation.
+  await expect(page.getByRole('heading', { name: 'Send money' }).first()).toBeVisible()
   await page.locator('#to').fill('customer:bob')
   await page.locator('#amount').fill('10.00')
   await page.getByRole('button', { name: 'Send', exact: true }).click()
