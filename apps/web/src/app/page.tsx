@@ -217,7 +217,7 @@ export default function Home() {
               <span>RPO 0</span>
             </div>
           </div>
-            <p className="dw-caption">Fig. 1 &mdash; The transaction path. No route between Cell 1 and Cell 2.</p>
+            <p className="dw-caption">Fig. 1: The transaction path. No route between Cell 1 and Cell 2.</p>
           </div>
         </div>
       </header>
@@ -235,7 +235,7 @@ export default function Home() {
             <span className="dw-mono">29</span> ledger records, <span className="dw-mono">0</span> tampered
           </div>
           <div className="dw-value-strip__item">
-            RPO <span className="dw-mono">0</span> &mdash; restored from verified ledger
+            RPO <span className="dw-mono">0</span>: restored from verified ledger
           </div>
           <div className="dw-value-strip__item">
             <span className="dw-mono">403</span> on the quarantined Cell, <span className="dw-mono">200</span> everywhere else
@@ -268,7 +268,7 @@ export default function Home() {
               </div>
             )}
           </figure>
-          <p className="dw-caption">Customer dashboard, screen W2 &mdash; a real seeded account, not a mockup.</p>
+          <p className="dw-caption">Customer dashboard, screen W2: a real seeded account, not a mockup.</p>
 
           <div className="dw-showcase__pair">
             <figure className="dw-showcase__figure">
@@ -298,7 +298,7 @@ export default function Home() {
               )}
             </figure>
           </div>
-          <p className="dw-caption">Recovery Console &mdash; health map (screen W5) and integrity audit (screen W6).</p>
+          <p className="dw-caption">Recovery Console: health map (screen W5) and integrity audit (screen W6).</p>
         </div>
       </section>
 
@@ -306,7 +306,7 @@ export default function Home() {
       <section className="dw-zone" id="failure" style={{ '--rule-delay': '60ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-section">
           <span className="dw-eyebrow">
-            <span className="dw-eyebrow__n">01</span>The failure &mdash; one trust domain, one network, one Master Key
+            <span className="dw-eyebrow__n">01</span>The failure: one trust domain, one network, one Master Key
           </span>
 
           <div className="dw-plate">
@@ -370,7 +370,7 @@ export default function Home() {
             </div>
           </div>
           <p className="dw-caption">
-            Fig. 2 &mdash; Arka splits the same services into <strong>two Cells with no route between them</strong>.
+            Fig. 2: Arka splits the same services into <strong>two Cells with no route between them</strong>.
           </p>
         </div>
       </section>
@@ -455,7 +455,7 @@ export default function Home() {
             <div className="dw-spec__row">
               <span className="dw-spec__k">Mechanism</span>
               <span className="dw-spec__v">
-                Identity, accounts, payments, ledger, notifications &mdash; own Postgres, own Redis Streams, per
+                Identity, accounts, payments, ledger, notifications: own Postgres, own Redis Streams, per
                 Cell.
               </span>
             </div>
@@ -491,7 +491,7 @@ export default function Home() {
               <span className="dw-eyebrow__n">04</span>Doctrine 03 &middot; Recovery is a feature
             </span>
             <h2 className="dw-heading dw-heading--lg">There is no Master Key.</h2>
-            <p className="dw-doctrine__note">3-of-5 keyholder quorum, designed &mdash; Phase 3 scope, see Honest scope.</p>
+            <p className="dw-doctrine__note">3-of-5 keyholder quorum, designed. Phase 3 scope, see Honest scope.</p>
           </div>
         </div>
       </section>
@@ -769,7 +769,7 @@ export default function Home() {
         </div>
 
         <p className="dw-caption">
-            Fig. 3 &mdash; <strong>No route exists</strong> between Cell 1 and Cell 2. The control plane observes and
+            Fig. 3: <strong>No route exists</strong> between Cell 1 and Cell 2. The control plane observes and
             rebuilds both, one-way, and holds no customer data.
           </p>
         </div>
@@ -818,7 +818,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <p className="dw-caption">Fig. 4 &mdash; pnpm verify-ledger, live output.</p>
+            <p className="dw-caption">Fig. 4: pnpm verify-ledger, live output.</p>
             <p className="dw-provenance">Recorded 2026-07-28T18:26:41Z &middot; live stack &middot; unstaged</p>
           </div>
 
@@ -839,7 +839,7 @@ export default function Home() {
               <div className="dw-timeline__step dw-timeline__step--loud">
                 <span className="dw-timeline__code">403</span>
                 <span className="dw-timeline__detail">
-                  CELL_QUARANTINED &mdash; the identical transfer, rejected. cell-1 is read-only.
+                  CELL_QUARANTINED: the identical transfer, rejected. cell-1 is read-only.
                 </span>
               </div>
               <div className="dw-timeline__step">
@@ -868,7 +868,7 @@ export default function Home() {
           </div>
 
           <p className="dw-proof__auditor">
-            An <strong>auditor</strong> never has to trust this page &mdash; recompute independently with{' '}
+            An <strong>auditor</strong> never has to trust this page. Recompute independently with{' '}
             <code>pnpm verify-ledger</code>, or walk the chain from Recovery Console screen W6.
           </p>
         </div>
