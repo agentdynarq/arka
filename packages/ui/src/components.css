@@ -186,8 +186,8 @@ body {
 
 .ui-sidebar__mark {
   flex-shrink: 0;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
 }
 
 .ui-sidebar[data-collapsed='true'] .ui-sidebar__wordmark {
