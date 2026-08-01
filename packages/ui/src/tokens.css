@@ -54,14 +54,53 @@
   --palette-ops-green-tint: #0c2b22;
   --palette-ops-green-text: #6ee7b7;
 
+  /* ---- New system primitives: indigo flood. Source of truth for every
+     surface at once — homepage, apps/web, apps/console share these, no
+     per-app variant, that is the whole point of this pass. Institutional
+     (--institutional-*) below is now aliased to these, mapped by role,
+     not by hue: see the comment on that block for the reasoning behind
+     each mapping, including the two that are not a straight hue swap
+     (--color-accent now --primary, and the ops register's grounds now
+     light instead of dark). ---- */
+  --flood-top: #4f5bff;
+  --flood-base: #171253;
+  --flood: linear-gradient(135deg, #4f5bff 0%, #171253 100%);
+
+  --white: #ffffff;
+  --ground: #fafafb;
+  --mist: #f4f5f7;
+
+  --ink: #12142b;
+  --ink-soft: #4a4e6b;
+  --ink-faint: #8a8da6;
+  --hairline: #e4e6ea;
+  --hairline-d: #2a2668;
+  --on-flood: #ffffff;
+  --on-flood-soft: #b9bce8;
+
+  --primary: #4338ca;
+  --primary-dk: #372fa8;
+  --primary-tint: #eeedfb;
+
+  --teal: #0e7c66;
+  --teal-tint: #e7f2ef;
+  --red: #b33a22;
+  --red-tint: #fbede9;
+  --amber: #9a6b15;
+  --amber-tint: #fbf3e4;
+
+  --radius: 3px;
+  --radius-panel: 12px;
+
   /* ---- Primitives: type ----
-   * var(--font-space-grotesk) etc. are supplied by next/font/google in each
-   * app's layout.tsx (a CSS variable class on <html>), never a Google Fonts
+   * var(--font-inter) etc. are supplied by next/font/google in each app's
+   * layout.tsx (a CSS variable class on <html>), never a Google Fonts
    * <link> or CDN import: no runtime request, no layout shift, matching the
    * rest of this codebase's no-CDN-dependency convention. The named
    * fallback keeps this file legible and non-broken if a consuming app ever
-   * forgets to wire the variable. */
-  --font-display-stack: var(--font-space-grotesk), 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+   * forgets to wire the variable. Space Grotesk is gone; --font-display
+   * below now resolves through --institutional-font-serif in both apps,
+   * loaded app-wide (see each app's layout.tsx), not scoped to one route. */
   --font-sans-stack: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono-stack: var(--font-jetbrains-mono), 'JetBrains Mono', 'SF Mono', Consolas, monospace;
 
@@ -110,41 +149,54 @@
   --color-text-inverse: var(--palette-white);
 
   /* ---- Semantic: brand and status ---- */
-  --color-accent: var(--institutional-ink);
-  --color-accent-hover: color-mix(in srgb, var(--institutional-ink) 85%, black);
-  --color-accent-tint: color-mix(in srgb, var(--institutional-ink) 6%, var(--institutional-paper));
+  /* Judgement call (chore/indigo-tokens): --color-accent no longer follows
+     --institutional-ink. That primitive is now a neutral structural color
+     (headings, body text — see the alias below), not the button/action
+     color, so the two roles split here: --primary is the single interactive
+     color on all three surfaces (homepage, apps/web, apps/console), where
+     --institutional-ink previously WAS the navy button fill in this
+     register. Anything that read as "navy-as-a-button" before now reads as
+     indigo, deliberately, everywhere. */
+  --color-accent: var(--primary);
+  --color-accent-hover: var(--primary-dk);
+  --color-accent-tint: var(--primary-tint);
   --color-accent-text: var(--palette-white);
 
-  /* Not --institutional-verified: that primitive is reserved for
-     verification state only (see its own comment below), never a general
-     UI accent. --color-teal backs .ui-panel__eyebrow, rendered as real text
-     directly on paper; --palette-teal-600 only clears 3.46:1 there (checked,
-     fails AA), --palette-teal-700 clears 5.06:1. --color-teal-strong is
-     darkened further via color-mix so a teal-on-teal-strong hover state
-     (.ui-button--teal) stays visibly distinct instead of collapsing to the
-     same value, and still clears AA where it renders as text (icon labels
-     on --color-bg-tint, 5.30:1, checked). */
+  /* Not touched by the indigo-tokens pass: --color-teal/--color-teal-strong
+     were never --institutional-* and aren't one of the two judgement calls
+     that pass covers. They still power .ui-button--teal, which is now the
+     only remaining non-primary colored button on a surface meant to have a
+     single interactive color, and the new palette's own STATUS colors are
+     documented as "never a button fill" — so this variant is stale, not
+     migrated blind. Flagged for follow-up rather than silently repointed. */
   --color-teal: var(--palette-teal-700);
   --color-teal-strong: color-mix(in srgb, var(--palette-teal-700) 90%, black);
 
-  --color-success: var(--palette-green-700);
-  --color-success-tint: var(--palette-green-tint);
-  --color-warning: var(--palette-amber-700);
-  --color-warning-tint: var(--palette-amber-tint);
-  /* --institutional-reject is explicitly the "403, text on paper" primitive:
-     5.48:1 on paper, checked, and 4.91:1 against the unchanged danger-tint
-     background badges and alerts already pair it with. */
+  /* Also not literally --institutional-*, but repointed anyway
+     (chore/indigo-tokens): the new palette defines exactly one status
+     triad (--teal/--red/--amber) to replace the old
+     green/amber/red/teal-600 spread, and --color-danger already flowed
+     through --institutional-reject (below), so leaving success/info/
+     warning on the old hues would have left the status system half
+     migrated — red new, everything else old. No separate "info" hue exists
+     in the new triad, so info collapses onto the same teal as success. */
+  --color-success: var(--teal);
+  --color-success-tint: var(--teal-tint);
+  --color-warning: var(--amber);
+  --color-warning-tint: var(--amber-tint);
+  /* --institutional-reject is explicitly the "403, text on paper" primitive,
+     now aliased to --red below; this formula recomputes automatically. */
   --color-danger: var(--institutional-reject);
   --color-danger-tint: color-mix(in srgb, var(--institutional-reject) 8%, var(--institutional-paper));
-  --color-info: var(--palette-teal-600);
-  --color-info-tint: var(--palette-teal-tint);
+  --color-info: var(--teal);
+  --color-info-tint: var(--teal-tint);
 
   /* A large status banner (W6's "chain verified") reads differently from a
    * small Badge pill: pills stay a light tint even in the dark ops register
    * (the wireframe shows this deliberately), a full-width banner does not. */
-  --color-banner-success-bg: var(--palette-green-tint);
-  --color-banner-success-border: var(--palette-green-500);
-  --color-banner-success-text: var(--palette-green-700);
+  --color-banner-success-bg: var(--teal-tint);
+  --color-banner-success-border: var(--teal);
+  --color-banner-success-text: var(--teal);
 
   /* Ink, not teal: focus and selection are generic UI chrome that lands on
      paper as easily as on a plate, matching the homepage's own
@@ -153,13 +205,11 @@
   --color-focus-ring: var(--institutional-ink);
 
   /* ---- Semantic: type scale ----
-   * Falls back to Georgia/Times New Roman (the fallback baked into
-   * --institutional-font-serif itself): Source Serif 4 is only loaded
-   * scoped to apps/web/src/app/page.tsx today (see the comment on the
-   * institutional block below), and neither app's root layout.tsx is in
-   * this restyle's file ownership to add a second, app-wide font load to.
-   * The serif fallback is a deliberate, zero-risk choice here, not an
-   * oversight: no extra network request, no CLS. */
+   * Source Serif 4 is now loaded app-wide (chore/indigo-tokens), in both
+   * apps/web/src/app/layout.tsx and apps/console/src/app/layout.tsx, the
+   * same next/font/google pattern already used for Inter and JetBrains
+   * Mono there — not scoped to a single route anymore. Falls back to
+   * Georgia/Times New Roman only if that ever changes. */
   --font-display: var(--institutional-font-serif);
   --font-sans: var(--font-sans-stack);
   --font-mono: var(--font-mono-stack);
@@ -172,14 +222,16 @@
 }
 
 /**
- * Institutional primitives (Phase 2, from the marketing homepage's rebuild:
- * apps/web/src/app/globals.css, the `.dw` scope). Added here so both frontends
- * can reference the same values without duplicating hex codes; NOT yet wired
- * into any --color-, --radius-, or --font- semantic alias above or in the
- * ops register below — landing this block changes zero rendered pixels on any
- * existing screen. Repointing the semantic aliases to these primitives is
- * deliberately a separate, later change, made screen by screen, so a mistake
- * is scoped to one screen rather than applied blind, everywhere, at once.
+ * Institutional primitives. Originally the marketing homepage's own palette
+ * (apps/web/src/app/globals.css, the `.dw` scope) — navy ink on paper, dark
+ * "plate" panels, teal verification. As of chore/indigo-tokens, every value
+ * below is an alias onto the indigo flood system declared earlier in this
+ * file, mapped by role rather than by hue, so every screen and every plate
+ * that already reads one of these tokens picks up the new palette with zero
+ * call-site changes. Names are unchanged on purpose: they're still what the
+ * semantic layer above and apps/web/src/app/globals.css's `.dw` scope both
+ * read, and renaming them would be exactly the kind of call-site migration
+ * this pass is not doing.
  *
  * Two sub-groups, because the homepage itself has two grounds:
  *   --institutional-* : the light "paper" register (maps to the customer
@@ -187,111 +239,114 @@
  *   --institutional-plate-* : the dark "plate" register (maps to the ops
  *     register below — :root[data-surface='ops']).
  *
- * --institutional-verified is #40BFB5, not the originally-briefed #0E7C66:
- * no single hue clears 4.5:1 text contrast against both a near-white paper
- * and a near-black plate at once (the required luminance bands don't
- * overlap — verified by computing both pairings). Every real use on the
- * homepage sits on a dark plate, so the shipped value is tuned for that
- * side. If a light-register (paper) use of this color is ever needed,
- * #0E7C66 is the correct value THERE specifically — don't reuse
- * --institutional-verified for it unmodified, recheck contrast for that
- * pairing instead.
+ * Two mappings are not a straight hue swap and are called out inline below:
+ * the "plate" tokens (the homepage's four dark technical panels) now alias
+ * the new --ink neutral rather than anything flood-colored — the flood
+ * gradient is reserved for new full-bleed homepage markup only, per its own
+ * definition above, never repurposed for an existing small or medium
+ * surface. And --institutional-verified keeps its own value rather than
+ * aliasing --teal directly: it is specifically the plate-ground-tuned
+ * variant (5.88:1 on --institutional-plate-fill, previously checked), while
+ * --teal is tuned for text on the new light grounds; the two happen to
+ * share a hue family but are kept as separate primitives on purpose, same
+ * reasoning as the original --reject/--reject-plate split below.
  */
 :root {
   /* Light "paper" register */
-  --institutional-paper: #f7f6f3;
-  --institutional-ink: #0a1e30;
-  --institutional-ink-soft: #465a6b;
-  --institutional-rule: #d9d5ce;
-  --institutional-reject: #b33a22; /* the 403, text on paper */
+  --institutional-paper: var(--ground);
+  --institutional-ink: var(--ink);
+  --institutional-ink-soft: var(--ink-soft);
+  --institutional-rule: var(--hairline);
+  --institutional-reject: var(--red); /* the 403, text on paper */
 
-  /* Dark "plate" register */
-  --institutional-plate: #0a1e30;
-  --institutional-plate-fill: #16324a;
-  --institutional-plate-fill-2: #1e3f5c;
-  --institutional-plate-line: #2f4d68;
-  --institutional-plate-ink: #e7ecef;
-  --institutional-plate-ink-soft: #9bb0bf;
-  --institutional-reject-plate: #e46944; /* graphical marks on a plate, not text */
+  /* Dark "plate" register — the homepage's four dark technical panels only
+     (architecture diagram, verify-ledger terminal, failure comparison, hero
+     line). Aliases --ink, a solid neutral, not the flood gradient: see the
+     comment above this block. */
+  --institutional-plate: var(--ink);
+  --institutional-plate-fill: var(--ink);
+  /* One tier lighter than --plate-fill, for a raised element (e.g. a Cell
+     box) to read a step above its panel: no single new primitive covers
+     this exactly, so computed rather than reusing --ink flat. */
+  --institutional-plate-fill-2: color-mix(in srgb, var(--ink) 82%, var(--white));
+  --institutional-plate-line: var(--hairline-d);
+  --institutional-plate-ink: var(--on-flood);
+  --institutional-plate-ink-soft: var(--on-flood-soft);
+  --institutional-reject-plate: var(--red); /* graphical marks on a plate, not text */
 
   /* Verification state only (see comment above): never a fill, button,
-     heading, or link color in either register. */
+     heading, or link color in either register. Not aliased to --teal: see
+     the block comment above for why the two stay separate primitives. */
   --institutional-verified: #40bfb5;
 
-  /* Type: Source Serif 4 for headings, Inter for body/UI (already loaded
-     app-wide via --font-inter), JetBrains Mono restricted to machine output
-     (already loaded app-wide via --font-jetbrains-mono). Source Serif 4 is
-     NOT loaded app-wide today — it's loaded scoped to
-     apps/web/src/app/page.tsx via next/font/google, so it fetches only for
-     "/". A screen adopting --institutional-font-serif must load the font
-     itself the same way, or this falls back to Georgia / Times New Roman. */
+  /* Type: Source Serif 4 for headings, now loaded app-wide (see each app's
+     layout.tsx), Inter for body/UI (already loaded app-wide via
+     --font-inter), JetBrains Mono restricted to machine output (already
+     loaded app-wide via --font-jetbrains-mono). */
   --institutional-font-serif: var(--font-source-serif, Georgia, 'Times New Roman', serif);
 
   /* Radius: 3px throughout, not a scale — nearly square is the whole point
      (no pill buttons, no pill cards). One value, unlike --radius-sm/md/lg
-     above, which is deliberately a scale for the older, rounder system. */
-  --institutional-radius: 3px;
+     above, which is deliberately a scale for the older, rounder system.
+     Aliases the new --radius primitive so both have one edit point. */
+  --institutional-radius: var(--radius);
 }
 
 /**
- * Screens W5/W6 (apps/console) are an operator instrument panel: a
- * deliberately darker register, exact values from the Figma wireframes
- * (bg #0a1020, surface #101a30, border #22304c). Opt in with
- * `data-surface="ops"` on a page's root element, not a second stylesheet,
- * so it stays on the same token names as everywhere else.
+ * Screens W5/W6 (apps/console) were a deliberately darker operator register.
+ * Judgement call (chore/indigo-tokens): the console goes LIGHT now, the
+ * same family as the customer register and the homepage, because "one
+ * palette across all three surfaces" was the whole point of this pass.
+ * That means this block can no longer simply inherit whatever
+ * --institutional-plate-* now resolves to (those alias --ink, a solid dark
+ * neutral, kept dark on purpose for the homepage's four actual plate
+ * panels — see the comment on that block). Every value here is instead
+ * repointed directly to a light neutral or --primary, decoupling the
+ * console's ground from the homepage's plate primitives. Still opted into
+ * with `data-surface="ops"` on a page's root element, not a second
+ * stylesheet, so it stays on the same token names as everywhere else — a
+ * future screen could still opt into an actually-dark register through
+ * this same attribute if one is ever needed again.
  */
 :root[data-surface='ops'] {
-  /* Three plate tiers instead of two: --institutional-plate-fill-2 gives
-     "raised element" (ui-tile, cell cards that need to read a step above
-     their panel) a real value of its own instead of duplicating bg-surface. */
-  --color-bg-canvas: var(--institutional-plate);
-  --color-bg-surface: var(--institutional-plate-fill);
-  --color-bg-surface-raised: var(--institutional-plate-fill-2);
-  --color-bg-tint: color-mix(in srgb, var(--institutional-plate-ink) 10%, var(--institutional-plate-fill));
-  --color-border: var(--institutional-plate-line);
-  --color-border-strong: var(--institutional-plate-line);
+  /* Three light tiers instead of three dark ones: canvas is the most
+     recessed (page background), surface the base card, surface-raised the
+     brightest — lighter reads as "raised" once the register is light,
+     the mirror image of the old dark-plate convention where raised meant
+     lighter-on-dark; here it means lighter-still-on-light. */
+  --color-bg-canvas: var(--mist);
+  --color-bg-surface: var(--ground);
+  --color-bg-surface-raised: var(--white);
+  --color-bg-tint: color-mix(in srgb, var(--ink) 6%, var(--mist));
+  --color-border: var(--hairline);
+  --color-border-strong: var(--hairline);
 
-  --color-text-primary: var(--institutional-plate-ink);
-  --color-text-secondary: var(--institutional-plate-ink-soft);
-  /* No separate institutional plate-tertiary primitive; plate-ink-soft
-     itself already clears 4.5:1 against all three plate tiers (4.87:1 on
-     the lightest, plate-fill-2, checked), so it is reused rather than
-     inventing a dimmer value nothing asked for. */
-  --color-text-tertiary: var(--institutional-plate-ink-soft);
+  --color-text-primary: var(--ink);
+  --color-text-secondary: var(--ink-soft);
+  --color-text-tertiary: var(--ink-faint);
 
-  /* A light rectangle set into the dark plate, mirroring the paper
-     register's dark-on-paper button: 14.21:1 for plate-on-plate-ink text,
-     checked. Not --institutional-verified: that primitive is reserved for
-     verification state only and is explicitly never a fill or button color
-     (see its definition comment below). */
-  --color-accent: var(--institutional-plate-ink);
-  --color-accent-hover: color-mix(in srgb, var(--institutional-plate-ink) 85%, var(--institutional-plate-line));
-  --color-accent-tint: color-mix(in srgb, var(--institutional-plate-ink) 10%, var(--institutional-plate-fill));
-  --color-accent-text: var(--institutional-plate);
+  /* Single primary interactive color across all three surfaces (see the
+     judgement-call comment on --color-accent above, in the base :root
+     block) — the console's button is no longer its own light-rectangle
+     variant, it is the same indigo. */
+  --color-accent: var(--primary);
+  --color-accent-hover: var(--primary-dk);
+  --color-accent-tint: var(--primary-tint);
+  --color-accent-text: var(--palette-white);
 
-  /* --color-danger/--color-warning/--color-info are deliberately left
-     unset here, inheriting the paper-register values above. Both are
-     always rendered as a self-contained pair with their own *-tint
-     background (badges, alerts, the integrity evidence banner), which
-     stays a light tint in this register on purpose (existing convention,
-     see --color-banner-success-* below); a plate-safe brightened variant
-     of either color would clear the dark-plate case but fail against that
-     unchanged light tint (checked: 1.85:1 and 1.87:1 respectively). The one
-     screen that rendered --color-warning as bare text directly on a plate
-     surface (health-map's pending-approval lines) was restyled to use the
-     existing Badge component instead, which sidesteps the conflict rather
-     than fighting it.
+  /* --color-danger/--color-warning/--color-info are still deliberately left
+     unset here, inheriting the base-register values above (now --red/
+     --amber/--teal) — unchanged behavior, only the underlying hues moved.
+     Ink, not a brand or status color, for the focus ring: still generic UI
+     chrome, not a verification signal, same reasoning as the base
+     register. */
+  --color-focus-ring: var(--ink);
 
-     Ink, not teal, for the same reason as the paper register: generic UI
-     chrome, not a verification signal. */
-  --color-focus-ring: var(--institutional-plate-ink);
-
-  /* The one place --institutional-verified is actually used: W6's "chain
-     verified" banner is exactly the verification-state signal this
-     primitive was tuned for, on the dark plate ground it's tuned for.
-     5.88:1 for --institutional-verified as text on --institutional-plate-fill,
-     checked. Border only, not a fill, per that primitive's own rule. */
-  --color-banner-success-bg: var(--institutional-plate-fill);
-  --color-banner-success-border: var(--institutional-verified);
-  --color-banner-success-text: var(--institutional-verified);
+  /* W6's "chain verified" banner: now the same teal as every other success
+     signal, on the same light grounds as the rest of this register — the
+     dark-plate-specific tuning this used to need no longer applies once
+     the register itself is light. */
+  --color-banner-success-bg: var(--teal-tint);
+  --color-banner-success-border: var(--teal);
+  --color-banner-success-text: var(--teal);
 }
