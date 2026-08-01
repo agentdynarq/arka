@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { fetchDashboard, fetchHistory, fetchDailyLimit, fetchNotifications, formatMinorUnits, ApiError } from '@/lib/api'
@@ -269,39 +269,45 @@ export default function DashboardPage() {
           <p className="ui-meta">No activity matches your search.</p>
         )}
 
-        {groups.map(([day, lines]) => (
-          <div className="ui-day-group" key={day}>
-            <p className="ui-day-group__heading">{day}</p>
-            <table className="ui-table ui-table--dense">
+        {groups.length > 0 && (
+          <div className="ui-table-scroll">
+            <table className="ui-table ui-table--dense ui-table--activity">
               <thead>
                 <tr>
                   <th>Date</th>
                   <th>Description</th>
                   <th>Reference</th>
-                  <th>Amount</th>
-                  <th>Balance after</th>
+                  <th className="ui-table__num">Amount</th>
+                  <th className="ui-table__num">Balance after</th>
                 </tr>
               </thead>
               <tbody>
-                {lines.map((line) => {
-                  const balanceAfter = balanceAfterBySeq.get(line.seq)
-                  return (
-                    <tr key={line.seq}>
-                      <td>{new Date(line.at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</td>
-                      <td>{descriptionFor(line)}</td>
-                      <td className="ui-hash">Block #{line.seq}</td>
-                      <td className="ui-table__num">
-                        {line.direction === 'debit' ? '-' : '+'}
-                        {formatMinorUnits(line.amount)}
-                      </td>
-                      <td className="ui-table__num">{balanceAfter !== undefined ? formatMinorUnits(balanceAfter.toString()) : '-'}</td>
+                {groups.map(([day, lines]) => (
+                  <Fragment key={day}>
+                    <tr className="ui-table__group-row">
+                      <td colSpan={5}>{day}</td>
                     </tr>
-                  )
-                })}
+                    {lines.map((line) => {
+                      const balanceAfter = balanceAfterBySeq.get(line.seq)
+                      return (
+                        <tr key={line.seq}>
+                          <td>{new Date(line.at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</td>
+                          <td>{descriptionFor(line)}</td>
+                          <td className="ui-hash">Block #{line.seq}</td>
+                          <td className={`ui-table__num ${line.direction === 'debit' ? 'ui-table__num--debit' : 'ui-table__num--credit'}`}>
+                            {line.direction === 'debit' ? '-' : '+'}
+                            {formatMinorUnits(line.amount)}
+                          </td>
+                          <td className="ui-table__num">{balanceAfter !== undefined ? formatMinorUnits(balanceAfter.toString()) : '-'}</td>
+                        </tr>
+                      )
+                    })}
+                  </Fragment>
+                ))}
               </tbody>
             </table>
           </div>
-        ))}
+        )}
 
         {!expanded && filtered.length > PAGE_SIZE && (
           <div style={{ marginTop: 'var(--space-4)' }}>
