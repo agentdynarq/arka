@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { existsSync } from 'node:fs'
+import path from 'node:path'
 
 /**
  * Homepage for Duothan 6.0 judges, not the customer app itself. A pure
@@ -16,6 +18,16 @@ import Link from 'next/link'
  * already reaching this page by inheritance, so a second, page-scoped
  * next/font/google call would just fetch the same font file twice.
  */
+
+/** Product showcase (lane-b/furnishing): Lane A is capturing real screenshots
+ *  and will push them to apps/web/public/media at these exact filenames
+ *  around 21:00. Checked at render time (this is a Server Component, so
+ *  `existsSync` runs on the server, not the client) rather than hardcoded
+ *  true/false, so the real images drop in with zero code change the moment
+ *  they land -- no redeploy of this file needed, just the new PNGs. */
+function screenshotExists(filename: string): boolean {
+  return existsSync(path.join(process.cwd(), 'public', 'media', filename))
+}
 
 export default function Home() {
   return (
@@ -207,6 +219,65 @@ export default function Home() {
           <div className="dw-value-strip__item">
             <span className="dw-mono">403</span> on the quarantined Cell, <span className="dw-mono">200</span> everywhere else
           </div>
+        </div>
+      </section>
+
+      {/* PRODUCT SHOWCASE — unnumbered interstitial, like the value strip
+          above it, not one of the file's own ten numbered chapters.
+          Screenshots become the brightest thing on the page now that the
+          ground is dark, which is exactly right, so .dw-showcase__img
+          carries no filter/opacity/tint of any kind. Stand-ins render at
+          the identical 1440x900 aspect until Lane A's real captures land
+          at these exact paths, so the layout never shifts. */}
+      <section className="dw-zone" style={{ '--rule-delay': '90ms' } as React.CSSProperties}>
+        <div className="dw-zone__inner dw-section">
+          <span className="dw-eyebrow">See it, not just a claim about it</span>
+          <h2 className="dw-heading dw-heading--lg">The actual customer dashboard, the actual console.</h2>
+
+          <figure className="dw-showcase__figure dw-showcase__figure--large">
+            {screenshotExists('01-customer-dashboard.png') ? (
+              <img
+                src="/media/01-customer-dashboard.png"
+                alt="The customer dashboard: balance, recent activity, and the daily transfer limit, from a real seeded account."
+                className="dw-showcase__img"
+              />
+            ) : (
+              <div className="dw-showcase__stand-in" role="img" aria-label="Customer dashboard screenshot, not yet captured">
+                <span>01-customer-dashboard.png</span>
+              </div>
+            )}
+          </figure>
+          <p className="dw-caption">Customer dashboard, screen W2 &mdash; a real seeded account, not a mockup.</p>
+
+          <div className="dw-showcase__pair">
+            <figure className="dw-showcase__figure">
+              {screenshotExists('03-console-health-map.png') ? (
+                <img
+                  src="/media/03-console-health-map.png"
+                  alt="The Recovery Console health map: both Cells shown healthy, quarantine controls per Cell."
+                  className="dw-showcase__img"
+                />
+              ) : (
+                <div className="dw-showcase__stand-in" role="img" aria-label="Console health map screenshot, not yet captured">
+                  <span>03-console-health-map.png</span>
+                </div>
+              )}
+            </figure>
+            <figure className="dw-showcase__figure">
+              {screenshotExists('04-console-integrity-audit.png') ? (
+                <img
+                  src="/media/04-console-integrity-audit.png"
+                  alt="The Recovery Console integrity audit: the ledger hash chain walked block by block, both Cells clean."
+                  className="dw-showcase__img"
+                />
+              ) : (
+                <div className="dw-showcase__stand-in" role="img" aria-label="Console integrity audit screenshot, not yet captured">
+                  <span>04-console-integrity-audit.png</span>
+                </div>
+              )}
+            </figure>
+          </div>
+          <p className="dw-caption">Recovery Console &mdash; health map (screen W5) and integrity audit (screen W6).</p>
         </div>
       </section>
 

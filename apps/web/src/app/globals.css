@@ -875,6 +875,54 @@ a.dw-cta-secondary.dw-cta-secondary--flood {
   }
 }
 
+/* ---- Product showcase: real screenshots (or their identical-aspect
+   stand-ins until Lane A's captures land), never tinted or darkened —
+   deliberately the brightest thing on the page now that the ground is
+   dark. 1440x900, the aspect Lane A is capturing at. ---- */
+.dw-showcase__figure {
+  margin: var(--s6) 0 0;
+  aspect-ratio: 1440 / 900;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.dw-showcase__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dw-showcase__stand-in {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dw-panel);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.dw-showcase__pair {
+  margin-top: var(--s6);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s6);
+}
+
+.dw-showcase__pair .dw-showcase__figure {
+  margin-top: 0;
+}
+
+@media (max-width: 900px) {
+  .dw-showcase__pair {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---- Plates, shared: the four dark technical figures (hero line, failure
    comparison, architecture, verify-ledger terminal). Full content width,
    never shrunk into a card, never full-bleed. A caption sits beneath each
