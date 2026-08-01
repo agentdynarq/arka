@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { existsSync } from 'node:fs'
+import path from 'node:path'
 
 /**
  * Homepage for Duothan 6.0 judges, not the customer app itself. A pure
@@ -16,6 +18,24 @@ import Link from 'next/link'
  * already reaching this page by inheritance, so a second, page-scoped
  * next/font/google call would just fetch the same font file twice.
  */
+
+/** Product showcase (lane-b/furnishing): Lane A is capturing real screenshots
+ *  and will push them to apps/web/public/media at these exact filenames
+ *  around 21:00. Checked at render time (this is a Server Component, so
+ *  `existsSync` runs on the server, not the client) rather than hardcoded
+ *  true/false, so the real images drop in with zero code change the moment
+ *  they land -- no redeploy of this file needed, just the new PNGs. */
+function screenshotExists(filename: string): boolean {
+  return existsSync(path.join(process.cwd(), 'public', 'media', filename))
+}
+
+/** Same reasoning, for the quarantine video: Lane A delivers quarantine.mp4
+ *  and quarantine.webm around 21:00. Until both exist, falls back to the
+ *  existing linked quarantine.gif rather than a container pointed at files
+ *  that 404. */
+function mediaFileExists(filename: string): boolean {
+  return existsSync(path.join(process.cwd(), 'public', 'media', filename))
+}
 
 export default function Home() {
   return (
@@ -189,6 +209,86 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Value strip — immediately below the hero, full width, on --dw-panel.
+          Four measured values, not four invented claims: same numbers as
+          the hero's own stat strip and the verify-ledger terminal below,
+          restated as one line each instead of a mono-only capsule row. */}
+      <section className="dw-zone dw-value-strip" style={{ '--rule-delay': '30ms' } as React.CSSProperties}>
+        <div className="dw-value-strip__inner dw-section">
+          <div className="dw-value-strip__item">
+            <span className="dw-mono">2</span> Cells, zero shared network paths
+          </div>
+          <div className="dw-value-strip__item">
+            <span className="dw-mono">29</span> ledger records, <span className="dw-mono">0</span> tampered
+          </div>
+          <div className="dw-value-strip__item">
+            RPO <span className="dw-mono">0</span> &mdash; restored from verified ledger
+          </div>
+          <div className="dw-value-strip__item">
+            <span className="dw-mono">403</span> on the quarantined Cell, <span className="dw-mono">200</span> everywhere else
+          </div>
+        </div>
+      </section>
+
+      {/* PRODUCT SHOWCASE — unnumbered interstitial, like the value strip
+          above it, not one of the file's own ten numbered chapters.
+          Screenshots become the brightest thing on the page now that the
+          ground is dark, which is exactly right, so .dw-showcase__img
+          carries no filter/opacity/tint of any kind. Stand-ins render at
+          the identical 1440x900 aspect until Lane A's real captures land
+          at these exact paths, so the layout never shifts. */}
+      <section className="dw-zone" style={{ '--rule-delay': '90ms' } as React.CSSProperties}>
+        <div className="dw-zone__inner dw-section">
+          <span className="dw-eyebrow">See it, not just a claim about it</span>
+          <h2 className="dw-heading dw-heading--lg">The actual customer dashboard, the actual console.</h2>
+
+          <figure className="dw-showcase__figure dw-showcase__figure--large">
+            {screenshotExists('01-customer-dashboard.png') ? (
+              <img
+                src="/media/01-customer-dashboard.png"
+                alt="The customer dashboard: balance, recent activity, and the daily transfer limit, from a real seeded account."
+                className="dw-showcase__img"
+              />
+            ) : (
+              <div className="dw-showcase__stand-in" role="img" aria-label="Customer dashboard screenshot, not yet captured">
+                <span>01-customer-dashboard.png</span>
+              </div>
+            )}
+          </figure>
+          <p className="dw-caption">Customer dashboard, screen W2 &mdash; a real seeded account, not a mockup.</p>
+
+          <div className="dw-showcase__pair">
+            <figure className="dw-showcase__figure">
+              {screenshotExists('03-console-health-map.png') ? (
+                <img
+                  src="/media/03-console-health-map.png"
+                  alt="The Recovery Console health map: both Cells shown healthy, quarantine controls per Cell."
+                  className="dw-showcase__img"
+                />
+              ) : (
+                <div className="dw-showcase__stand-in" role="img" aria-label="Console health map screenshot, not yet captured">
+                  <span>03-console-health-map.png</span>
+                </div>
+              )}
+            </figure>
+            <figure className="dw-showcase__figure">
+              {screenshotExists('04-console-integrity-audit.png') ? (
+                <img
+                  src="/media/04-console-integrity-audit.png"
+                  alt="The Recovery Console integrity audit: the ledger hash chain walked block by block, both Cells clean."
+                  className="dw-showcase__img"
+                />
+              ) : (
+                <div className="dw-showcase__stand-in" role="img" aria-label="Console integrity audit screenshot, not yet captured">
+                  <span>04-console-integrity-audit.png</span>
+                </div>
+              )}
+            </figure>
+          </div>
+          <p className="dw-caption">Recovery Console &mdash; health map (screen W5) and integrity audit (screen W6).</p>
+        </div>
+      </section>
+
       {/* 01 · THE FAILURE — full-bleed diagram, mono eyebrow as the only heading */}
       <section className="dw-zone" id="failure" style={{ '--rule-delay': '60ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-section">
@@ -262,6 +362,56 @@ export default function Home() {
         </div>
       </section>
 
+      {/* CONTRAST PAIR — unnumbered, like the value strip and the product
+          showcase above it. Restates the same claim sections 01 and 03
+          already make, in a visual device neither of those uses: two
+          panels side by side, chaos against calm, same real service names
+          and the same real quarantine outcome as the rest of the page, not
+          new figures. */}
+      <section className="dw-zone" style={{ '--rule-delay': '150ms' } as React.CSSProperties}>
+        <div className="dw-contrast">
+          <div className="dw-contrast__col dw-contrast__col--collapse">
+            <div className="dw-contrast__inner">
+              <h2 className="dw-heading dw-heading--lg">One trust domain. One network. One Master Key.</h2>
+              <div className="dw-contrast__cards">
+                <div className="dw-contrast__card dw-contrast__card--1">
+                  <span className="dw-contrast__chip">STATUS: UNRESOLVED</span>
+                  <span>IDENTITY unreachable</span>
+                </div>
+                <div className="dw-contrast__card dw-contrast__card--2">
+                  <span className="dw-contrast__chip">STATUS: UNRESOLVED</span>
+                  <span>LEDGER writes failing</span>
+                </div>
+                <div className="dw-contrast__card dw-contrast__card--3">
+                  <span className="dw-contrast__chip">STATUS: UNRESOLVED</span>
+                  <span>MASTER KEY compromised</span>
+                </div>
+              </div>
+              <div className="dw-contrast__store">
+                <div className="dw-contrast__store-services">
+                  {['IDENTITY', 'ACCOUNTS', 'PAYMENTS', 'LEDGER', 'NOTIFICATIONS'].map((svc) => (
+                    <span key={svc} className="dw-contrast__store-svc">
+                      {svc}
+                    </span>
+                  ))}
+                </div>
+                <div className="dw-contrast__store-arrow" aria-hidden="true" />
+                <div className="dw-contrast__store-shared">ONE SHARED STORE</div>
+              </div>
+            </div>
+          </div>
+          <div className="dw-contrast__col dw-contrast__col--contain">
+            <div className="dw-contrast__inner">
+              <h2 className="dw-heading dw-heading--lg dw-contrast__heading--flood">Blast radius becomes a design parameter.</h2>
+              <p className="dw-contrast__confirm">
+                <span className="dw-mono">cell-1 quarantined</span> &middot; <span className="dw-mono">cell-2 serving</span> &middot;{' '}
+                <span className="dw-mono">0 records lost</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 02 · DOCTRINE 01 — single centered statement, the page's one quiet moment */}
       <section className="dw-zone dw-zone--tint" id="doctrines" style={{ '--rule-delay': '120ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-section dw-section--narrow dw-doctrine-quiet">
@@ -329,6 +479,50 @@ export default function Home() {
             </span>
             <h2 className="dw-heading dw-heading--lg">There is no Master Key.</h2>
             <p className="dw-doctrine__note">3-of-5 keyholder quorum, designed &mdash; Phase 3 scope, see Honest scope.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* DOCTRINE GRID — unnumbered, like the value strip, product showcase
+          and contrast pair above it. Same three doctrines sections 02-04
+          each already state on their own, recapped together in one device
+          none of those three use: a 3-up bordered grid with corner tick
+          marks, the Cloudflare feature-grid convention. */}
+      <section className="dw-zone" style={{ '--rule-delay': '270ms' } as React.CSSProperties}>
+        <div className="dw-zone__inner dw-section">
+          <span className="dw-eyebrow">Three doctrines, every decision traces to one</span>
+          <div className="dw-doctrine-grid">
+            <div className="dw-doctrine-grid__cell">
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--tl" aria-hidden="true" />
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--tr" aria-hidden="true" />
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--bl" aria-hidden="true" />
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--br" aria-hidden="true" />
+              <h3 className="dw-doctrine-grid__title">Assume breach.</h3>
+              <p className="dw-doctrine-grid__note">
+                Every internal call is authenticated. Network location grants no trust.
+              </p>
+            </div>
+            <div className="dw-doctrine-grid__cell">
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--tl" aria-hidden="true" />
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--tr" aria-hidden="true" />
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--bl" aria-hidden="true" />
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--br" aria-hidden="true" />
+              <h3 className="dw-doctrine-grid__title">Contain by construction.</h3>
+              <p className="dw-doctrine-grid__note">
+                Customers are sharded across independent Cells that share nothing and have no network path to
+                each other.
+              </p>
+            </div>
+            <div className="dw-doctrine-grid__cell">
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--tl" aria-hidden="true" />
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--tr" aria-hidden="true" />
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--bl" aria-hidden="true" />
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--br" aria-hidden="true" />
+              <h3 className="dw-doctrine-grid__title">Recovery is a feature.</h3>
+              <p className="dw-doctrine-grid__note">
+                An append-only hash-chained ledger makes tampering detectable and state rebuildable.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -812,46 +1006,139 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FINAL CTA — near-empty, terminal block plus CTA, left-aligned inside a centered container */}
-      <section className="dw-zone dw-final" style={{ '--rule-delay': '600ms' } as React.CSSProperties}>
+      {/* QUARANTINE VIDEO — split out of the old combined final-CTA block now
+          that the final CTA below gets its own full-bleed flood treatment. */}
+      <section className="dw-zone" style={{ '--rule-delay': '600ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-final__inner">
           <h2 className="dw-final__title">See it fail. Then see it survive.</h2>
 
-          <div className="dw-final__actions">
-            <div className="dw-terminal">
-              <div className="dw-terminal__bar" aria-hidden="true">
-                <span className="dw-terminal__dot" />
-                <span className="dw-terminal__dot" />
-                <span className="dw-terminal__dot" />
-              </div>
-              <div className="dw-terminal__body">
-                <div>
-                  <span className="dw-terminal__prompt">$</span> docker compose up -d
-                </div>
-                <div>
-                  <span className="dw-terminal__prompt">$</span> pnpm seed
-                </div>
-                <div>
-                  <span className="dw-terminal__prompt">$</span> pnpm dev
-                </div>
-              </div>
-            </div>
-            <Link href="/reverify" className="dw-cta-primary">
-              Run the live demo
-            </Link>
-            <a href="#architecture" className="dw-cta-secondary">
-              Read the architecture
-            </a>
+          <div className="dw-quarantine-video">
+            {mediaFileExists('quarantine.mp4') && mediaFileExists('quarantine.webm') ? (
+              <video className="dw-quarantine-video__el" muted loop playsInline controls poster="/media/quarantine-poster.jpg">
+                <source src="/media/quarantine.webm" type="video/webm" />
+                <source src="/media/quarantine.mp4" type="video/mp4" />
+              </video>
+            ) : (
+              <img
+                src="/media/quarantine.gif"
+                alt="A live quarantine: a transfer succeeds, the Cell is quarantined, the identical transfer is rejected, the dashboard still reads fine, the quarantine is lifted, and the transfer succeeds again."
+                className="dw-quarantine-video__el"
+              />
+            )}
           </div>
         </div>
       </section>
 
-      <footer className="dw-zone dw-footer" style={{ '--rule-delay': '660ms' } as React.CSSProperties}>
-        <span className="dw-footer__brand">ARKA</span>
-        <span>Team True Node &middot; NSBM Green University &middot; Duothan 6.0 &middot; MIT License</span>
-        <a href="https://github.com/agentdynarq/arka" target="_blank" rel="noopener noreferrer">
-          github.com/agentdynarq/arka
-        </a>
+      {/* FINAL CTA — full-bleed flood, like the hero. Headline and subhead
+          are both exact reuses of real phrases already on this page
+          ("Banking that survives." from the hero, "Prefer verifiable to
+          impressive." from Proof's own heading), not new copy. Logo
+          watermark: a CSS mask, not an <img> -- the source PNG is a black
+          glyph on transparency, and a mask with background-color:white
+          renders it white regardless, so a failed opacity or missing
+          stylesheet shows a plain white rectangle, never a black blob. */}
+      <section className="dw-zone dw-final" style={{ '--rule-delay': '630ms' } as React.CSSProperties}>
+        <div className="dw-final__flood">
+          <div className="dw-final__watermark" aria-hidden="true" />
+          <div className="dw-final__icons" aria-hidden="true">
+            <svg viewBox="0 0 24 24" className="dw-final__icon dw-final__icon--1"><rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" strokeWidth="1" /></svg>
+            <svg viewBox="0 0 24 24" className="dw-final__icon dw-final__icon--2"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1" /></svg>
+            <svg viewBox="0 0 24 24" className="dw-final__icon dw-final__icon--3"><path d="M12 2 L22 20 L2 20 Z" fill="none" stroke="currentColor" strokeWidth="1" /></svg>
+          </div>
+          <div className="dw-zone__inner dw-final__inner">
+            <h2 className="dw-final__title dw-final__title--flood">Banking that survives.</h2>
+            <p className="dw-final__sub">Prefer verifiable to impressive.</p>
+
+            <div className="dw-final__actions">
+              <div className="dw-terminal">
+                <div className="dw-terminal__bar" aria-hidden="true">
+                  <span className="dw-terminal__dot" />
+                  <span className="dw-terminal__dot" />
+                  <span className="dw-terminal__dot" />
+                </div>
+                <div className="dw-terminal__body">
+                  <div>
+                    <span className="dw-terminal__prompt">$</span> docker compose up -d
+                  </div>
+                  <div>
+                    <span className="dw-terminal__prompt">$</span> pnpm seed
+                  </div>
+                  <div>
+                    <span className="dw-terminal__prompt">$</span> pnpm dev
+                  </div>
+                </div>
+              </div>
+              <Link href="/reverify" className="dw-cta-primary dw-cta-primary--flood">
+                Run the live demo
+              </Link>
+              <a href="#architecture" className="dw-cta-secondary dw-cta-secondary--flood">
+                Read the architecture
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER — six real link columns, dense: same-page anchors, the two
+          real internal routes, and GitHub blob links to files confirmed
+          present in this repo (docs/ARCHITECTURE.md, docs/RUNBOOK.md,
+          USER-GUIDE.md, LICENSE), not invented pages. */}
+      <footer className="dw-zone dw-footer dw-footer--dense" style={{ '--rule-delay': '660ms' } as React.CSSProperties}>
+        <div className="dw-footer__grid">
+          <div className="dw-footer__col">
+            <span className="dw-footer__label">The argument</span>
+            <a href="#failure">The failure</a>
+            <a href="#doctrines">Doctrines</a>
+            <a href="#architecture">Architecture</a>
+            <a href="#scope">Honest scope</a>
+          </div>
+          <div className="dw-footer__col">
+            <span className="dw-footer__label">Proof</span>
+            <a href="#proof">Prefer verifiable</a>
+            <a href="/media/isolation.gif" target="_blank" rel="noopener noreferrer">
+              Isolation proof
+            </a>
+            <a href="/media/quarantine.gif" target="_blank" rel="noopener noreferrer">
+              Quarantine proof
+            </a>
+          </div>
+          <div className="dw-footer__col">
+            <span className="dw-footer__label">Documentation</span>
+            <a href="https://github.com/agentdynarq/arka/blob/main/docs/ARCHITECTURE.md" target="_blank" rel="noopener noreferrer">
+              Architecture
+            </a>
+            <a href="https://github.com/agentdynarq/arka/blob/main/docs/RUNBOOK.md" target="_blank" rel="noopener noreferrer">
+              Runbook
+            </a>
+            <a href="https://github.com/agentdynarq/arka/blob/main/USER-GUIDE.md" target="_blank" rel="noopener noreferrer">
+              User guide
+            </a>
+          </div>
+          <div className="dw-footer__col">
+            <span className="dw-footer__label">Try it</span>
+            <Link href="/reverify">Run the live demo</Link>
+            <Link href="/judges">Judges reference</Link>
+          </div>
+          <div className="dw-footer__col">
+            <span className="dw-footer__label">Repository</span>
+            <a href="https://github.com/agentdynarq/arka" target="_blank" rel="noopener noreferrer">
+              github.com/agentdynarq/arka
+            </a>
+            <a href="https://github.com/agentdynarq/arka/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">
+              MIT License
+            </a>
+          </div>
+          <div className="dw-footer__col">
+            <span className="dw-footer__label">Team True Node</span>
+            <span className="dw-footer__text">R M S Hasitha Bandara</span>
+            <span className="dw-footer__text">W A S Keshan</span>
+            <span className="dw-footer__text">NSBM Green University</span>
+          </div>
+        </div>
+        <div className="dw-footer__bottom">
+          <span className="dw-footer__brand">ARKA</span>
+          <span>Team True Node &middot; NSBM Green University &middot; Duothan 6.0 &middot; MIT License</span>
+        </div>
       </footer>
     </div>
   )
