@@ -175,8 +175,33 @@
    No background here (unlike the earlier tonal-zone system): zones are paper
    only because .dw is, which is what lets the grain texture below show
    through them. */
+/* The homepage ground, set on the document itself. The shared UI stylesheet
+   leaves body on --paper (near-white), which is correct for the app screens
+   but wrong here: any horizontal overflow, now or later, shows that white in
+   the gutter beside the flood panels as a bright strip down the page edge.
+   Dark ground means a future overflow is invisible rather than glaring.
+
+   Scoped with :has() to pages that actually render .dw. globals.css is
+   imported by the root layout, so an unscoped body rule would darken the
+   dashboard, transfer and re-verify screens too, which are correctly on
+   --paper.
+
+   The literal, not var(--dw-ground): the --dw-* primitives are declared on
+   .dw itself, so they do not resolve on body, which is above it. Written out
+   with the token named beside it rather than moved to :root, because moving
+   them would leak the homepage's ground into every other screen. */
+body:has(.dw) {
+  background: #0b0a18; /* --dw-ground */
+}
+
 .dw-zone {
   position: relative;
+  /* clip, not hidden. Both stop a section's contents from extending the
+     document, but hidden makes every zone a scroll container, which breaks
+     position:sticky for anything inside one. clip does not. Applied per
+     section rather than on body/html on purpose: that would hide the symptom
+     and leave the real overflow in place. */
+  overflow-x: clip;
 }
 
 /* One or two sections only, to break the uniform ground — not a pattern
@@ -356,28 +381,6 @@
   .dw-nav__inner {
     padding: var(--s4) var(--s6);
   }
-}
-
-/* Holds the mark and the wordmark together. The hairline belongs to
-   .dw-nav__brand alone, so it stays the exact width of the word. */
-.dw-nav__brandlock {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Already the correct blue in the file itself, so no mask and no filter.
-   Width and height are set here as well as on the element so the row never
-   reflows if the image is slow. */
-.dw-nav__mark {
-  display: block;
-  flex: none;
-  width: 22px;
-  height: 22px;
-  /* The wordmark's hairline and 2px padding sit below its baseline, which
-     pulls the flex row's optical centre down. This lifts the mark back onto
-     the centre of the letterforms rather than the centre of the box. */
-  margin-bottom: 3px;
 }
 
 /* Typographic wordmark: no box, no fill, no icon. A single hairline the
@@ -684,15 +687,17 @@ a.dw-cta-secondary.dw-cta-secondary--flood {
 .dw-hero__watermark {
   position: absolute;
   z-index: 0;
-  top: 50%;
-  right: -7%;
+  top: 34%;
+  right: 1%;
   transform: translateY(-50%);
-  width: 470px;
-  height: 470px;
-  max-width: 62vw;
-  max-height: 62vw;
+  width: 740px;
+  height: 740px;
+  max-width: 70vw;
+  max-height: 70vw;
   background-color: var(--white);
-  opacity: 0.1;
+  /* Larger shape, lower opacity. A 740px glyph at the 0.16 that suited 470px
+     carries far more weight and starts reading as a second focal point. */
+  opacity: 0.13;
   -webkit-mask-image: url('/brand/logo-mark.png');
   mask-image: url('/brand/logo-mark.png');
   -webkit-mask-size: contain;
