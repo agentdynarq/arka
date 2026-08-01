@@ -1687,6 +1687,64 @@ body {
   gap: var(--space-2);
 }
 
+/* ---- Toggle row (a compact settings switch, e.g. low-bandwidth mode) ---- */
+
+.ui-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.ui-toggle-row__label {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.ui-toggle-row__hint {
+  margin: 2px 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  max-width: 52ch;
+}
+
+.ui-toggle {
+  flex-shrink: 0;
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-tint);
+  cursor: pointer;
+  padding: 0;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.ui-toggle[data-on='true'] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.ui-toggle__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--white);
+  transition: transform var(--transition-fast);
+}
+
+.ui-toggle[data-on='true'] .ui-toggle__thumb {
+  transform: translateX(20px);
+}
+
 /* ---- Row (history lines, list items) ---- */
 
 .ui-row {
