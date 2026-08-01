@@ -81,6 +81,18 @@ export interface Dashboard {
   accounts: DashboardAccount[]
 }
 
+export type CellStatusValue = 'healthy' | 'quarantined' | 'unknown'
+
+export interface CellStatus {
+  cellId: string
+  status: CellStatusValue
+}
+
+/** Backs the sidebar's Cell status element and W3's quarantine notice. Polled, not pushed, same pattern as W5's health map. */
+export function fetchCellStatus(accessToken: string): Promise<CellStatus> {
+  return get('/v1/me/cell-status', accessToken)
+}
+
 export async function fetchDashboard(accessToken: string): Promise<Dashboard> {
   const response = await fetch(`${API_BASE}/v1/me/dashboard`, {
     headers: { Authorization: `Bearer ${accessToken}` },
