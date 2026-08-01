@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { Source_Serif_4 } from 'next/font/google'
 
 /**
  * Reference card for Duothan 6.0 judges, not a second homepage. Pure Server
@@ -9,16 +8,15 @@ import { Source_Serif_4 } from 'next/font/google'
  * apps/web/public/media/. No aspirational content: if a step doesn't work
  * today, it isn't listed.
  *
- * Loads Source Serif 4 itself, same scoped pattern as page.tsx: --font-serif
- * in globals.css falls through to it via var(), so without this the heading
- * font-family is invalid at computed-value time on this route and silently
- * drops to inherited sans.
+ * No longer loads Source Serif 4 itself (chore/indigo-tokens): it's loaded
+ * app-wide now in apps/web/src/app/layout.tsx, so --font-serif in
+ * globals.css already resolves correctly here by inheritance, no
+ * second-fetch scoped call needed.
  */
-const sourceSerif = Source_Serif_4({ subsets: ['latin'], weight: ['400', '600'], variable: '--font-source-serif' })
 
 export default function JudgesPage() {
   return (
-    <div className={`dw ${sourceSerif.variable}`}>
+    <div className="dw">
       <nav className="dw-nav" aria-label="Primary">
         <div className="dw-nav__inner">
           <Link href="/" className="dw-nav__brand" style={{ textDecoration: 'none' }}>

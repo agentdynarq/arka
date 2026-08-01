@@ -48,11 +48,19 @@
   /* Verification state only: the word "clean", the packet capsules, env
      values inside plates. Never a fill, button, heading, or link color.
      Kept as its own tuned primitive rather than aliased to --teal: this
-     value is specifically tuned for a dark plate ground (5.88:1 there,
-     previously checked), while --teal is tuned for the new light grounds —
-     same reasoning as the original --reject/--reject-plate split below,
-     now applied to this pairing too. */
-  --verified: #40bfb5;
+     value is specifically tuned for a dark plate ground, while --teal is
+     tuned for the new light grounds — same reasoning as the original
+     --reject/--reject-plate split below, now applied to this pairing too.
+     Value updated to match @arka/ui/tokens.css's --teal-on-dark exactly
+     (fix/teal-on-dark): the old #40bfb5 was bright mint against a paper
+     ground, but reads as a scam signal against indigo, which is what
+     surrounds it on the ink-based plates now. Same fix, applied here too
+     since this is the primitive actually rendered on the live homepage
+     plates, not aliased across files from tokens.css's copy — keeping the
+     local name --verified (not renamed to --teal-on-dark) since nothing
+     asked for a call-site migration across this file's ten usages, only a
+     corrected value. */
+  --verified: #6fbfad;
   /* Failure state only: the 403 (paper, text) and the extinguished packet /
      void mark (plate, graphical). Both now alias --red: the plate ground
      itself is changing character (navy to --ink), so the old

@@ -171,7 +171,7 @@ export default function TransferPage() {
             <div style={{ marginBottom: 'var(--space-4)' }}>
               <OtpInput value={totpCode} onChange={setTotpCode} autoFocus />
             </div>
-            <Button type="submit" variant="teal" disabled={submitting}>
+            <Button type="submit" disabled={submitting}>
               {submitting ? 'Verifying...' : 'Confirm transfer'}
             </Button>
           </form>

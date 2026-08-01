@@ -127,7 +127,7 @@ export default function DashboardPage() {
               badge="Ledger verified just now"
               hint="Restored from verified ledger · zero data loss"
             >
-              <Button variant="teal" fullWidth={false} onClick={() => router.push('/transfer')}>
+              <Button fullWidth={false} onClick={() => router.push('/transfer')}>
                 Send
               </Button>
               <Button variant="secondary" fullWidth={false} style={{ color: 'white', borderColor: 'rgba(255,255,255,0.3)' }} onClick={() => router.push('/agent')}>

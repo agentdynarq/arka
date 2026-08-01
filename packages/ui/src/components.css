@@ -313,15 +313,6 @@ body {
   filter: brightness(0.92);
 }
 
-.ui-button--teal {
-  background: var(--color-teal);
-  color: var(--color-text-inverse);
-}
-
-.ui-button--teal:hover:not(:disabled) {
-  background: var(--color-teal-strong);
-}
-
 .ui-button:disabled {
   cursor: not-allowed;
   opacity: 0.55;

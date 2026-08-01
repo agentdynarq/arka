@@ -84,6 +84,7 @@
 
   --teal: #0e7c66;
   --teal-tint: #e7f2ef;
+  --teal-on-dark: #6fbfad; /* verification state on ink/flood grounds only */
   --red: #b33a22;
   --red-tint: #fbede9;
   --amber: #9a6b15;
@@ -162,13 +163,15 @@
   --color-accent-tint: var(--primary-tint);
   --color-accent-text: var(--palette-white);
 
-  /* Not touched by the indigo-tokens pass: --color-teal/--color-teal-strong
-     were never --institutional-* and aren't one of the two judgement calls
-     that pass covers. They still power .ui-button--teal, which is now the
-     only remaining non-primary colored button on a surface meant to have a
-     single interactive color, and the new palette's own STATUS colors are
-     documented as "never a button fill" — so this variant is stale, not
-     migrated blind. Flagged for follow-up rather than silently repointed. */
+  /* .ui-button--teal is retired (fix/teal-on-dark): the new palette's own
+     STATUS colors are documented as "never a button fill", and this was
+     the last non-primary colored button on a surface meant to have a
+     single interactive color. Both call sites (transfer's confirm button,
+     dashboard's Send) now render as the default primary variant instead;
+     the modifier class itself is deleted from components.css. These two
+     tokens are still very much alive for everything else that isn't a
+     button: .ui-panel__eyebrow text, the progress bar fill, the modal
+     panel's top border, and a few icon/text colors. */
   --color-teal: var(--palette-teal-700);
   --color-teal-strong: color-mix(in srgb, var(--palette-teal-700) 90%, black);
 
@@ -242,14 +245,16 @@
  * Two mappings are not a straight hue swap and are called out inline below:
  * the "plate" tokens (the homepage's four dark technical panels) now alias
  * the new --ink neutral rather than anything flood-colored — the flood
- * gradient is reserved for new full-bleed homepage markup only, per its own
- * definition above, never repurposed for an existing small or medium
- * surface. And --institutional-verified keeps its own value rather than
- * aliasing --teal directly: it is specifically the plate-ground-tuned
- * variant (5.88:1 on --institutional-plate-fill, previously checked), while
- * --teal is tuned for text on the new light grounds; the two happen to
- * share a hue family but are kept as separate primitives on purpose, same
- * reasoning as the original --reject/--reject-plate split below.
+ * gradient is reserved for new full-bleed homepage markup only (exactly
+ * four panels: hero, contrast pair, final CTA, value strip), never
+ * repurposed for an existing small or medium surface, and never the Fig.
+ * 1-4 plates specifically — gradient plates would make the device stop
+ * meaning anything. --institutional-verified is gone as of fix/
+ * teal-on-dark: it's now --teal-on-dark (in the new-primitives status
+ * group above), not aliased here at all, same reasoning as the original
+ * --reject/--reject-plate split just below — a dark-ground-tuned
+ * verification color needs a different value from --teal, not a
+ * differently-named pointer to the same one.
  */
 :root {
   /* Light "paper" register */
@@ -273,11 +278,6 @@
   --institutional-plate-ink: var(--on-flood);
   --institutional-plate-ink-soft: var(--on-flood-soft);
   --institutional-reject-plate: var(--red); /* graphical marks on a plate, not text */
-
-  /* Verification state only (see comment above): never a fill, button,
-     heading, or link color in either register. Not aliased to --teal: see
-     the block comment above for why the two stay separate primitives. */
-  --institutional-verified: #40bfb5;
 
   /* Type: Source Serif 4 for headings, now loaded app-wide (see each app's
      layout.tsx), Inter for body/UI (already loaded app-wide via
