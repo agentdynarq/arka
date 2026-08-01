@@ -1006,11 +1006,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FINAL CTA — near-empty, terminal block plus CTA, left-aligned inside a centered container.
-          "See it fail. Then see it survive." plus the inline quarantine video live here for now
-          (lane-b/furnishing task order builds the video before the final CTA gets its own
-          full-bleed flood rebuild) -- this section splits into two once that lands. */}
-      <section className="dw-zone dw-final" style={{ '--rule-delay': '600ms' } as React.CSSProperties}>
+      {/* QUARANTINE VIDEO — split out of the old combined final-CTA block now
+          that the final CTA below gets its own full-bleed flood treatment. */}
+      <section className="dw-zone" style={{ '--rule-delay': '600ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-final__inner">
           <h2 className="dw-final__title">See it fail. Then see it survive.</h2>
 
@@ -1028,32 +1026,55 @@ export default function Home() {
               />
             )}
           </div>
+        </div>
+      </section>
 
-          <div className="dw-final__actions">
-            <div className="dw-terminal">
-              <div className="dw-terminal__bar" aria-hidden="true">
-                <span className="dw-terminal__dot" />
-                <span className="dw-terminal__dot" />
-                <span className="dw-terminal__dot" />
+      {/* FINAL CTA — full-bleed flood, like the hero. Headline and subhead
+          are both exact reuses of real phrases already on this page
+          ("Banking that survives." from the hero, "Prefer verifiable to
+          impressive." from Proof's own heading), not new copy. Logo
+          watermark: a CSS mask, not an <img> -- the source PNG is a black
+          glyph on transparency, and a mask with background-color:white
+          renders it white regardless, so a failed opacity or missing
+          stylesheet shows a plain white rectangle, never a black blob. */}
+      <section className="dw-zone dw-final" style={{ '--rule-delay': '630ms' } as React.CSSProperties}>
+        <div className="dw-final__flood">
+          <div className="dw-final__watermark" aria-hidden="true" />
+          <div className="dw-final__icons" aria-hidden="true">
+            <svg viewBox="0 0 24 24" className="dw-final__icon dw-final__icon--1"><rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" strokeWidth="1" /></svg>
+            <svg viewBox="0 0 24 24" className="dw-final__icon dw-final__icon--2"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1" /></svg>
+            <svg viewBox="0 0 24 24" className="dw-final__icon dw-final__icon--3"><path d="M12 2 L22 20 L2 20 Z" fill="none" stroke="currentColor" strokeWidth="1" /></svg>
+          </div>
+          <div className="dw-zone__inner dw-final__inner">
+            <h2 className="dw-final__title dw-final__title--flood">Banking that survives.</h2>
+            <p className="dw-final__sub">Prefer verifiable to impressive.</p>
+
+            <div className="dw-final__actions">
+              <div className="dw-terminal">
+                <div className="dw-terminal__bar" aria-hidden="true">
+                  <span className="dw-terminal__dot" />
+                  <span className="dw-terminal__dot" />
+                  <span className="dw-terminal__dot" />
+                </div>
+                <div className="dw-terminal__body">
+                  <div>
+                    <span className="dw-terminal__prompt">$</span> docker compose up -d
+                  </div>
+                  <div>
+                    <span className="dw-terminal__prompt">$</span> pnpm seed
+                  </div>
+                  <div>
+                    <span className="dw-terminal__prompt">$</span> pnpm dev
+                  </div>
+                </div>
               </div>
-              <div className="dw-terminal__body">
-                <div>
-                  <span className="dw-terminal__prompt">$</span> docker compose up -d
-                </div>
-                <div>
-                  <span className="dw-terminal__prompt">$</span> pnpm seed
-                </div>
-                <div>
-                  <span className="dw-terminal__prompt">$</span> pnpm dev
-                </div>
-              </div>
+              <Link href="/reverify" className="dw-cta-primary dw-cta-primary--flood">
+                Run the live demo
+              </Link>
+              <a href="#architecture" className="dw-cta-secondary dw-cta-secondary--flood">
+                Read the architecture
+              </a>
             </div>
-            <Link href="/reverify" className="dw-cta-primary">
-              Run the live demo
-            </Link>
-            <a href="#architecture" className="dw-cta-secondary">
-              Read the architecture
-            </a>
           </div>
         </div>
       </section>
