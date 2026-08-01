@@ -330,18 +330,20 @@ export default function DashboardPage() {
           <EmptyState icon={<ShieldIcon />} title="Nothing to review" hint="Sign-ins and security-relevant changes will show up here." />
         )}
         {securityEvents && securityEvents.length > 0 && (
-          <table className="ui-table ui-table--dense">
-            <tbody>
-              {securityEvents.map((event) => (
-                <tr key={event.notificationId}>
-                  <td style={{ width: '30%' }} className="ui-hash">
-                    {new Date(event.createdAt).toLocaleString()}
-                  </td>
-                  <td>{event.message}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="ui-table-scroll">
+            <table className="ui-table ui-table--dense">
+              <tbody>
+                {securityEvents.map((event) => (
+                  <tr key={event.notificationId}>
+                    <td style={{ width: '30%' }} className="ui-hash">
+                      {new Date(event.createdAt).toLocaleString()}
+                    </td>
+                    <td>{event.message}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </Panel>
     </>
