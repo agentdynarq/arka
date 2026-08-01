@@ -514,6 +514,12 @@ body {
 
 .ui-dashboard__main,
 .ui-dashboard__rail {
+  /* Grid items default to min-width: auto (content-based), so a wide child
+     (the audit trail table) inflates the column itself instead of being
+     contained by it, pushing the whole page wider. min-width: 0 lets the
+     column shrink to the grid track and hand overflow down to .ui-table's
+     own overflow-x instead. */
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
@@ -531,6 +537,22 @@ body {
   width: 100%;
   border-collapse: collapse;
   font-size: var(--text-sm);
+}
+
+/* A wide table (five dense columns, monospace hashes and amounts) can
+   demand more than its container at 390px. table-layout: auto sizes columns
+   from content and ignores width: 100%, so the table renders at its own
+   content width regardless, overflow-x on the table itself has nothing to
+   clip since the table's own box never exceeds itself. The scroll has to
+   live on a container narrower than the table: .ui-day-group already wraps
+   the dashboard's activity table, [data-testid='audit-trail'] already wraps
+   W5's, and .ui-table-scroll is for anywhere else a table has no existing
+   wrapper (W2's security events table). */
+.ui-day-group,
+[data-testid='audit-trail'],
+.ui-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .ui-table th,
@@ -1685,6 +1707,27 @@ body {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+/* At 390px the category word, timestamp and "Mark read" together are wider
+   than what's left once the title claims its min-width: 0 share, so the
+   title's column collapses to zero and its text paints on top of the
+   category badge. Below wraps the row: the title keeps the full first line,
+   everything else drops to a second line. margin-left on the wrapped items
+   lines them up under the title rather than the dot. */
+@media (max-width: 560px) {
+  .ui-notif-row {
+    flex-wrap: wrap;
+  }
+
+  .ui-notif-row__body {
+    flex-basis: 100%;
+  }
+
+  .ui-notif-row .ui-status-word,
+  .ui-notif-row__time {
+    margin-left: 20px;
+  }
 }
 
 /* ---- Toggle row (a compact settings switch, e.g. low-bandwidth mode) ---- */
