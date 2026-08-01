@@ -1,24 +1,19 @@
 /**
  * Homepage at "/", built for Duothan 6.0 judges, not the customer app itself.
- * Direction: dark institutional instrument — white ink on a near-black
- * indigo ground, indigo accent, serif, conservative, rectangular — with
- * panels one step up from the ground for anything that was previously a
- * "plate" (lane-b/furnishing: the ground itself went dark, see --dw-ground
- * and its neighbours in the .dw primitives just below; before this the
- * page was light paper with four dark plates inset into it — the flood
- * hero read as a coloured box dropped on a white page rather than light
- * emerging from darkness, so the whole ground moved to match it, the same
- * device cloudflare.com uses). Indigo accent means the flood system (see
- * @arka/ui/tokens.css's new-primitives block and this file's own .dw
- * primitives just below), shared with apps/web's other screens and
+ * Direction: light institutional document — ink on paper, indigo accent,
+ * serif, conservative, rectangular — with four dark technical plates inset
+ * into it. As of chore/indigo-tokens, "navy" above means the indigo flood
+ * system (see @arka/ui/tokens.css's new-primitives block and this file's own
+ * .dw primitives just below), shared with apps/web's other screens and
  * apps/console, not a homepage-only hue. A deposit institution rebuilt after
  * a collapse of public trust reads like one, not like a crypto exchange.
  * Scoped entirely under .dw. One content grid throughout for every section
- * except one: the hero is the one deliberate full-bleed exception, a wider
- * inset flood panel rather than the standard --content column — see
- * .dw-hero__flood's own comment for why. No other section breaks the grid.
- * Every number is real, pulled from arka/README.md, docs/RUNBOOK.md and the
- * actual docs/media/*.cast recordings, never invented.
+ * except one: the hero (lane-b/furnishing) is the one deliberate full-bleed
+ * exception, a wider inset flood panel rather than the standard --content
+ * column — see .dw-hero__flood's own comment for why. No other section
+ * breaks the grid. Every number is real, pulled from arka/README.md,
+ * docs/RUNBOOK.md and the actual docs/media/*.cast recordings, never
+ * invented.
  */
 
 * {
@@ -26,73 +21,78 @@
 }
 
 .dw {
-  /* ---- Primitives: color (lane-b/furnishing: dark ground). The homepage's
-     own ground, not the shared @arka/ui register: near-black with an
-     indigo cast, not paper, so the flood hero reads as light emerging from
-     darkness rather than a coloured box dropped on a white page. New
-     primitives, homepage-scoped, named --dw-* to keep them distinct from
-     @arka/ui/tokens.css's own --ground/--ink/etc (this file's --ground
-     etc. below are its OWN aliases, one level removed, kept for the same
-     no-call-site-migration reason chore/indigo-tokens already established:
-     every rule further down this file reads --paper/--ink/--ink-soft/--rule,
-     not --dw-* directly). */
-  --dw-ground: #0b0a18; /* page ground */
-  --dw-panel: #14132a; /* section panels, plates, one step up from ground */
-  --dw-hairline: #262445;
-  --dw-ink: #ffffff;
-  --dw-ink-soft: #a9acc9;
-  --dw-ink-faint: #6e7196;
-
-  --paper: var(--dw-ground);
-  --ink: var(--dw-ink);
-  --ink-soft: var(--dw-ink-soft);
-  --rule: var(--dw-hairline);
+  /* ---- Primitives: color (chore/indigo-tokens). Every name below is
+     unchanged from the original "paper" direction — renaming them would be
+     the kind of call-site migration this pass isn't doing, since every rule
+     further down this file still reads these exact names — but the values
+     are now aliases onto the indigo flood system declared at :root by
+     @arka/ui/tokens.css (loaded globally in layout.tsx, ahead of this file,
+     so it's already in scope here by ordinary CSS inheritance; no
+     duplicated hex needed for anything that doesn't collide by name).
+     --ink and --ink-soft are the one exception: the new system's own
+     canonical tokens are ALSO named --ink/--ink-soft, so aliasing them
+     (`--ink: var(--ink)`) would be a self-reference — an invalid CSS cycle,
+     not a working alias — so those two get the literal new value directly
+     instead, matching @arka/ui/tokens.css's own --ink/--ink-soft exactly.
+     Paper is no longer the ground's own concept — see --ground in
+     tokens.css — but the four plates (hero line, failure comparison,
+     architecture, the verify-ledger terminal) still keep a dark ground,
+     now aliasing --ink rather than a navy of their own; --plate-* below
+     carries that, not the flood gradient, which is homepage-hero-only and
+     never a plate/panel fill (see its own definition in tokens.css). ---- */
+  --paper: var(--ground);
+  --ink: #12142b;
+  --ink-soft: #4a4e6b;
+  --rule: var(--hairline);
 
   /* Verification state only: the word "clean", the packet capsules, env
      values inside plates. Never a fill, button, heading, or link color.
-     Matches @arka/ui/tokens.css's --teal-on-dark exactly (fix/teal-on-dark)
-     — every ground on this page is dark now, not just the plates, so this
-     is simply "the" verified color here, not a plate-specific exception
-     anymore. Local name kept (not renamed to --teal-on-dark) since nothing
+     Kept as its own tuned primitive rather than aliased to --teal: this
+     value is specifically tuned for a dark plate ground, while --teal is
+     tuned for the new light grounds — same reasoning as the original
+     --reject/--reject-plate split below, now applied to this pairing too.
+     Value updated to match @arka/ui/tokens.css's --teal-on-dark exactly
+     (fix/teal-on-dark): the old #40bfb5 was bright mint against a paper
+     ground, but reads as a scam signal against indigo, which is what
+     surrounds it on the ink-based plates now. Same fix, applied here too
+     since this is the primitive actually rendered on the live homepage
+     plates, not aliased across files from tokens.css's copy — keeping the
+     local name --verified (not renamed to --teal-on-dark) since nothing
      asked for a call-site migration across this file's ten usages, only a
      corrected value. */
   --verified: #6fbfad;
-  /* Failure state only: the 403 and the extinguished packet / void mark.
-     Both lifted to #E0603F (was --red, #B33A22): --red is tuned as dark
-     text on a light ground — 5.48:1 there — but only ~3.3:1 as text on
-     --dw-ground, failing AA. #E0603F clears ~5.5:1 on --dw-ground and
-     ~5.1:1 on --dw-panel, checked. Homepage-local value, not added to
-     @arka/ui/tokens.css: this page's grounds are darker than either of
-     that file's two registers, and nothing there needed the same lift. */
-  --reject: #e0603f;
-  --reject-plate: #e0603f;
+  /* Failure state only: the 403 (paper, text) and the extinguished packet /
+     void mark (plate, graphical). Both now alias --red: the plate ground
+     itself is changing character (navy to --ink), so the old
+     brightened-for-a-dark-ground variant of --reject-plate no longer has a
+     distinct reason to differ from --reject — flagged as worth rechecking
+     once the new plate ground is live, not assumed correct by default. */
+  --reject: var(--red);
+  --reject-plate: var(--red);
 
-  /* Accent, not action: links, eyebrow numbers, hover states, dimension-line
-     stroke work inside plates, small annotation text. Never a button — the
-     primary button is --primary fill, white text, below. Repointed from
-     --primary to --on-flood-soft (was: var(--primary), var(--primary-dk)):
-     --primary itself is only ~2.5:1 on --dw-ground, failing AA — it's tuned
-     as a button fill on light or flood grounds, not as text on near-black.
-     --on-flood-soft (~10.7:1 on --dw-ground, checked) already existed for
-     exactly this "light accent text on a dark ink ground" role, so this is
-     a reuse, not a new token. */
-  --blue: var(--on-flood-soft);
-  --blue-hover: var(--on-flood);
-  --blue-tint: var(--primary-tint); /* orphaned as of this commit: .dw-zone--tint now reads --dw-panel directly, see its own rule. Left as a valid, unused declaration rather than removed — no call site reads it anymore. */
-  --blue-plate: var(--on-flood-soft); /* decorative diagram stroke work on a dark plate only, never the packets or the void mark */
+  /* Accent, not action: links, eyebrow numbers, hover states, a tint band
+     on two sections, dimension-line stroke work inside plates, small
+     annotation text. Never a button — the primary button is now --primary
+     fill, white text (see --color-accent's own judgement-call comment in
+     tokens.css): "navy reads consumer-fintech" becomes moot once the whole
+     system is one deliberate indigo, but the "never a button" rule for this
+     token specifically still holds — --blue is accent, not action. Headings
+     and body stay ink. */
+  --blue: var(--primary);
+  --blue-hover: var(--primary-dk);
+  --blue-tint: var(--primary-tint);
+  --blue-plate: var(--on-flood-soft); /* decorative diagram stroke work on a dark plate only, never the packets or the void mark — --on-flood-soft is the new system's own "soft light text/lines on a dark ground" token, a closer role match than the saturated --primary */
 
-  /* ---- Plate primitives: the four dark technical figures, now aliasing
-     --dw-panel rather than --ink — --ink is text-on-dark now (white), not
-     a background any plate, panel, or terminal could still use as its own
-     fill. --dw-panel is one step up from --dw-ground on purpose, so a
-     plate still reads as a distinct object on the page, not an
-     indistinguishable patch of the same ground colour. ---- */
-  --plate: var(--dw-panel);
-  --plate-fill: var(--dw-panel); /* gateway / control-plane / terminal cards */
-  --plate-fill-2: color-mix(in srgb, var(--dw-panel) 82%, var(--dw-ink)); /* Cell boxes, one tier lighter: the raised element */
-  --plate-line: var(--dw-hairline); /* borders and rules inside a plate */
-  --plate-ink: var(--dw-ink); /* primary text on a plate */
-  --plate-ink-soft: var(--dw-ink-soft); /* secondary text on a plate */
+  /* ---- Plate primitives: the four dark technical figures only. Alias
+     --ink, a solid neutral, not the flood gradient — the flood is reserved
+     for new full-bleed homepage hero markup exclusively (see its own
+     definition in tokens.css), never repurposed for an existing panel. ---- */
+  --plate: var(--ink);
+  --plate-fill: var(--ink); /* gateway / control-plane / terminal cards */
+  --plate-fill-2: color-mix(in srgb, var(--ink) 82%, var(--white)); /* Cell boxes, one tier lighter: the raised element */
+  --plate-line: var(--hairline-d); /* borders and rules inside a plate */
+  --plate-ink: var(--on-flood); /* primary text on a plate */
+  --plate-ink-soft: var(--on-flood-soft); /* secondary text on a plate */
 
   /* ---- Primitives: type. Serif for headings, sans for body and UI, mono
      restricted to actual machine output. Source Serif 4 is now loaded
@@ -118,25 +118,21 @@
   --gutter: 64px; /* content inset from viewport edge; every section, the nav, and every diagram share it */
 
   position: relative;
-  /* Fine grain, layered directly on the root's own background rather than
-     a z-index:-1 pseudo-element: an element's own background always paints
-     before any of its descendants regardless of z-index, so a
+  /* Fine paper grain, layered directly on the root's own background rather
+     than a z-index:-1 pseudo-element: an element's own background always
+     paints before any of its descendants regardless of z-index, so a
      negative-z-index child of .dw could never show through .dw's own opaque
      fill. Two background layers on one box sidesteps that entirely — the
-     noise image paints over the ground color, both on .dw itself. Every
-     zone and plate paints its own opaque background on top of this in
-     turn, so the grain shows only where the plain ground actually shows
-     and never inside a plate, with no per-plate exclusion needed.
-     feColorMatrix converts the turbulence into alpha-varying noise; the
-     alpha row is pre-scaled to the target ~0.03 dose (there's no separate
-     element here to hang a CSS opacity off of). background-attachment:
-     fixed keeps the grain anchored to the viewport, a felt surface rather
-     than scrolling content. Constant colour output lifted from dark ink
-     (lane-b/furnishing: was 0.039/0.118/0.188, near-invisible dark-on-dark
-     once the ground itself went near-black) to a light lavender close to
-     --dw-ink-soft (0.66/0.67/0.79), so the grain still reads as faint
-     texture on the new dark ground instead of vanishing into it. */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.66 0 0 0 0 0.67 0 0 0 0 0.79 0.011 0.011 0.011 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+     noise image paints over the paper color, both on .dw itself. Every zone
+     and plate paints its own opaque background on top of this in turn, so
+     the grain shows only where paper actually shows and never inside a
+     plate, with no per-plate exclusion needed. feColorMatrix converts the
+     turbulence into ink-colored, alpha-varying noise; the alpha row is
+     pre-scaled to the target ~0.03 dose (there's no separate element here
+     to hang a CSS opacity off of). background-attachment: fixed keeps the
+     grain anchored to the viewport, a felt surface rather than scrolling
+     content. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.039 0 0 0 0 0.118 0 0 0 0 0.188 0.011 0.011 0.011 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-attachment: fixed;
   background-color: var(--paper);
@@ -150,15 +146,12 @@
   color: inherit;
 }
 
-/* Selection and focus are generic UI chrome. Background/color swapped
-   (lane-b/furnishing) from "dark fill, white text" to "light fill, dark
-   text": --ink is white now, so the old var(--ink)/#fff pairing had become
-   white-on-white, invisible. Inverted instead of just recoloured, since a
-   light selection highlight on a dark page is the expected convention, not
-   an arbitrary choice. */
+/* Navy, not the verification teal: selection and focus are generic UI
+   chrome that can land on paper as easily as on a plate, and --verified is
+   tuned for plate contrast only (see its definition above). */
 .dw ::selection {
   background: var(--ink);
-  color: var(--paper);
+  color: #fff;
 }
 
 .dw a:focus-visible,
@@ -179,17 +172,11 @@
   position: relative;
 }
 
-/* One or two sections only, to break the uniform ground — not a pattern
-   applied broadly. A panel band, not a new ground colour system: headings
-   and body inside stay ink, only the section's own background shifts.
-   Reads var(--dw-panel) directly (lane-b/furnishing), not --blue-tint:
-   the two tinted bands (Doctrine 01, the Cell-3 config band) become
-   --dw-panel bands now, keeping the same ground/panel/ground/panel
-   alternation the plates already established, so the page still reads as
-   chapters. --blue-tint itself is left declared but unused as of this
-   commit. */
+/* One or two sections only, to break the uniform paper — not a pattern
+   applied broadly. Tint, not a new ground: headings and body inside stay
+   ink, only the section's own background shifts. */
 .dw-zone--tint {
-  background: var(--dw-panel);
+  background: var(--blue-tint);
 }
 
 .dw-zone::before {
@@ -399,21 +386,13 @@
 }
 
 /* ---- Buttons: one style, three uses (nav CTA, hero primary, final CTA).
-   Rectangular, indigo, sentence case. Secondary is a text link, one style,
+   Rectangular, navy, sentence case. Secondary is a text link, one style,
    also three uses. ---- */
 
 /* `a.` prefix, not just `.class`: matches the specificity of the early
    `.dw a { color: inherit }` reset so this rule's white text wins on source
-   order instead of silently losing to it (indigo text on an indigo fill is
-   an invisible-button bug, not a hypothetical one). Fill moved from
-   var(--ink) to var(--primary) (lane-b/furnishing): --ink is white now, so
-   the old pairing had become a white button with white text. --primary as
-   a solid fill reads well against the new near-black ground (7.9:1 for
-   white text on it, checked) and matches "one interactive colour" rather
-   than introducing a second, separate reversed-white-button treatment for
-   every non-flood surface — the flood-specific white fill
-   (.dw-cta-primary--flood) stays exactly as it was, a deliberate exception
-   for sitting on the saturated gradient specifically, not the norm. */
+   order instead of silently losing to it (navy text on a navy fill is an
+   invisible-button bug, not a hypothetical one). */
 a.dw-cta-primary,
 a.dw-nav__primary {
   display: inline-flex;
@@ -422,8 +401,8 @@ a.dw-nav__primary {
   height: 46px;
   padding: 0 28px;
   border-radius: 3px;
-  background: var(--primary);
-  color: var(--white);
+  background: var(--ink);
+  color: #fff;
   font-family: var(--font-sans);
   font-weight: 500;
   font-size: 0.9375rem;
@@ -436,12 +415,12 @@ a.dw-nav__primary {
 
 .dw-cta-primary:hover,
 .dw-nav__primary:hover {
-  background: var(--primary-dk);
+  background: #132d47;
 }
 
 .dw-cta-primary:active,
 .dw-nav__primary:active {
-  background: color-mix(in srgb, var(--primary-dk) 82%, black);
+  background: #061422;
 }
 
 a.dw-cta-secondary,
@@ -598,12 +577,7 @@ a.dw-cta-secondary.dw-cta-secondary--flood {
    level below .dw-zone__inner's z-index 1, so the text (and the plate,
    which is opaque regardless) sit above it without any extra stacking
    fuss. Slight horizontal overhang so a few px of drift never reveals an
-   edge. On the homepage's own hero this only shows in the inset margin
-   around .dw-hero__flood (the flood panel is opaque and covers the rest);
-   on the judges page, which reuses .dw-hero without that flood wrapper, it
-   shows across the whole header. Stroke lifted from dark navy (%230a1e30)
-   to white (lane-b/furnishing): the margin area is --dw-ground now, not
-   paper, and a dark stroke at 3.5% opacity was invisible dark-on-dark. */
+   edge. */
 .dw-hero::after {
   content: '';
   position: absolute;
@@ -615,7 +589,7 @@ a.dw-cta-secondary.dw-cta-secondary--flood {
   pointer-events: none;
   opacity: 0.035;
   background-repeat: repeat;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='320'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='1'%3E%3Cpath d='M0,40 Q75,15 150,40 T300,40 T450,40 T600,40'/%3E%3Cpath d='M0,96 Q75,124 150,96 T300,96 T450,96 T600,96'/%3E%3Cpath d='M0,150 Q75,128 150,150 T300,150 T450,150 T600,150'/%3E%3Cpath d='M0,214 Q75,242 150,214 T300,214 T450,214 T600,214'/%3E%3Cpath d='M0,270 Q75,246 150,270 T300,270 T450,270 T600,270'/%3E%3C/g%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='320'%3E%3Cg fill='none' stroke='%230a1e30' stroke-width='1'%3E%3Cpath d='M0,40 Q75,15 150,40 T300,40 T450,40 T600,40'/%3E%3Cpath d='M0,96 Q75,124 150,96 T300,96 T450,96 T600,96'/%3E%3Cpath d='M0,150 Q75,128 150,150 T300,150 T450,150 T600,150'/%3E%3Cpath d='M0,214 Q75,242 150,214 T300,214 T450,214 T600,214'/%3E%3Cpath d='M0,270 Q75,246 150,270 T300,270 T450,270 T600,270'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -829,50 +803,6 @@ a.dw-cta-secondary.dw-cta-secondary--flood {
   letter-spacing: 0.04em;
   color: var(--plate-ink-soft);
   font-variant-numeric: tabular-nums;
-}
-
-/* ---- Value strip: full-bleed panel band immediately below the hero, the
-   Cloudflare device (a row of measured values right under the fold), not a
-   card or a plate. Full width on purpose, unlike every other section:
-   background bleeds edge to edge while the row of items inside still
-   respects the standard --content column via dw-section, so text doesn't
-   stretch oddly on an ultra-wide viewport even though the colour does. ---- */
-.dw-value-strip {
-  background: var(--dw-panel);
-}
-
-.dw-value-strip__inner {
-  display: flex;
-  flex-wrap: wrap;
-  padding-top: var(--s5);
-  padding-bottom: var(--s5);
-}
-
-.dw-value-strip__item {
-  flex: 1 1 220px;
-  padding: var(--s2) var(--s6);
-  font-family: var(--font-sans);
-  font-size: 0.9rem;
-  color: var(--ink-soft);
-  border-left: 1px solid var(--rule);
-}
-
-.dw-value-strip__item:first-child {
-  padding-left: 0;
-  border-left: none;
-}
-
-@media (max-width: 900px) {
-  .dw-value-strip__item {
-    flex-basis: 100%;
-    border-left: none;
-    border-top: 1px solid var(--rule);
-    padding: var(--s3) 0;
-  }
-
-  .dw-value-strip__item:first-child {
-    border-top: none;
-  }
 }
 
 /* ---- Plates, shared: the four dark technical figures (hero line, failure
@@ -1653,7 +1583,6 @@ a.dw-proof__link {
 
 .dw-footer {
   padding: var(--s6) var(--gutter);
-  border-top: 1px solid var(--rule);
   display: flex;
   align-items: center;
   justify-content: space-between;

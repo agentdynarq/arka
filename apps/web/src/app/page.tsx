@@ -189,27 +189,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Value strip — immediately below the hero, full width, on --dw-panel.
-          Four measured values, not four invented claims: same numbers as
-          the hero's own stat strip and the verify-ledger terminal below,
-          restated as one line each instead of a mono-only capsule row. */}
-      <section className="dw-zone dw-value-strip" style={{ '--rule-delay': '30ms' } as React.CSSProperties}>
-        <div className="dw-value-strip__inner dw-section">
-          <div className="dw-value-strip__item">
-            <span className="dw-mono">2</span> Cells, zero shared network paths
-          </div>
-          <div className="dw-value-strip__item">
-            <span className="dw-mono">29</span> ledger records, <span className="dw-mono">0</span> tampered
-          </div>
-          <div className="dw-value-strip__item">
-            RPO <span className="dw-mono">0</span> &mdash; restored from verified ledger
-          </div>
-          <div className="dw-value-strip__item">
-            <span className="dw-mono">403</span> on the quarantined Cell, <span className="dw-mono">200</span> everywhere else
-          </div>
-        </div>
-      </section>
-
       {/* 01 · THE FAILURE — full-bleed diagram, mono eyebrow as the only heading */}
       <section className="dw-zone" id="failure" style={{ '--rule-delay': '60ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-section">
