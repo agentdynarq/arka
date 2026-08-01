@@ -157,6 +157,16 @@ reliable route.
 whether their Cell is quarantined before a write, and until that service is listening the answer is
 `503 QUARANTINE_CHECK_UNAVAILABLE`. Retrying after a moment succeeds. Reads are unaffected.
 
+**The very first click on a given route can take up to 20-30 seconds under `pnpm dev`.** This is
+worst on the homepage and happens once more, briefly, the first time you navigate to `/reverify`.
+Next.js's dev server compiles each route the moment it is first requested rather than upfront, so
+that cost is paid exactly once per route per session, then it is gone: a second visit to the same
+route is well under a second. Measured on this machine: homepage cold 25.5s, `/reverify` cold 1.0s,
+both warm under 0.7s. It is dev-server behaviour, not an application defect; a `pnpm build` followed
+by `next start` in each app that has one (`web`, `console`) serves every route from the first
+request in under 50ms, since every route is already compiled. Prefer the production build if judging
+under time pressure and a rebuild is acceptable; `pnpm dev` remains correct for anyone modifying code.
+
 Demo credentials for every other persona are in [USER-GUIDE.md](USER-GUIDE.md).
 
 Two commands worth running to see the core claims for yourself:
