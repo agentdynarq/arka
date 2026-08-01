@@ -94,7 +94,7 @@ export function ConsoleShell({ children }: { readonly children: ReactNode }) {
           <Sidebar
             wordmark={
               <>
-                <img src="/brand/logo-mark-192.png" alt="" className="ui-sidebar__mark" />
+                <img src="/brand/logo-mark-blue.png" alt="" width={24} height={24} className="ui-sidebar__mark" />
                 <span className="ui-sidebar__wordmark-text">Arka</span>
               </>
             }

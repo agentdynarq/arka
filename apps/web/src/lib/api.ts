@@ -49,6 +49,22 @@ export function reVerify(customerId: string, registryDocumentId: string): Promis
   return post('/v1/identity/re-verify', { customerId, registryDocumentId })
 }
 
+/**
+ * Probes the same demo-only endpoint `DemoMfaWidget` uses, to check whether
+ * `DEMO_MFA_ENDPOINT_ENABLED` is on before ever prefilling a password: the
+ * browser has no way to read that server-side env var directly, so a 200 vs
+ * 404 from this endpoint is the only honest signal available. Never throws;
+ * a network error is the same as "off" for this purpose.
+ */
+export async function checkDemoModeEnabled(username: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE}/v1/auth/demo/mfa-code?username=${encodeURIComponent(username)}`)
+    return response.ok
+  } catch {
+    return false
+  }
+}
+
 export interface LoginChallenge {
   mfaToken: string
   expiresAt: string
