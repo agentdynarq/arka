@@ -42,7 +42,14 @@ export default function Home() {
     <div className="dw">
       <nav className="dw-nav" aria-label="Primary">
         <div className="dw-nav__inner">
-          <span className="dw-nav__brand">ARKA</span>
+          {/* The mark sits outside .dw-nav__brand, not inside it: that class carries
+              the hairline under the wordmark, and nesting the image would drag the
+              rule out under the glyph too. The file is already --primary, so it is
+              a plain image with no mask and no recolouring. */}
+          <span className="dw-nav__brandlock">
+            <img src="/brand/logo-mark-blue.png" alt="" width={22} height={22} className="dw-nav__mark" />
+            <span className="dw-nav__brand">ARKA</span>
+          </span>
           <div className="dw-nav__links">
             <a href="#failure">The failure</a>
             <a href="#doctrines">Doctrines</a>
@@ -74,6 +81,12 @@ export default function Home() {
       <header className="dw-zone dw-hero">
         <div className="dw-hero__flood">
           <div className="dw-hero__bloom" aria-hidden="true" />
+          {/* Sits here, before the content, so document order alone puts it under
+              the transaction-path plate: .dw-hero__line is position:relative and
+              later in the DOM, and --dw-panel is opaque, so the diagram is never
+              competing with it. Same mask technique as the final CTA's watermark,
+              so the two read as one logo rather than two. */}
+          <div className="dw-hero__watermark" aria-hidden="true" />
           <div className="dw-zone__inner dw-section">
             <span className="dw-hero__pill">Team True Node &middot; Duothan 6.0 &middot; Phase 2</span>
             <h1 className="dw-hero__claim">

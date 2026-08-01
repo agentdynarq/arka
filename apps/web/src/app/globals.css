@@ -358,6 +358,28 @@
   }
 }
 
+/* Holds the mark and the wordmark together. The hairline belongs to
+   .dw-nav__brand alone, so it stays the exact width of the word. */
+.dw-nav__brandlock {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Already the correct blue in the file itself, so no mask and no filter.
+   Width and height are set here as well as on the element so the row never
+   reflows if the image is slow. */
+.dw-nav__mark {
+  display: block;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  /* The wordmark's hairline and 2px padding sit below its baseline, which
+     pulls the flex row's optical centre down. This lifts the mark back onto
+     the centre of the letterforms rather than the centre of the box. */
+  margin-bottom: 3px;
+}
+
 /* Typographic wordmark: no box, no fill, no icon. A single hairline the
    exact width of the word sits under it, an engraved-certificate device. */
 .dw-nav__brand {
@@ -651,6 +673,37 @@ a.dw-cta-secondary.dw-cta-secondary--flood {
 
 /* Plate (a): the hero transaction-line diagram. Full content width, generous
    internal padding, a caption beneath in secondary ink. */
+/* Hero watermark. Same source file and same mask technique as
+   .dw-final__watermark, deliberately, so the two marks on this page read as
+   one logo rather than two. Fills the empty right-hand side of the flood
+   panel, cropped by the panel's own right edge via a negative offset against
+   its overflow:hidden. z-index 0 keeps it beneath the transaction-path plate,
+   which is opaque, so the diagram stays fully legible on top of it. Quiet
+   enough to be texture, not a second focal point: if it ever competes with
+   the headline, drop the opacity rather than the size. */
+.dw-hero__watermark {
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  right: -7%;
+  transform: translateY(-50%);
+  width: 470px;
+  height: 470px;
+  max-width: 62vw;
+  max-height: 62vw;
+  background-color: var(--white);
+  opacity: 0.1;
+  -webkit-mask-image: url('/brand/logo-mark.png');
+  mask-image: url('/brand/logo-mark.png');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  pointer-events: none;
+}
+
 .dw-hero__line {
   position: relative;
   margin: var(--s6) 0 var(--s3);
@@ -1969,8 +2022,10 @@ a.dw-proof__link {
    degrades to a plain white rectangle, never a black blob on the flood.
    ~900px, cropped by the panel's own right and bottom edges (negative
    offsets past its own container, clipped by overflow:hidden above).
-   z-index 0, strictly beneath .dw-final__inner's z-index 1. Final CTA
-   only -- never the hero, never the nav. */
+   z-index 0, strictly beneath .dw-final__inner's z-index 1. The hero now
+   carries the same mark, smaller and quieter, via .dw-hero__watermark; the
+   two share this technique on purpose. Never the nav, which uses the solid
+   blue mark at 22px instead. */
 .dw-final__watermark {
   position: absolute;
   z-index: 0;
