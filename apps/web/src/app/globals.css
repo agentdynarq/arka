@@ -358,6 +358,28 @@
   }
 }
 
+/* Holds the mark and the wordmark together. The hairline belongs to
+   .dw-nav__brand alone, so it stays the exact width of the word. */
+.dw-nav__brandlock {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Already the correct blue in the file itself, so no mask and no filter.
+   Width and height are set here as well as on the element so the row never
+   reflows if the image is slow. */
+.dw-nav__mark {
+  display: block;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  /* The wordmark's hairline and 2px padding sit below its baseline, which
+     pulls the flex row's optical centre down. This lifts the mark back onto
+     the centre of the letterforms rather than the centre of the box. */
+  margin-bottom: 3px;
+}
+
 /* Typographic wordmark: no box, no fill, no icon. A single hairline the
    exact width of the word sits under it, an engraved-certificate device. */
 .dw-nav__brand {
