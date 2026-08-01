@@ -4,24 +4,22 @@ import { Suspense, useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { fetchAllIntegrity, fetchIntegrity, integrityExportUrl, ApiError } from '@/lib/api'
 import type { IntegrityEvidence } from '@/lib/api'
-import { Main, Panel, Field, SelectField, Button, Alert, Badge, Skeleton } from '@arka/ui'
+import { PageHeader, Panel, Field, SelectField, Button, Alert, Badge, Skeleton } from '@arka/ui'
 
 /**
  * Screen W6: on-demand ledger integrity verification with export (FR-23).
  * Follows `docs/RUNBOOK.md` P1: select the Cell and the block range (default
  * genesis to head), run verification, export the evidence.
  *
- * Matched to the real Phase 1 wireframe (get_design_context on node 11:2336).
  * The wireframe also shows a "Latest blocks" row of individual block cards
  * and a "Published integrity checkpoints" table with named, scheduled
  * checkpoint IDs (CP-2065-07-22-A style). Neither has a real data source in
- * this build: `LedgerService`'s public API (`services/ledger/src/service.ts`)
- * has no method returning a list of recent blocks, only the aggregate
- * `VerifyResult` this page already uses, and there is no scheduled
- * checkpoint-publishing concept anywhere in the data model, only the
- * on-demand verification already built here. Rather than invent either,
- * this keeps showing the real on-demand verification, restyled to the
- * wireframe's visual language (the chain-verified banner, dark ops cards).
+ * this build: `LedgerService`'s public API has no method returning a list of
+ * recent blocks, only the aggregate `VerifyResult` this page already uses,
+ * and there is no scheduled checkpoint-publishing concept anywhere in the
+ * data model. Rather than invent either, this keeps the real on-demand
+ * verification, its overview chips now the same status-block shape as W5's
+ * Cell panels (lane-c/app-shell), not a separate visual language.
  */
 function IntegrityPageInner() {
   const searchParams = useSearchParams()
@@ -31,6 +29,14 @@ function IntegrityPageInner() {
   const [evidence, setEvidence] = useState<IntegrityEvidence | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  function copyRootHash(hash: string) {
+    navigator.clipboard.writeText(hash).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   const loadOverview = useCallback(async () => {
     try {
@@ -81,29 +87,36 @@ function IntegrityPageInner() {
   }
 
   return (
-    <Main size="dashboard">
-      <Panel title="Ledger integrity" subtitle="On-demand verification with export (FR-23). See docs/RUNBOOK.md P1.">
-        {error && <Alert>{error}</Alert>}
-      </Panel>
+    <>
+      <PageHeader breadcrumb="Arka / Integrity audit" title="Ledger integrity" context="On-demand verification with export (FR-23). See docs/RUNBOOK.md P1." />
+
+      {error && <Alert>{error}</Alert>}
 
       {!overview && !error && (
-        <div className="ui-grid">
-          <Skeleton height="90px" />
-          <Skeleton height="90px" />
+        <div className="ui-cell-panels">
+          <Skeleton height="180px" />
+          <Skeleton height="180px" />
         </div>
       )}
 
-      <div className="ui-grid">
+      <div className="ui-cell-panels">
         {overview?.map((e) => (
-          <Panel key={e.cellId} data-testid="cell-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <span style={{ fontWeight: 700, fontSize: 'var(--text-lg)' }}>{e.cellId}</span>
+          <div className="ui-panel ui-cell-panel" key={e.cellId} data-testid="cell-card">
+            <div className="ui-cell-panel__header">
+              <span className="ui-cell-panel__id">{e.cellId}</span>
               <Badge tone={e.result.ok ? 'success' : 'danger'}>{e.result.ok ? 'clean' : 'broken'}</Badge>
             </div>
-            <div className="ui-meta">
-              {e.result.records} records · checked {new Date(e.verifiedAt).toLocaleTimeString()}
-            </div>
-          </Panel>
+            <dl className="ui-cell-panel__attrs">
+              <div className="ui-cell-panel__attr">
+                <dt>Records</dt>
+                <dd>{e.result.records.toLocaleString()}</dd>
+              </div>
+              <div className="ui-cell-panel__attr">
+                <dt>Checked</dt>
+                <dd>{new Date(e.verifiedAt).toLocaleTimeString()}</dd>
+              </div>
+            </dl>
+          </div>
         ))}
       </div>
 
@@ -155,7 +168,7 @@ function IntegrityPageInner() {
                 }}
               >
                 {evidence.result.ok
-                  ? `Chain verified: ${evidence.result.records.toLocaleString()} records · 0 breaks`
+                  ? `Chain verified: ${evidence.result.records.toLocaleString()} records, 0 breaks`
                   : `Chain broken at block ${evidence.result.brokenAt}: ${evidence.result.reason}`}
               </p>
               <p className="ui-meta" style={{ marginTop: 4 }}>
@@ -172,53 +185,60 @@ function IntegrityPageInner() {
             </a>
           </div>
 
-          <table className="ui-table ui-table--attributes">
-            <tbody>
-              <tr>
-                <th>Status</th>
-                <td data-testid="evidence-status">
-                  <Badge tone={evidence.result.ok ? 'success' : 'danger'}>{evidence.result.ok ? 'clean' : 'broken'}</Badge>
-                </td>
-              </tr>
-              <tr>
-                <th>Verified at</th>
-                <td>{new Date(evidence.verifiedAt).toLocaleString()}</td>
-              </tr>
-              <tr>
-                <th>Walked up to</th>
-                <td>{evidence.upTo ?? 'head'}</td>
-              </tr>
-              <tr>
-                <th>Records</th>
-                <td>{evidence.result.records}</td>
-              </tr>
-              <tr>
-                <th>Root hash</th>
-                <td className="ui-hash">{evidence.result.rootHash ?? '(empty chain)'}</td>
-              </tr>
-              {!evidence.result.ok && (
-                <>
-                  <tr>
-                    <th>Broken at</th>
-                    <td>block {evidence.result.brokenAt}</td>
-                  </tr>
-                  <tr>
-                    <th>Reason</th>
-                    <td>{evidence.result.reason}</td>
-                  </tr>
-                </>
-              )}
-            </tbody>
-          </table>
+          <dl className="ui-cell-panel__attrs">
+            <div className="ui-cell-panel__attr">
+              <dt>Status</dt>
+              <dd data-testid="evidence-status">
+                <Badge tone={evidence.result.ok ? 'success' : 'danger'}>{evidence.result.ok ? 'clean' : 'broken'}</Badge>
+              </dd>
+            </div>
+            <div className="ui-cell-panel__attr">
+              <dt>Verified at</dt>
+              <dd>{new Date(evidence.verifiedAt).toLocaleString()}</dd>
+            </div>
+            <div className="ui-cell-panel__attr">
+              <dt>Walked up to</dt>
+              <dd>{evidence.upTo ?? 'head'}</dd>
+            </div>
+            <div className="ui-cell-panel__attr">
+              <dt>Records</dt>
+              <dd>{evidence.result.records}</dd>
+            </div>
+            <div className="ui-cell-panel__attr">
+              <dt>Root hash</dt>
+              <dd style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
+                <span className="ui-hash" style={{ wordBreak: 'break-all', textAlign: 'right' }}>
+                  {evidence.result.rootHash ?? '(empty chain)'}
+                </span>
+                {evidence.result.rootHash && (
+                  <button type="button" className="ui-copy-control" onClick={() => copyRootHash(evidence.result.rootHash!)}>
+                    {copied ? 'Copied' : 'Copy'}
+                  </button>
+                )}
+              </dd>
+            </div>
+            {!evidence.result.ok && (
+              <>
+                <div className="ui-cell-panel__attr">
+                  <dt>Broken at</dt>
+                  <dd>block {evidence.result.brokenAt}</dd>
+                </div>
+                <div className="ui-cell-panel__attr">
+                  <dt>Reason</dt>
+                  <dd>{evidence.result.reason}</dd>
+                </div>
+              </>
+            )}
+          </dl>
         </Panel>
       )}
-    </Main>
+    </>
   )
 }
 
 export default function IntegrityPage() {
   return (
-    <Suspense fallback={<Main size="dashboard" />}>
+    <Suspense fallback={<Skeleton height="200px" />}>
       <IntegrityPageInner />
     </Suspense>
   )

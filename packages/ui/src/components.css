@@ -128,6 +128,360 @@ body {
   justify-content: stretch;
 }
 
+/* ---- Application shell (sidebar + page header + overview strip) ----
+ * lane-c/app-shell: the fixed-sidebar shell every authenticated screen
+ * (W2-W6, agent cash) renders into. Unauthenticated W1 skips this entirely,
+ * same as the old AppTopbar's own session-gated null-render. */
+
+.ui-app-layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--ground);
+}
+
+.ui-sidebar {
+  flex-shrink: 0;
+  width: 240px;
+  min-height: 100vh;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  background: var(--mist);
+  border-right: 1px solid var(--hairline);
+  padding: var(--space-5) var(--space-4);
+  transition: width var(--transition-base);
+}
+
+.ui-sidebar[data-collapsed='true'] {
+  width: 64px;
+  padding-left: var(--space-2);
+  padding-right: var(--space-2);
+}
+
+.ui-sidebar[data-collapsed='true'] .ui-sidebar__context,
+.ui-sidebar[data-collapsed='true'] .ui-sidebar__group-label,
+.ui-sidebar[data-collapsed='true'] .ui-sidebar__cell-status-text,
+.ui-sidebar[data-collapsed='true'] .ui-sidebar__collapse-label,
+.ui-sidebar[data-collapsed='true'] .ui-sidebar__signout-label {
+  display: none;
+}
+
+.ui-sidebar__top {
+  margin-bottom: var(--space-6);
+}
+
+.ui-sidebar__wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-lg);
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.ui-sidebar__context {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  line-height: 1.5;
+}
+
+.ui-sidebar__nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  overflow-y: auto;
+}
+
+.ui-sidebar__group-label {
+  margin: 0 0 var(--space-2);
+  padding: 0 var(--space-3);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.ui-sidebar__link {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  margin: 0 0 2px;
+  border-radius: var(--radius);
+  border-left: 2px solid transparent;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--ink-soft);
+  text-decoration: none;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.ui-sidebar__link:hover {
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+  color: var(--ink);
+}
+
+.ui-sidebar__link[data-active='true'] {
+  background: var(--primary-tint);
+  border-left-color: var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.ui-sidebar__link--placeholder {
+  color: var(--ink-faint);
+  cursor: default;
+  opacity: 0.7;
+}
+
+.ui-sidebar__link--placeholder:hover {
+  background: transparent;
+  color: var(--ink-faint);
+}
+
+.ui-sidebar__bottom {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-sidebar__cell-status {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+}
+
+.ui-sidebar__cell-status-dot {
+  flex-shrink: 0;
+  margin-top: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+
+.ui-sidebar__cell-status[data-tone='healthy'] .ui-sidebar__cell-status-dot {
+  background: var(--teal);
+}
+
+.ui-sidebar__cell-status[data-tone='quarantined'] .ui-sidebar__cell-status-dot {
+  background: var(--red);
+}
+
+.ui-sidebar__cell-status-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ui-sidebar__cell-status-primary {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ui-sidebar__cell-status[data-tone='quarantined'] .ui-sidebar__cell-status-primary {
+  color: var(--red);
+}
+
+.ui-sidebar__cell-status-secondary {
+  color: var(--ink-faint);
+  line-height: 1.4;
+}
+
+.ui-sidebar__collapse {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: flex-start;
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+
+.ui-sidebar__collapse:hover {
+  color: var(--ink);
+}
+
+.ui-app-layout__content {
+  flex: 1;
+  min-width: 0;
+  background: var(--ground);
+}
+
+.ui-app-layout__content-inner {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+@media (max-width: 768px) {
+  .ui-app-layout {
+    flex-direction: column;
+  }
+
+  .ui-sidebar {
+    position: sticky;
+    width: 100%;
+    min-height: 0;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-2) var(--space-4);
+    overflow-x: auto;
+    z-index: 20;
+  }
+
+  .ui-sidebar__top {
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+
+  .ui-sidebar__context,
+  .ui-sidebar__group-label,
+  .ui-sidebar__collapse,
+  .ui-sidebar__cell-status-secondary {
+    display: none;
+  }
+
+  .ui-sidebar__nav {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-4);
+    overflow: visible;
+  }
+
+  .ui-sidebar__group {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .ui-sidebar__link {
+    white-space: nowrap;
+    margin: 0;
+    padding: var(--space-2);
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+  }
+
+  .ui-sidebar__link[data-active='true'] {
+    border-left-color: transparent;
+    border-bottom-color: var(--primary);
+    background: transparent;
+  }
+
+  .ui-sidebar__bottom {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .ui-app-layout__content-inner {
+    padding: var(--space-4);
+  }
+}
+
+/* ---- Page header ---- */
+
+.ui-page-header {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.ui-page-header__row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.ui-page-header__breadcrumb {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+
+.ui-page-header__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.75rem;
+  color: var(--ink);
+}
+
+.ui-page-header__context {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.ui-page-header__action {
+  flex-shrink: 0;
+}
+
+/* ---- Overview strip ---- */
+
+.ui-overview-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.ui-overview-strip__col {
+  padding: var(--space-4) var(--space-5);
+  border-left: 1px solid var(--hairline);
+}
+
+.ui-overview-strip__col:first-child {
+  padding-left: 0;
+  border-left: none;
+}
+
+.ui-overview-strip__label {
+  margin: 0 0 var(--space-2);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.ui-overview-strip__value {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ui-overview-strip__context {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
 /* ---- Generic text ---- */
 
 .ui-meta {
@@ -250,12 +604,13 @@ body {
   justify-content: center;
   gap: var(--space-2);
   width: 100%;
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
+  height: 46px;
+  padding: 0 28px;
+  border-radius: var(--radius);
   border: 1px solid transparent;
   font-family: inherit;
   font-size: var(--text-md);
-  font-weight: 600;
+  font-weight: 500;
   text-decoration: none;
   cursor: pointer;
   transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast),
@@ -287,11 +642,11 @@ body {
 .ui-button--secondary {
   background: transparent;
   color: var(--color-accent);
-  border-color: var(--color-border-strong);
+  border-color: var(--color-accent);
 }
 
 .ui-button--secondary:hover:not(:disabled) {
-  background: var(--color-bg-tint);
+  background: var(--color-accent-tint);
 }
 
 .ui-button--ghost {
@@ -304,12 +659,26 @@ body {
   background: var(--color-bg-tint);
 }
 
+/* Destructive: outline at rest, filled only at the confirm step (never
+   pre-filled the way a "final" state should read as more consequential
+   than the request that led to it). */
 .ui-button--danger {
-  background: var(--color-danger);
-  color: var(--color-text-inverse);
+  background: transparent;
+  color: var(--color-danger);
+  border-color: var(--color-danger);
 }
 
 .ui-button--danger:hover:not(:disabled) {
+  background: var(--color-danger-tint);
+}
+
+.ui-button--danger-confirm {
+  background: var(--color-danger);
+  color: var(--color-text-inverse);
+  border-color: var(--color-danger);
+}
+
+.ui-button--danger-confirm:hover:not(:disabled) {
   filter: brightness(0.92);
 }
 
@@ -377,7 +746,10 @@ body {
   align-items: center;
   gap: var(--space-1);
   padding: 3px var(--space-2);
-  border-radius: var(--radius-pill);
+  /* A tag, not a pill: "no filled status pills" is a shell-wide rule, and
+     --radius is already documented as "nearly square is the whole point,
+     no pill buttons, no pill cards" (tokens.css). */
+  border-radius: var(--radius);
   font-size: var(--text-xs);
   font-weight: 600;
   line-height: 1.4;
@@ -609,8 +981,11 @@ body {
   width: 44%;
   min-width: 420px;
   padding: var(--space-7) var(--space-7) var(--space-6);
-  background: linear-gradient(165deg, var(--palette-navy-900), var(--palette-navy-950));
-  color: var(--palette-white);
+  /* Flat, not a gradient: the flood gradient is homepage-only, every app
+     panel is a solid ground. --ink is the app's own dark neutral, the same
+     one the homepage's institutional plates alias. */
+  background: var(--ink);
+  color: var(--white);
   display: flex;
   flex-direction: column;
 }
@@ -623,7 +998,7 @@ body {
   width: 62%;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--palette-teal-600) 22%, transparent), transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--teal) 22%, transparent), transparent 70%);
   pointer-events: none;
 }
 
@@ -640,8 +1015,8 @@ body {
   width: 44px;
   height: 44px;
   border-radius: var(--radius-md);
-  background: var(--palette-white);
-  color: var(--palette-navy-900);
+  background: var(--white);
+  color: var(--ink);
   font-family: var(--font-display);
   font-weight: 700;
   font-size: var(--text-lg);
@@ -778,7 +1153,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--palette-navy-950);
+  background: color-mix(in srgb, var(--ink) 80%, transparent);
   z-index: 100;
 }
 
@@ -795,8 +1170,9 @@ body {
   overflow: hidden;
   border-radius: var(--radius-lg);
   padding: var(--space-5) var(--space-6);
-  background: linear-gradient(160deg, var(--palette-navy-900), var(--palette-navy-950));
-  color: var(--palette-white);
+  /* Flat, not a gradient: same reasoning as .ui-split-hero__panel above. */
+  background: var(--ink);
+  color: var(--white);
 }
 
 .ui-balance-hero::before {
@@ -807,7 +1183,7 @@ body {
   width: 55%;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--palette-teal-600) 18%, transparent), transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--teal) 18%, transparent), transparent 70%);
   pointer-events: none;
 }
 
@@ -831,8 +1207,10 @@ body {
   margin-top: var(--space-3);
   padding: 4px var(--space-3);
   border-radius: var(--radius-pill);
-  background: var(--palette-teal-tint-dark);
-  color: var(--palette-teal-300);
+  /* --teal-on-dark is exactly this: the verification-state tint tuned for
+     an ink/flood ground, not the flat --teal-tint meant for paper. */
+  background: color-mix(in srgb, var(--teal-on-dark) 18%, transparent);
+  color: var(--teal-on-dark);
   font-size: var(--text-xs);
   font-weight: 600;
 }
@@ -1052,6 +1430,319 @@ body {
   letter-spacing: 0;
   text-align: left;
   word-break: break-all;
+}
+
+/* ---- Cell panel (W5's two Cell cards, W6's status chips) ---- */
+
+.ui-cell-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: var(--space-5);
+  align-items: stretch;
+}
+
+.ui-cell-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-cell-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ui-cell-panel__id {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
+}
+
+.ui-cell-panel__attrs {
+  margin: 0 0 var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-cell-panel__attr {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.ui-cell-panel__attr dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  color: var(--color-text-primary);
+  text-align: right;
+}
+
+.ui-cell-panel__section {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ui-cell-panel__section--rest {
+  margin-top: auto;
+  border: 1px solid var(--color-border);
+}
+
+.ui-cell-panel__section--danger {
+  border: 1px solid color-mix(in srgb, var(--color-danger) 30%, transparent);
+  background: var(--color-danger-tint);
+}
+
+.ui-cell-panel__section--warning {
+  border: 1px solid color-mix(in srgb, var(--color-warning) 35%, transparent);
+  background: var(--color-warning-tint);
+}
+
+/* ---- Status word (a small coloured dot plus a word: dense table rows, never a pill) ---- */
+
+.ui-status-word {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+}
+
+.ui-status-word__dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-text-tertiary);
+}
+
+.ui-status-word--success .ui-status-word__dot {
+  background: var(--color-success);
+}
+
+.ui-status-word--warning .ui-status-word__dot {
+  background: var(--color-warning);
+}
+
+.ui-status-word--danger .ui-status-word__dot {
+  background: var(--color-danger);
+}
+
+/* ---- Link row (plain text destinations, replaces a boxed tile grid) ---- */
+
+.ui-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+}
+
+.ui-link-row__item {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.ui-link-row__item:hover {
+  color: var(--color-accent-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---- Day group (dense activity tables grouped by calendar day) ---- */
+
+.ui-day-group__heading {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.ui-day-group:first-child .ui-day-group__heading {
+  margin-top: 0;
+}
+
+.ui-table--dense th,
+.ui-table--dense td {
+  padding: var(--space-2) var(--space-3);
+}
+
+.ui-table--dense td.ui-table__num {
+  font-family: var(--font-mono);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ---- Toolbar (search + filter above a dense table) ---- */
+
+.ui-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.ui-toolbar__search {
+  flex: 1;
+  min-width: 200px;
+}
+
+.ui-toolbar .ui-field,
+.ui-toolbar .ui-input,
+.ui-toolbar .ui-select {
+  margin-bottom: 0;
+}
+
+/* ---- Copy control (root hash and other mono values with a copy affordance) ---- */
+
+.ui-copy-control {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  padding: 2px var(--space-2);
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.ui-copy-control:hover {
+  background: var(--color-accent-tint);
+}
+
+/* ---- Notification row (W4: unread dot at the left edge, not a pill) ---- */
+
+.ui-notif-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ui-notif-row:last-child {
+  border-bottom: none;
+}
+
+.ui-notif-row__dot {
+  flex-shrink: 0;
+  margin-top: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.ui-notif-row[data-unread='true'] .ui-notif-row__dot {
+  background: var(--color-accent);
+}
+
+.ui-notif-row__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ui-notif-row__title {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.ui-notif-row__meta {
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.ui-notif-row__time {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+.ui-notif-row__actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ---- Toggle row (a compact settings switch, e.g. low-bandwidth mode) ---- */
+
+.ui-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.ui-toggle-row__label {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.ui-toggle-row__hint {
+  margin: 2px 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  max-width: 52ch;
+}
+
+.ui-toggle {
+  flex-shrink: 0;
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-tint);
+  cursor: pointer;
+  padding: 0;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.ui-toggle[data-on='true'] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.ui-toggle__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--white);
+  transition: transform var(--transition-fast);
+}
+
+.ui-toggle[data-on='true'] .ui-toggle__thumb {
+  transform: translateX(20px);
 }
 
 /* ---- Row (history lines, list items) ---- */

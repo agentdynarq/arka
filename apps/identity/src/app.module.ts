@@ -19,6 +19,7 @@ import { AccessTokenGuard } from './auth/access-token.guard.ts'
 import { ReVerifyController } from './reverify/reverify.controller.ts'
 import { AccountOpeningController } from './account-opening/account-opening.controller.ts'
 import { DashboardController } from './dashboard/dashboard.controller.ts'
+import { CellStatusController } from './dashboard/cell-status.controller.ts'
 import { HealthController } from './health/health.controller.ts'
 import { TransfersController } from './payments/transfers.controller.ts'
 import { HistoryController } from './payments/history.controller.ts'
@@ -36,6 +37,7 @@ import { NotificationsController } from './notifications/notifications.controlle
     ReVerifyController,
     AccountOpeningController,
     DashboardController,
+    CellStatusController,
     TransfersController,
     HistoryController,
     LimitsController,

@@ -1,27 +1,26 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { fetchNotifications, markNotificationRead, ApiError } from '@/lib/api'
 import type { AppNotification } from '@/lib/api'
 import { getAccessToken, clearSession } from '@/lib/session'
-import { Main, Panel, Row, Badge, Skeleton, EmptyState, Alert, InboxIcon } from '@arka/ui'
+import { PageHeader, Panel, StatusWord, Skeleton, EmptyState, Alert, InboxIcon, Button } from '@arka/ui'
+
+function dayKeyFor(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+}
 
 /**
- * FR-19 (transaction alerts) and FR-20 (security alerts) had a real backend
- * and an API surface (`GET /v1/notifications`) but no screen: the agent-cash
- * flow (W4) reads a customer's OTP from the same inbox in tests and via
- * curl, but nothing in this app ever let a real customer see it. This
- * closes that gap.
- *
- * A pollable inbox, not push, at Phase 2 demo scale; labelled as such in
- * `services/notifications/README.md`, same honesty principle as
- * `livenessSimulated`.
+ * FR-19 (transaction alerts) and FR-20 (security alerts): a pollable inbox,
+ * not push, at Phase 2 demo scale, labelled as such in
+ * `services/notifications/README.md`.
  */
 export default function NotificationsPage() {
   const router = useRouter()
   const [notifications, setNotifications] = useState<AppNotification[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [markingAll, setMarkingAll] = useState(false)
 
   useEffect(() => {
     const accessToken = getAccessToken()
@@ -49,9 +48,52 @@ export default function NotificationsPage() {
     }
   }
 
+  async function markAllRead() {
+    const accessToken = getAccessToken()
+    if (!accessToken || !notifications) return
+    const unread = notifications.filter((n) => !n.readAt)
+    if (unread.length === 0) return
+    setMarkingAll(true)
+    try {
+      const updates = await Promise.all(unread.map((n) => markNotificationRead(accessToken, n.notificationId)))
+      const byId = new Map(updates.map((u) => [u.notificationId, u]))
+      setNotifications(notifications.map((n) => byId.get(n.notificationId) ?? n))
+    } catch {
+      // Same as markRead: best-effort, a partial failure just leaves some items unread.
+    } finally {
+      setMarkingAll(false)
+    }
+  }
+
+  const groups = useMemo(() => {
+    const map = new Map<string, AppNotification[]>()
+    for (const n of notifications ?? []) {
+      const key = dayKeyFor(n.createdAt)
+      const list = map.get(key)
+      if (list) list.push(n)
+      else map.set(key, [n])
+    }
+    return Array.from(map.entries())
+  }, [notifications])
+
+  const unreadCount = notifications?.filter((n) => !n.readAt).length ?? 0
+
   return (
-    <Main size="wide">
-      <Panel title="Notifications" subtitle="FR-19 transaction alerts, FR-20 security alerts. Newest first.">
+    <>
+      <PageHeader
+        breadcrumb="Arka / Notifications"
+        title="Notifications"
+        context="Transaction and security alerts, newest first."
+        action={
+          unreadCount > 0 ? (
+            <Button variant="secondary" fullWidth={false} disabled={markingAll} onClick={markAllRead}>
+              {markingAll ? 'Marking...' : 'Mark all as read'}
+            </Button>
+          ) : undefined
+        }
+      />
+
+      <Panel>
         {error && <Alert>{error}</Alert>}
         {notifications === null && !error && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -61,27 +103,31 @@ export default function NotificationsPage() {
           </div>
         )}
         {notifications?.length === 0 && <EmptyState icon={<InboxIcon />} title="No notifications yet" hint="Transaction and security alerts will show up here." />}
-        {notifications?.map((n) => (
-          <button
-            key={n.notificationId}
-            onClick={() => markRead(n.notificationId)}
-            style={{ all: 'unset', display: 'block', width: '100%', cursor: n.readAt ? 'default' : 'pointer' }}
-          >
-            <Row
-              title={n.title}
-              meta={
-                <>
-                  {n.message}
-                  <br />
-                  {new Date(n.createdAt).toLocaleString()}
-                </>
-              }
-              value={<Badge tone={n.kind === 'security' ? 'warning' : 'info'}>{n.kind}</Badge>}
-              footnote={!n.readAt ? <Badge tone="neutral">Unread, tap to mark read</Badge> : null}
-            />
-          </button>
+
+        {groups.map(([day, items]) => (
+          <div className="ui-day-group" key={day}>
+            <p className="ui-day-group__heading">{day}</p>
+            {items.map((n) => (
+              <div className="ui-notif-row" key={n.notificationId} data-unread={!n.readAt}>
+                <span className="ui-notif-row__dot" aria-hidden="true" />
+                <div className="ui-notif-row__body">
+                  <div className="ui-notif-row__title">{n.title}</div>
+                  <div className="ui-notif-row__meta">{n.message}</div>
+                </div>
+                <StatusWord tone={n.kind === 'security' ? 'warning' : 'neutral'}>{n.kind}</StatusWord>
+                <div className="ui-notif-row__time">{new Date(n.createdAt).toLocaleString()}</div>
+                <div className="ui-notif-row__actions">
+                  {!n.readAt && (
+                    <button type="button" className="ui-copy-control" onClick={() => markRead(n.notificationId)}>
+                      Mark read
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         ))}
       </Panel>
-    </Main>
+    </>
   )
 }

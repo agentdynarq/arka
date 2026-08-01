@@ -3,8 +3,7 @@ import { Source_Serif_4, Inter, JetBrains_Mono } from 'next/font/google'
 import '@arka/ui/tokens.css'
 import '@arka/ui/components.css'
 import './globals.css'
-import { Shell } from '@arka/ui'
-import { AppTopbar } from '@/components/AppTopbar'
+import { AppShell } from '@/components/AppSidebar'
 
 // Space Grotesk removed (chore/indigo-tokens): headings are Source Serif 4
 // everywhere now, loaded here app-wide rather than scoped per-route the way
@@ -27,10 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${sourceSerif.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
       <body>
-        <Shell>
-          <AppTopbar />
-          {children}
-        </Shell>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   )

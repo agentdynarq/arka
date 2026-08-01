@@ -6,19 +6,22 @@ import {
   fetchHealthMap,
   fetchQuarantineStatus,
   fetchAuditTrail,
+  fetchAllIntegrity,
   requestQuarantine,
   approveQuarantine,
   requestLiftQuarantine,
   approveLiftQuarantine,
   ApiError,
 } from '@/lib/api'
-import type { CellHealthSnapshot, QuarantineStatus, AuditTrailEntry } from '@/lib/api'
-import { Main, Panel, Field, Button, Alert, Badge, Skeleton, EmptyState, TimelineItem, Row } from '@arka/ui'
+import type { CellHealthSnapshot, QuarantineStatus, AuditTrailEntry, IntegrityEvidence } from '@/lib/api'
+import { PageHeader, OverviewStrip, Panel, Field, Button, Alert, Badge, Skeleton, EmptyState, Row } from '@arka/ui'
 import type { BadgeTone } from '@arka/ui'
+import { useOperatorId } from '@/lib/operator-context'
 
 interface CellRow {
   health: CellHealthSnapshot
   quarantine: QuarantineStatus
+  integrity?: IntegrityEvidence
 }
 
 const STATUS_TONE: Record<CellHealthSnapshot['status'], BadgeTone> = {
@@ -40,24 +43,31 @@ function auditTone(action: string): 'neutral' | 'warning' | 'danger' {
   return 'neutral'
 }
 
-function describeAudit(entry: AuditTrailEntry): string {
-  const cell = entry.cellId ?? 'the platform'
-  switch (entry.action) {
+function describeAction(action: string): string {
+  switch (action) {
     case 'quarantine.requested':
-      return `${entry.actor} requested quarantine of ${cell}`
+      return 'Quarantine requested'
     case 'quarantine.approval_recorded':
-      return `${entry.actor} approved quarantining ${cell}, awaiting a second, distinct operator`
+      return 'Quarantine approval recorded'
     case 'quarantine.approved':
-      return `${entry.actor} gave the second approval; ${cell} is now quarantined`
+      return 'Quarantine approved'
     case 'lift.requested':
-      return `${entry.actor} requested lifting quarantine on ${cell}`
+      return 'Lift requested'
     case 'lift.approval_recorded':
-      return `${entry.actor} approved lifting quarantine on ${cell}, awaiting a second, distinct operator`
+      return 'Lift approval recorded'
     case 'lift.approved':
-      return `${entry.actor} gave the second approval; ${cell} is no longer quarantined`
+      return 'Lift approved'
     default:
-      return `${entry.actor}: ${entry.action} (${cell})`
+      return action
   }
+}
+
+function describeResult(action: string): string {
+  if (action === 'quarantine.approved') return 'Quarantined'
+  if (action.startsWith('quarantine.')) return 'Pending'
+  if (action === 'lift.approved') return 'Healthy'
+  if (action.startsWith('lift.')) return 'Pending'
+  return '-'
 }
 
 /**
@@ -67,67 +77,44 @@ function describeAudit(entry: AuditTrailEntry): string {
  * point in time" operation since balances are always computed live from the
  * chain rather than cached (docs/RUNBOOK.md P3), and there is no per-Cell
  * signing key to rotate (docs/adr/0003's design, not yet built, see
- * docs/ARCHITECTURE.md section 8). Shown honestly rather than either wired
- * to nothing or silently dropped.
+ * docs/ARCHITECTURE.md section 8).
  */
-const RECOVERY_ACTIONS = [
-  {
-    title: 'Run integrity verification',
-    detail: 'Full hash-chain walk, exportable evidence',
-    href: '/integrity',
-    wired: true,
-  },
-  {
-    title: 'Rebuild Cell from IaC',
-    detail: 'Signed images + Terraform · target RTO 30 min',
-    wired: false,
-  },
+const PHASE_3_ACTIONS = [
+  { title: 'Rebuild Cell from IaC', detail: 'Signed images + Terraform · target RTO 30 min' },
   {
     title: 'Replay ledger to point in time',
     detail: 'Balances are always computed live from the chain, not cached, so there is no separate replay step to run',
-    wired: false,
   },
-  {
-    title: 'Rotate Cell keys',
-    detail: 'No per-Cell signing key exists yet to rotate (docs/adr/0003)',
-    wired: false,
-  },
+  { title: 'Rotate Cell keys', detail: 'No per-Cell signing key exists yet to rotate (docs/adr/0003)' },
 ] as const
 
 /**
  * Screen W5: the Recovery Console's health map and quarantine controls
  * (FR-21, FR-22), plus the operator audit trail (FR-25). No operator login
- * wired into this screen in this scope: `operatorId` below is free text,
- * simulating which operator is acting, the same simplification the FR-02
- * account-opening flow made for KYC review. RBAC and session auth already
- * exist as real capabilities in `@arka/identity`; wiring them into the
- * console is future work, not pretended here.
- *
- * Matched to the real Phase 1 wireframe (get_design_context on node 11:2244).
- * The wireframe shows per-Cell customer counts, TPS and p95 latency, and an
- * "Anomaly feed" of automated security events: none of that has a real data
- * source in this build (`CellHealthSnapshot` is only `status`/`lastCheckedAt`
- * /`latencyMs`, and there is no anomaly-detection system beyond rate
- * limiting, already named in USER-GUIDE.md's "what is not built"). Shown
- * honestly below: the health probe's own latency, and the real audit trail
- * (FR-25) styled as the wireframe's feed rather than invented telemetry.
+ * wired into this screen in this scope: identity is a free-text field lifted
+ * into the sidebar (`lib/operator-context.tsx`), not a real session, same
+ * simplification the FR-02 account-opening flow made for KYC review.
  */
 export default function HealthMapPage() {
+  const [operatorId] = useOperatorId()
   const [rows, setRows] = useState<CellRow[] | null>(null)
   const [trail, setTrail] = useState<AuditTrailEntry[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [operatorId, setOperatorId] = useState('operator-1')
-  const [reason, setReason] = useState('anomalous write volume')
+  const [reasons, setReasons] = useState<Record<string, string>>({})
   const [busyCellId, setBusyCellId] = useState<string | null>(null)
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null)
 
   const refresh = useCallback(async () => {
     try {
-      const health = await fetchHealthMap()
-      const withQuarantine = await Promise.all(
-        health.map(async (h) => ({ health: h, quarantine: await fetchQuarantineStatus(h.cellId) }))
+      const [health, integrity] = await Promise.all([fetchHealthMap(), fetchAllIntegrity()])
+      const withDetail = await Promise.all(
+        health.map(async (h) => ({
+          health: h,
+          quarantine: await fetchQuarantineStatus(h.cellId),
+          integrity: integrity.find((e) => e.cellId === h.cellId),
+        }))
       )
-      setRows(withQuarantine)
+      setRows(withDetail)
       setTrail(await fetchAuditTrail())
       setLastRefreshedAt(new Date())
       setError(null)
@@ -147,6 +134,7 @@ export default function HealthMapPage() {
     setError(null)
     try {
       await action()
+      setReasons((prev) => ({ ...prev, [cellId]: '' }))
       await refresh()
     } catch (err) {
       setError(err instanceof ApiError ? `${err.code}: ${err.message}` : 'Action failed')
@@ -155,122 +143,152 @@ export default function HealthMapPage() {
     }
   }
 
-  const anyIncident = rows?.some((r) => r.health.status !== 'healthy') ?? false
+  const healthyCount = rows?.filter((r) => r.health.status === 'healthy').length ?? 0
+  const pendingCount = rows?.filter((r) => r.quarantine.state === 'pending_second_approval').length ?? 0
+  const latencies = (rows ?? []).map((r) => r.health.latencyMs).filter((v): v is number => v !== undefined)
+  const avgLatency = latencies.length > 0 ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length) : null
+  const ledgerHeads = (rows ?? [])
+    .filter((r) => r.integrity)
+    .map((r) => `${r.health.cellId} #${r.integrity!.result.records}`)
+    .join(', ')
 
   return (
-    <Main size="dashboard">
-      <Panel eyebrow="RECOVERY CONSOLE">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
-          <div>
-            <h1 className="ui-panel__title" style={{ marginBottom: 4 }}>
-              Cell health
-            </h1>
-            <p className="ui-meta">
-              {lastRefreshedAt ? `Live · updated ${lastRefreshedAt.toLocaleTimeString()}` : 'Live · loading...'}
-            </p>
-          </div>
-          {anyIncident && <Badge tone="danger">INCIDENT MODE</Badge>}
-        </div>
-        {error && <Alert>{error}</Alert>}
-        <div style={{ maxWidth: 360, marginTop: 12 }}>
-          <Field id="operatorId" label="Acting as operator id" value={operatorId} onChange={(e) => setOperatorId(e.target.value)} />
-        </div>
-      </Panel>
+    <>
+      <PageHeader
+        breadcrumb="Arka / Cell health"
+        title="Cell health"
+        context={lastRefreshedAt ? `Live, updated ${lastRefreshedAt.toLocaleTimeString()}.` : 'Live, loading...'}
+      />
+
+      {error && <Alert>{error}</Alert>}
+
+      {!rows && !error && <Skeleton height="80px" />}
+      {rows && (
+        <OverviewStrip
+          columns={[
+            { label: 'Cells healthy', value: `${healthyCount} of ${rows.length}` },
+            { label: 'Ledger head block', value: ledgerHeads || '-', context: 'Latest verified block per Cell' },
+            { label: 'Last probe latency', value: avgLatency !== null ? `${avgLatency}ms` : '-', context: 'Averaged across Cells' },
+            { label: 'Pending approvals', value: String(pendingCount), context: 'Awaiting a second, distinct operator' },
+          ]}
+        />
+      )}
 
       {!rows && !error && (
-        <div className="ui-grid">
-          <Skeleton height="220px" />
-          <Skeleton height="220px" />
+        <div className="ui-cell-panels">
+          <Skeleton height="360px" />
+          <Skeleton height="360px" />
         </div>
       )}
 
-      <div className="ui-grid">
-        {rows?.map(({ health, quarantine }) => (
-          <Panel key={health.cellId} data-testid="cell-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <span style={{ fontWeight: 700, fontSize: 'var(--text-lg)' }}>{health.cellId}</span>
-              <span data-testid="cell-status">
-                <Badge tone={STATUS_TONE[health.status]}>{health.status}</Badge>
-              </span>
-            </div>
-            <div className="ui-meta">
-              Checked {new Date(health.lastCheckedAt).toLocaleTimeString()}
-              {health.latencyMs !== undefined ? ` · health probe ${health.latencyMs}ms` : ''}
-            </div>
+      <div className="ui-cell-panels">
+        {rows?.map(({ health, quarantine, integrity }) => {
+          const reason = reasons[health.cellId] ?? ''
+          const busy = busyCellId === health.cellId
+          return (
+            <div className="ui-panel ui-cell-panel" key={health.cellId} data-testid="cell-card">
+              <div className="ui-cell-panel__header">
+                <span className="ui-cell-panel__id">{health.cellId}</span>
+                <span data-testid="cell-status">
+                  <Badge tone={STATUS_TONE[health.status]}>{health.status}</Badge>
+                </span>
+              </div>
 
-            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <dl className="ui-cell-panel__attrs">
+                <div className="ui-cell-panel__attr">
+                  <dt>Ledger head</dt>
+                  <dd>{integrity ? `#${integrity.result.records}` : '-'}</dd>
+                </div>
+                <div className="ui-cell-panel__attr">
+                  <dt>Record count</dt>
+                  <dd>{integrity ? integrity.result.records.toLocaleString() : '-'}</dd>
+                </div>
+                <div className="ui-cell-panel__attr">
+                  <dt>Probe latency</dt>
+                  <dd>{health.latencyMs !== undefined ? `${health.latencyMs}ms` : '-'}</dd>
+                </div>
+                <div className="ui-cell-panel__attr">
+                  <dt>Last checked</dt>
+                  <dd>{new Date(health.lastCheckedAt).toLocaleTimeString()}</dd>
+                </div>
+              </dl>
+
               {quarantine.state === 'none' && (
-                <>
-                  <Field id={`reason-${health.cellId}`} label="Reason" value={reason} onChange={(e) => setReason(e.target.value)} />
+                <div className="ui-cell-panel__section ui-cell-panel__section--rest">
+                  <p className="ui-meta">
+                    Quarantine freezes Cell egress and holds non-critical writes. Customers drop to read-only. Requires dual
+                    approval.
+                  </p>
+                  <Field
+                    id={`reason-${health.cellId}`}
+                    label="Reason"
+                    value={reason}
+                    onChange={(e) => setReasons((prev) => ({ ...prev, [health.cellId]: e.target.value }))}
+                  />
                   <Button
                     variant="danger"
-                    disabled={busyCellId === health.cellId}
+                    disabled={busy || reason.trim().length === 0}
                     onClick={() => withBusy(health.cellId, () => requestQuarantine(health.cellId, reason, operatorId))}
                   >
                     Request quarantine
                   </Button>
-                </>
+                </div>
               )}
 
               {quarantine.state === 'pending_second_approval' && health.status !== 'quarantined' && (
-                <>
-                  <p className="ui-meta" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontWeight: 600 }}>
-                    <Badge tone="warning">Pending quarantine</Badge>
-                    Approved by: {quarantine.approvedBy.join(', ') || 'none yet'}. Needs a second, distinct operator.
+                <div className="ui-cell-panel__section ui-cell-panel__section--warning">
+                  <p className="ui-meta">
+                    <strong>Requested by {quarantine.approvedBy[0] ?? 'an operator'} · awaiting second approval.</strong> Pending
+                    quarantine of {health.cellId}.
                   </p>
                   <Button
-                    variant="danger"
-                    disabled={busyCellId === health.cellId}
+                    variant="danger-confirm"
+                    disabled={busy}
                     onClick={() => withBusy(health.cellId, () => approveQuarantine(health.cellId, operatorId))}
                   >
                     Approve quarantine
                   </Button>
-                </>
+                </div>
               )}
 
               {quarantine.state === 'quarantined' && (
-                <>
-                  <p className="ui-meta" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontWeight: 600 }}>
-                    <Badge tone="warning">Quarantined</Badge>
-                    Approved by: {quarantine.approvedBy.join(', ')}.
-                  </p>
+                <div className="ui-cell-panel__section ui-cell-panel__section--danger">
+                  <p className="ui-meta">Quarantined. Approved by {quarantine.approvedBy.join(', ')}.</p>
                   <Button
                     variant="secondary"
-                    disabled={busyCellId === health.cellId}
+                    disabled={busy}
                     onClick={() => withBusy(health.cellId, () => requestLiftQuarantine(health.cellId, operatorId))}
                   >
                     Request lift
                   </Button>
-                </>
+                </div>
               )}
 
               {quarantine.state === 'pending_second_approval' && health.status === 'quarantined' && (
-                <>
-                  <p className="ui-meta" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontWeight: 600 }}>
-                    <Badge tone="warning">Pending lift</Badge>
-                    Needs a second, distinct operator to approve.
+                <div className="ui-cell-panel__section ui-cell-panel__section--warning">
+                  <p className="ui-meta">
+                    <strong>Requested by {quarantine.approvedBy[0] ?? 'an operator'} · awaiting second approval.</strong> Pending
+                    lift on {health.cellId}.
                   </p>
                   <Button
                     variant="secondary"
-                    disabled={busyCellId === health.cellId}
+                    disabled={busy}
                     onClick={() => withBusy(health.cellId, () => approveLiftQuarantine(health.cellId, operatorId))}
                   >
                     Approve lift
                   </Button>
-                </>
+                </div>
               )}
 
-              <Link href={`/integrity?cell=${encodeURIComponent(health.cellId)}`} className="ui-button ui-button--secondary ui-button--auto">
-                Inspect
-              </Link>
+              <div style={{ marginTop: 'var(--space-3)' }}>
+                <Link href={`/integrity?cell=${encodeURIComponent(health.cellId)}`} className="ui-button ui-button--secondary ui-button--auto">
+                  Inspect
+                </Link>
+              </div>
             </div>
-          </Panel>
-        ))}
+          )
+        })}
       </div>
-
-      <p className="ui-meta">
-        Quarantine freezes Cell egress and holds non-critical writes. Customers drop to read-only. Requires dual approval.
-      </p>
 
       <div className="ui-dashboard">
         <div className="ui-dashboard__main">
@@ -279,13 +297,30 @@ export default function HealthMapPage() {
               {trail.length === 0 ? (
                 <EmptyState title="No operator actions recorded yet" hint="Quarantine or lift actions will appear here." />
               ) : (
-                trail.map((entry) => (
-                  <div key={entry.id} data-action={entry.action}>
-                    <TimelineItem time={new Date(entry.occurredAt).toLocaleTimeString()} tone={auditTone(entry.action)}>
-                      {describeAudit(entry)}
-                    </TimelineItem>
-                  </div>
-                ))
+                <table className="ui-table">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Operator</th>
+                      <th>Action</th>
+                      <th>Cell</th>
+                      <th>Result</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {trail.map((entry) => (
+                      <tr key={entry.id} data-action={entry.action}>
+                        <td className="ui-hash">{new Date(entry.occurredAt).toLocaleTimeString()}</td>
+                        <td>{entry.actor}</td>
+                        <td>{describeAction(entry.action)}</td>
+                        <td className="ui-hash">{entry.cellId ?? '-'}</td>
+                        <td>
+                          <Badge tone={auditTone(entry.action)}>{describeResult(entry.action)}</Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
           </Panel>
@@ -293,20 +328,20 @@ export default function HealthMapPage() {
 
         <div className="ui-dashboard__rail">
           <Panel title="Recovery actions">
-            {RECOVERY_ACTIONS.map((action) =>
-              action.wired ? (
-                <Link key={action.title} href={action.href} style={{ textDecoration: 'none', color: 'inherit' }}>
-                  <Row title={action.title} meta={action.detail} value="›" />
-                </Link>
-              ) : (
-                <div key={action.title} style={{ opacity: 0.55 }}>
-                  <Row title={action.title} meta={action.detail} value={<Badge tone="neutral">Not wired yet</Badge>} />
-                </div>
-              )
-            )}
+            <Link href="/integrity" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <Row title="Run integrity verification" meta="Full hash-chain walk, exportable evidence" value="›" />
+            </Link>
+            <p className="ui-field__label" style={{ marginTop: 'var(--space-4)', marginBottom: 'var(--space-2)' }}>
+              Phase 3, designed not wired
+            </p>
+            {PHASE_3_ACTIONS.map((action) => (
+              <div key={action.title} style={{ opacity: 0.55 }}>
+                <Row title={action.title} meta={action.detail} value={<Badge tone="neutral">Not wired</Badge>} />
+              </div>
+            ))}
           </Panel>
         </div>
       </div>
-    </Main>
+    </>
   )
 }

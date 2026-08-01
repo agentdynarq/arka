@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { requestAgentCash, completeAgentCash, toMinorUnits, ApiError } from '@/lib/api'
 import type { AgentCashDirection } from '@/lib/api'
 import { isLowBandwidthEnabled, setLowBandwidthEnabled, LOW_BANDWIDTH_HISTORY_LIMIT } from '@/lib/low-bandwidth'
-import { Main, Panel, Field, SelectField, Button, Alert, OtpInput } from '@arka/ui'
+import { PageHeader, Panel, Field, SelectField, Button, Alert, OtpInput } from '@arka/ui'
 
 type Stage =
   | { name: 'form' }
@@ -18,10 +18,11 @@ const DIRECTION_OPTIONS = [
 ]
 
 /**
- * Screen W4, the inclusion surface (FR-16) and the low-bandwidth preference
+ * Screen W4's agent-cash half (FR-16) plus the low-bandwidth preference
  * (FR-15): the traceability matrix in docs/ARCHITECTURE.md ties both to this
- * one screen, "reach everyone" being the shared idea behind an agent-assisted
- * transaction and an app that still works on a slow connection.
+ * one screen, "reach everyone" being the shared idea behind an
+ * agent-assisted transaction and an app that still works on a slow
+ * connection.
  *
  * Agent cash-in/cash-out is deliberately unauthenticated end to end, same as
  * the backend: there is no agent login system in scope. The OTP the agent
@@ -91,7 +92,8 @@ export default function AgentPage() {
 
   if (stage.name === 'done') {
     return (
-      <Main>
+      <>
+        <PageHeader breadcrumb="Arka / Agent cash" title="Agent cash" />
         <Panel
           title={`Cash ${direction === 'cash_in' ? 'in' : 'out'} confirmed`}
           subtitle={`Ledger block #${stage.ledgerBlockSeq}, confirmed immediately.`}
@@ -99,13 +101,14 @@ export default function AgentPage() {
           <p className="ui-meta">Transfer ID: {stage.transferId}</p>
           <Button onClick={() => setStage({ name: 'form' })}>Start another</Button>
         </Panel>
-      </Main>
+      </>
     )
   }
 
   if (stage.name === 'awaiting-otp') {
     return (
-      <Main>
+      <>
+        <PageHeader breadcrumb="Arka / Agent cash" title="Agent cash" />
         <Panel
           title="Ask the customer for their code"
           subtitle={`An OTP was sent to the customer's own notification inbox, it expires at ${new Date(
@@ -125,56 +128,91 @@ export default function AgentPage() {
             Cancel
           </Button>
         </Panel>
-      </Main>
+      </>
     )
   }
 
   return (
-    <Main size="wide">
-      <Panel title="Agent cash in / cash out" subtitle="FR-16. The customer consents by OTP, sent to their own inbox, never to this screen.">
-        {error && <Alert>{error}</Alert>}
-        <form onSubmit={submitRequest}>
-          <Field id="agentId" label="Agent ID" value={agentId} onChange={(e) => setAgentId(e.target.value)} placeholder="agent:west-01" />
-          <Field
-            id="agentAccountId"
-            label="Agent's cash account"
-            value={agentAccountId}
-            onChange={(e) => setAgentAccountId(e.target.value)}
-            placeholder="agent:west"
-          />
-          <Field
-            id="customerAccountId"
-            label="Customer's account"
-            value={customerAccountId}
-            onChange={(e) => setCustomerAccountId(e.target.value)}
-            placeholder="customer:alice"
-          />
-          <SelectField
-            id="direction"
-            label="Direction"
-            options={DIRECTION_OPTIONS}
-            value={direction}
-            onChange={(e) => setDirection(e.target.value as AgentCashDirection)}
-          />
-          <Field id="amount" label="Amount (LKR)" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50.00" />
-          <Button type="submit" disabled={submitting}>
-            {submitting ? 'Requesting...' : 'Request'}
-          </Button>
-        </form>
-      </Panel>
+    <>
+      <PageHeader
+        breadcrumb="Arka / Agent cash"
+        title="Agent cash"
+        context="The customer consents by OTP, sent to their own notification inbox, never to this screen."
+      />
+      <p className="ui-meta">FR-16</p>
 
-      <Panel title="Low-bandwidth mode" subtitle="FR-15. Keeps the dashboard usable on a slow connection: history loads only your most recent transactions instead of the full ledger. Applies everywhere, remembered on this device.">
-        <Button variant="secondary" onClick={toggleLowBandwidth}>
-          {lowBandwidth ? 'Turn off low-bandwidth mode' : 'Turn on low-bandwidth mode'}
-        </Button>
-        <p className="ui-meta" style={{ marginTop: 8 }}>
-          Currently {lowBandwidth ? `on, showing ${LOW_BANDWIDTH_HISTORY_LIMIT} lines` : 'off'}.
+      <div className="ui-dashboard">
+        <Panel className="ui-dashboard__main" title="Cash in / cash out">
+          {error && <Alert>{error}</Alert>}
+          <form onSubmit={submitRequest}>
+            <Field id="agentId" label="Agent ID" value={agentId} onChange={(e) => setAgentId(e.target.value)} placeholder="agent:west-01" />
+            <Field
+              id="agentAccountId"
+              label="Agent's cash account"
+              value={agentAccountId}
+              onChange={(e) => setAgentAccountId(e.target.value)}
+              placeholder="agent:west"
+            />
+            <Field
+              id="customerAccountId"
+              label="Customer's account"
+              value={customerAccountId}
+              onChange={(e) => setCustomerAccountId(e.target.value)}
+              placeholder="customer:alice"
+            />
+            <SelectField
+              id="direction"
+              label="Direction"
+              options={DIRECTION_OPTIONS}
+              value={direction}
+              onChange={(e) => setDirection(e.target.value as AgentCashDirection)}
+            />
+            <Field id="amount" label="Amount (LKR)" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50.00" />
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Requesting...' : 'Request'}
+            </Button>
+          </form>
+        </Panel>
+
+        <Panel className="ui-dashboard__rail" title="How this works">
+          <ol style={{ margin: 0, paddingLeft: '1.1em', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+            <li className="ui-meta">The agent starts a request with the direction and amount.</li>
+            <li className="ui-meta">Arka sends a one-time code to the customer's own notification inbox, never to the agent.</li>
+            <li className="ui-meta">The customer reads the code aloud to the agent.</li>
+            <li className="ui-meta">The agent enters it here to confirm. The transfer settles on the ledger immediately.</li>
+          </ol>
+        </Panel>
+      </div>
+
+      <Panel>
+        <div className="ui-toggle-row" style={{ paddingTop: 0, borderTop: 'none' }}>
+          <div>
+            <p className="ui-toggle-row__label">Low-bandwidth mode</p>
+            <p className="ui-toggle-row__hint">
+              Loads only your most recent transactions instead of the full ledger. Applies everywhere, remembered on this
+              device. Currently {lowBandwidth ? `on, showing ${LOW_BANDWIDTH_HISTORY_LIMIT} lines` : 'off'}.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={lowBandwidth}
+            aria-label="Low-bandwidth mode"
+            className="ui-toggle"
+            data-on={lowBandwidth}
+            onClick={toggleLowBandwidth}
+          >
+            <span className="ui-toggle__thumb" />
+          </button>
+        </div>
+        <p className="ui-meta" style={{ marginTop: 'var(--space-2)' }}>
+          FR-15
         </p>
       </Panel>
 
       <Button variant="ghost" onClick={() => router.push('/dashboard')}>
         Back to dashboard
       </Button>
-    </Main>
+    </>
   )
 }
