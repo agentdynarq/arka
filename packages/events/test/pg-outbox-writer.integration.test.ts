@@ -32,6 +32,25 @@ async function isReachable(connectionString: string): Promise<boolean> {
  * `databaseName` on the same server as `connectionString` if it does not
  * exist yet, so this suite gets a genuinely separate database from the one
  * `pnpm seed` populates instead of colliding with demo data.
+ *
+ * Kept in sync with `@arka/ledger`'s copy, including its advisory-lock fix:
+ * this suite shares the `arka_cell1_test` name with accounts, identity,
+ * ledger, notifications and payments, and `turbo run test` runs independent
+ * packages concurrently on a cold cache, so all six used to race
+ * `CREATE DATABASE` for that name at once. The loser failed with a raw
+ * `duplicate key value violates unique constraint "pg_database_datname_index"`
+ * (23505), not the friendlier `42P04` (database already exists) the old
+ * guard only checked for -- reproduced directly against a dropped
+ * `arka_cell1_test` with all six suites forced to run in parallel. A
+ * Postgres session-level advisory lock keyed by hashtext of `databaseName`
+ * serialises only the suites racing for the same name; a dedicated client
+ * (not `adminPool` directly) runs both the lock and the `CREATE DATABASE`,
+ * since a session-level advisory lock only blocks other sessions if held
+ * by the specific session performing the guarded work -- splitting the
+ * lock and the create across two different pooled connections would
+ * silently defeat the whole point. `client.release()` is enough to drop
+ * the lock: Postgres releases session-level advisory locks automatically
+ * when the session ends, and nothing here needs it held any longer.
  */
 async function ensureTestDatabase(connectionString: string, databaseName: string): Promise<string> {
   const target = new URL(connectionString)
@@ -39,11 +58,20 @@ async function ensureTestDatabase(connectionString: string, databaseName: string
   admin.pathname = '/postgres'
 
   const adminPool = new Pool({ connectionString: admin.toString(), connectionTimeoutMillis: 2000 })
+  const client = await adminPool.connect()
   try {
-    await adminPool.query(`CREATE DATABASE "${databaseName}"`)
-  } catch (error) {
-    if ((error as { code?: string }).code !== '42P04') throw error // 42P04: database already exists
+    await client.query('SELECT pg_advisory_lock(hashtext($1), 0)', [databaseName])
+    try {
+      await client.query(`CREATE DATABASE "${databaseName}"`)
+    } catch (error) {
+      const code = (error as { code?: string }).code
+      // 42P04: database already exists, the ordinary path. 23505 on
+      // pg_database_datname_index: kept as defence in depth, not expected
+      // to trigger now that the lock serialises this.
+      if (code !== '42P04' && code !== '23505') throw error
+    }
   } finally {
+    client.release()
     await adminPool.end()
   }
 
