@@ -3,17 +3,18 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { AppLayout, Sidebar, SidebarGroup, SidebarLinkPlaceholder, SidebarCellStatus, Field } from '@arka/ui'
+import { usePathname, useRouter } from 'next/navigation'
+import { AppLayout, Sidebar, SidebarGroup, SidebarLinkPlaceholder, SidebarCellStatus, Field, Button } from '@arka/ui'
 import type { CellStatusTone } from '@arka/ui'
 import { fetchHealthMap } from '@/lib/api'
 import type { CellHealthSnapshot } from '@/lib/api'
 import { OperatorProvider, useOperatorId } from '@/lib/operator-context'
 
-function NavLink({ href, active, children }: { href: string; active: boolean; children: ReactNode }) {
+function NavLink({ href, active, icon, children }: { href: string; active: boolean; icon?: ReactNode; children: ReactNode }) {
   return (
     <Link href={href} className="ui-sidebar__link" data-active={active ? 'true' : undefined}>
-      {children}
+      {icon && <span className="ui-sidebar__link-icon">{icon}</span>}
+      <span className="ui-sidebar__link-text">{children}</span>
     </Link>
   )
 }
@@ -80,11 +81,12 @@ function OperatorField() {
 /**
  * The Recovery Console's persistent chrome: the health map and integrity
  * audit under one sidebar, plus the same Cell status element apps/web's
- * sidebar carries. No console session exists in this scope (see
- * `lib/operator-context.tsx`), so there is no real sign-out to offer here.
+ * sidebar carries. Sign-out resets the free-text operator identity and
+ * navigates back to the root (which redirects to health-map).
  */
 export function ConsoleShell({ children }: { readonly children: ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
 
   return (
@@ -102,18 +104,76 @@ export function ConsoleShell({ children }: { readonly children: ReactNode }) {
             collapsed={collapsed}
             onToggleCollapse={() => setCollapsed((c) => !c)}
             cellStatus={<CellStatusElement />}
+            signOut={
+              <Button
+                variant="danger"
+                fullWidth
+                onClick={() => {
+                  try {
+                    localStorage.clear()
+                    sessionStorage.clear()
+                  } catch {
+                    // Ignore storage errors
+                  }
+                  window.location.replace('http://localhost:3000/reverify')
+                }}
+              >
+                Sign out
+              </Button>
+            }
           >
             <SidebarGroup label="Operations">
-              <NavLink href="/health-map" active={pathname === '/health-map'}>
+              <NavLink
+                href="/health-map"
+                active={pathname === '/health-map'}
+                icon={
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                  </svg>
+                }
+              >
                 Cell health
               </NavLink>
-              <NavLink href="/integrity" active={pathname === '/integrity'}>
+              <NavLink
+                href="/integrity"
+                active={pathname === '/integrity'}
+                icon={
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    <path d="m9 12 2 2 4-4" />
+                  </svg>
+                }
+              >
                 Integrity audit
               </NavLink>
             </SidebarGroup>
             <SidebarGroup label="Reference">
-              <SidebarLinkPlaceholder>Audit trail</SidebarLinkPlaceholder>
-              <SidebarLinkPlaceholder>Runbook</SidebarLinkPlaceholder>
+              <NavLink
+                href="/audit-trail"
+                active={pathname === '/audit-trail'}
+                icon={
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                  </svg>
+                }
+              >
+                Audit trail
+              </NavLink>
+              <NavLink
+                href="/runbook"
+                active={pathname === '/runbook'}
+                icon={
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                  </svg>
+                }
+              >
+                Runbook
+              </NavLink>
             </SidebarGroup>
           </Sidebar>
         }

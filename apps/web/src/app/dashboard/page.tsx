@@ -223,7 +223,7 @@ export default function DashboardPage() {
         <Link href="/dashboard" className="ui-link-row__item">
           Statements
         </Link>
-        <Link href="/agent" className="ui-link-row__item">
+        <Link href="/limits" className="ui-link-row__item">
           Limits
         </Link>
         <Link href="/agent" className="ui-link-row__item">

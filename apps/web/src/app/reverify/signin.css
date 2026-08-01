@@ -9,6 +9,7 @@
  */
 
 .signin {
+  position: relative;
   min-height: 100vh;
   background: var(--ground);
   display: flex;
@@ -18,9 +19,41 @@
   /* The 24px floor is the gutter at 390. Vertical padding keeps the card off
      the edge on short viewports, where centring alone would clip it. */
   padding: 48px 24px;
+  overflow: hidden;
+}
+
+/* Background image blur container */
+.signin__bg-container {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.signin__bg-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  /* Soft ambient blur with subtle scale to eliminate edge artifacts */
+  filter: blur(2px) brightness(0.75);
+  transform: scale(1.08);
+}
+
+.signin__bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg,
+      rgba(245, 247, 250, 0.65) 0%,
+      rgba(235, 240, 248, 0.55) 50%,
+      rgba(225, 235, 245, 0.70) 100%);
+  backdrop-filter: blur(6px);
 }
 
 .signin__inner {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: 440px;
 }
@@ -57,9 +90,9 @@
   text-align: center;
   font-family: var(--font-sans);
   font-size: 15px;
-  font-weight: 400;
+  font-weight: 500;
   line-height: 1.5;
-  color: var(--ink-soft);
+  color: var(--ink);
 }
 
 /* ---- step rail ----
@@ -137,13 +170,27 @@
 /* ---- card ---- */
 
 .signin .ui-panel {
-  background: var(--white);
-  border: 1px solid var(--hairline);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: var(--radius-panel);
   padding: 40px 40px 32px;
+  overflow: hidden;
   box-shadow:
-    0 1px 2px rgba(18, 20, 43, 0.04),
-    0 8px 24px rgba(18, 20, 43, 0.06);
+    0 4px 12px rgba(18, 20, 43, 0.06),
+    0 16px 36px rgba(18, 20, 43, 0.12);
+}
+
+/* The last stepper step ("Confirm access") must be allowed to shrink so it
+   stays inside the panel at every viewport width, not just below 480px. */
+.signin .ui-stepper__step:last-child {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.signin .ui-stepper__item {
+  white-space: normal;
 }
 
 /* ---- "Signing in as alice" ---- */
@@ -250,14 +297,15 @@
   text-align: center;
   font-family: var(--font-sans);
   font-size: 13px;
+  font-weight: 500;
   line-height: 1.5;
-  color: var(--ink-faint);
+  color: var(--ink);
 }
 
 .signin__footer-rule {
   height: 1px;
   margin: 12px auto;
-  background: var(--hairline);
+  background: rgba(0, 0, 0, 0.12);
 }
 
 /* The Cell status element, same anatomy as the one in the app sidebar: dot,
