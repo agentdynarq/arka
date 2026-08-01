@@ -3,8 +3,7 @@ import { Source_Serif_4, Inter, JetBrains_Mono } from 'next/font/google'
 import '@arka/ui/tokens.css'
 import '@arka/ui/components.css'
 import './globals.css'
-import { Shell } from '@arka/ui'
-import { ConsoleTopbar } from '@/components/ConsoleTopbar'
+import { ConsoleShell } from '@/components/ConsoleSidebar'
 
 // Not previously wired here (chore/indigo-tokens): apps/web already loaded
 // these three, apps/console never did, silently falling back to system
@@ -29,10 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     // reintroduced through this same seam if one is ever needed again.
     <html lang="en" data-surface="ops" className={`${sourceSerif.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
       <body>
-        <Shell>
-          <ConsoleTopbar />
-          {children}
-        </Shell>
+        <ConsoleShell>{children}</ConsoleShell>
       </body>
     </html>
   )
