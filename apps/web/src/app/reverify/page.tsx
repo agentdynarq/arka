@@ -106,6 +106,7 @@ export default function ReVerifyPage() {
     <div className="signin">
       <div className="signin__inner">
         <div className="signin__brand">
+          <img src="/brand/logo-mark-blue.png" alt="" width={36} height={36} className="signin__mark" />
           <span className="signin__wordmark">ARKA</span>
         </div>
         <p className="signin__tagline">Your money is intact. Let&apos;s get you back to it.</p>
