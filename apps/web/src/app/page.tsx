@@ -41,33 +41,44 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* 00 · HERO — one unbroken line, with a gap. The line states the thesis
-          before a word is read: it is the transaction path, edge to edge,
-          simply absent for 18% of its width between Cell 1 and Cell 2. */}
+      {/* 00 · HERO — an indigo flood panel, inset from the page edges, the
+          one deliberate break from the rest of the page's one-grid system
+          (see the file header comment). Everything that was here before
+          the flood pass is still here: the gapped transaction line, the
+          NO ROUTE EXISTS dimension label, the stat strip — recoloured
+          onto var(--ink)/var(--on-flood-soft) rather than paper, which
+          they already resolve to correctly through the alias chain
+          @arka/ui/tokens.css and this file's own primitives both went
+          through in chore/indigo-tokens. Nothing about the diagram itself
+          changed. */}
       <header className="dw-zone dw-hero">
-        <div className="dw-zone__inner dw-section">
-          <span className="dw-eyebrow">
-            <span className="dw-eyebrow__n">00</span>Team True Node &middot; Duothan 6.0 &middot; Phase 2
-          </span>
-          <h1 className="dw-hero__claim">Banking that survives.</h1>
+        <div className="dw-hero__flood">
+          <div className="dw-hero__bloom" aria-hidden="true" />
+          <div className="dw-zone__inner dw-section">
+            <span className="dw-hero__pill">Team True Node &middot; Duothan 6.0 &middot; Phase 2</span>
+            <h1 className="dw-hero__claim">
+              Banking that
+              <br />
+              survives.
+            </h1>
 
-          <p className="dw-hero__sub">
-            The 2065 collapse was an architecture failure. Arka rebuilds banking so one compromise cannot become
-            a total one.
-          </p>
-          <div className="dw-hero__actions">
-            <Link href="/reverify" className="dw-cta-primary">
-              Run the live demo
-            </Link>
-            <a href="#architecture" className="dw-cta-secondary">
-              Read the architecture
-            </a>
-          </div>
-          <p className="dw-hero__credentials">
-            alice / demo-password-123 &middot; MFA code printed to the server console on boot
-          </p>
+            <p className="dw-hero__sub">
+              The 2065 collapse was an architecture failure. Arka rebuilds banking so one compromise cannot become
+              a total one.
+            </p>
+            <div className="dw-hero__actions">
+              <Link href="/reverify" className="dw-cta-primary dw-cta-primary--flood">
+                Run the live demo
+              </Link>
+              <a href="#architecture" className="dw-cta-secondary dw-cta-secondary--flood">
+                Read the architecture
+              </a>
+            </div>
+            <p className="dw-hero__credentials">
+              alice / demo-password-123 &middot; MFA code printed to the server console on boot
+            </p>
 
-          <div className="dw-hero__line">
+            <div className="dw-hero__line">
             <svg
               className="dw-hero__line-svg dw-hero__line-svg--desktop"
               viewBox="0 0 1000 170"
@@ -173,7 +184,8 @@ export default function Home() {
               <span>RPO 0</span>
             </div>
           </div>
-          <p className="dw-caption">Fig. 1 &mdash; The transaction path. No route between Cell 1 and Cell 2.</p>
+            <p className="dw-caption">Fig. 1 &mdash; The transaction path. No route between Cell 1 and Cell 2.</p>
+          </div>
         </div>
       </header>
 

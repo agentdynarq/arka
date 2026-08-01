@@ -7,11 +7,11 @@
  * .dw primitives just below), shared with apps/web's other screens and
  * apps/console, not a homepage-only hue. A deposit institution rebuilt after
  * a collapse of public trust reads like one, not like a crypto exchange.
- * Scoped entirely under .dw. One content grid throughout: one max-width, one
- * left margin, one section padding value, no full-bleed exceptions today —
- * the flood gradient primitive is reserved for a future full-bleed hero
- * panel, not yet built as of this commit; when that markup lands, this line
- * needs updating. Every number is real, pulled from arka/README.md,
+ * Scoped entirely under .dw. One content grid throughout for every section
+ * except one: the hero (lane-b/furnishing) is the one deliberate full-bleed
+ * exception, a wider inset flood panel rather than the standard --content
+ * column — see .dw-hero__flood's own comment for why. No other section
+ * breaks the grid. Every number is real, pulled from arka/README.md,
  * docs/RUNBOOK.md and the actual docs/media/*.cast recordings, never
  * invented.
  */
@@ -442,10 +442,134 @@ a.dw-nav__secondary {
   border-bottom-color: var(--blue-hover);
 }
 
+/* Flood-ground variants: same two button styles, recoloured for sitting on
+   the indigo flood instead of paper. var(--ink) fill would nearly vanish
+   against --flood-base, so the primary reverses to a white fill instead;
+   var(--blue) (now indigo) reads as near-invisible indigo-on-indigo for
+   the secondary, so it moves to the on-flood family. Compound selectors
+   match the base rules' own specificity so these reliably win regardless
+   of source order. Shared between the hero and the final CTA — both
+   flood-ground sections. */
+a.dw-cta-primary.dw-cta-primary--flood {
+  background: var(--white);
+  color: var(--flood-base);
+}
+
+.dw-cta-primary--flood:hover {
+  background: var(--on-flood-soft);
+}
+
+.dw-cta-primary--flood:active {
+  background: var(--primary-tint);
+}
+
+a.dw-cta-secondary.dw-cta-secondary--flood {
+  color: var(--on-flood);
+  border-bottom-color: var(--on-flood-soft);
+}
+
+.dw-cta-secondary--flood:hover {
+  color: var(--on-flood-soft);
+  border-bottom-color: var(--on-flood);
+}
+
 /* ---- Hero ---- */
 
 .dw-hero {
   position: relative;
+}
+
+/* The one deliberate break from the page's one-grid, no-full-bleed system:
+   a full-bleed indigo flood panel, inset from the true page edges rather
+   than touching them (hence the radius; a true edge-to-edge fill wouldn't
+   need one). --radius-panel (12px), not --institutional-radius (3px) —
+   this is the flood system's own panel, not a paper-register plate. Wider
+   than --content on purpose: the text column inside still respects it
+   (dw-zone__inner.dw-section, unchanged), but the coloured panel itself
+   reads as a distinct, wider band, matching the reference. Positioned and
+   z-indexed above .dw-hero::after's contour texture, which now shows only
+   in the inset margin around this panel, still on paper there. */
+.dw-hero__flood {
+  position: relative;
+  z-index: 1;
+  margin: var(--s6) var(--s5);
+  overflow: hidden;
+  border-radius: var(--radius-panel);
+  /* Two layers: a scrim first (on top), the flood gradient beneath. The
+     scrim exists for one reason — --on-flood-soft (the subhead's specified
+     color) computes to roughly 9:1 against --flood-base but only ~2.7:1
+     against --flood-top, and the subhead sits left-aligned near the top of
+     a 135deg gradient, i.e. near the bright corner, not the dark one. Sized
+     to fade out by the panel's vertical midpoint so the true, unscrimmed
+     flood gradient is still what's judged everywhere else, especially
+     behind the bloom and the transaction-line plate lower down. */
+  background:
+    linear-gradient(165deg, color-mix(in srgb, var(--flood-base) 50%, transparent) 0%, transparent 55%),
+    var(--flood);
+}
+
+@media (max-width: 900px) {
+  .dw-hero__flood {
+    margin: var(--s5) var(--s4);
+  }
+}
+
+/* A soft light source rising from the panel's bottom edge — the reference's
+   own device for a flood hero. A large, blurred radial glow, not a shape:
+   deliberately not a new DOM element, just an extra background layer so it
+   participates in the same overflow:hidden clip as the flood gradient. */
+.dw-hero__bloom {
+  position: absolute;
+  z-index: 0;
+  left: 10%;
+  right: 10%;
+  bottom: -35%;
+  height: 70%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--flood-top) 55%, transparent), transparent 72%);
+  filter: blur(48px);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dw-hero__bloom {
+    animation: dw-bloom-drift 14s ease-in-out infinite;
+  }
+
+  @keyframes dw-bloom-drift {
+    0%,
+    100% {
+      opacity: 0.75;
+      transform: translateY(0);
+    }
+    50% {
+      opacity: 1;
+      transform: translateY(-3%);
+    }
+  }
+}
+
+/* Replaces the numbered eyebrow for the hero specifically — every other
+   section keeps its own "01 · Doctrine" eyebrow untouched; this is the one
+   deliberately different treatment, a bordered pill instead. Centered on
+   its own, the one exception to the hero's otherwise left-aligned column
+   (width: fit-content + auto margins, not a flex/text-align change on the
+   whole block, so nothing beneath it shifts alignment). */
+.dw-hero__pill {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: fit-content;
+  margin: 0 auto;
+  align-items: center;
+  padding: 6px 18px;
+  border: 1px solid var(--hairline-d);
+  border-radius: var(--radius-pill, 999px);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--on-flood-soft);
+  text-align: center;
 }
 
 /* Behind the hero text only: fine engraved contour lines, the same
@@ -487,13 +611,16 @@ a.dw-nav__secondary {
 .dw-hero__claim {
   position: relative;
   z-index: 1;
-  margin: var(--s3) 0 0;
+  margin: var(--s4) 0 0;
   font-family: var(--font-serif);
   font-weight: 600;
   letter-spacing: 0;
   line-height: 1.08;
   font-size: clamp(2.1rem, 4.6vw, 3.6rem);
-  color: var(--ink);
+  /* var(--on-flood), not var(--ink): the hero sits on the flood panel now,
+     not paper. Computes to ~4.9:1 against --flood-top and ~19:1 against
+     --flood-base, checked — passes AA at both ends of the gradient. */
+  color: var(--on-flood);
 }
 
 /* Plate (a): the hero transaction-line diagram. Full content width, generous
@@ -636,10 +763,16 @@ a.dw-nav__secondary {
   max-width: 46ch;
   font-size: 1.0625rem;
   line-height: 1.6;
-  color: var(--ink);
+  /* var(--on-flood-soft): specified for the subhead. Protected by
+     .dw-hero__flood's own top-weighted scrim layer (see its comment) so
+     this still clears AA where it actually renders, near the panel's
+     brighter corner. */
+  color: var(--on-flood-soft);
 }
 
 .dw-hero__actions {
+  position: relative;
+  z-index: 1;
   margin-top: var(--s6);
   display: flex;
   align-items: center;
@@ -648,10 +781,12 @@ a.dw-nav__secondary {
 }
 
 .dw-hero__credentials {
+  position: relative;
+  z-index: 1;
   margin-top: var(--s4);
   font-family: var(--font-mono);
   font-size: 0.72rem;
-  color: var(--ink-soft);
+  color: var(--on-flood-soft);
 }
 
 /* Inside the plate now, along its bottom edge: part of the figure, not loose
@@ -689,12 +824,21 @@ a.dw-nav__secondary {
 }
 
 .dw-caption {
+  position: relative;
+  z-index: 1;
   margin-top: var(--s4);
   max-width: 62ch;
   font-family: var(--font-sans);
   font-size: 0.9rem;
   line-height: 1.6;
   color: var(--ink-soft);
+}
+
+/* Fig. 1's caption is the one .dw-caption that sits inside a flood panel
+   rather than on paper — var(--ink-soft) is nearly invisible against the
+   flood, caught in preview before this shipped. */
+.dw-hero__flood .dw-caption {
+  color: var(--on-flood-soft);
 }
 
 .dw-caption strong {
