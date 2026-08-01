@@ -609,8 +609,11 @@ body {
   width: 44%;
   min-width: 420px;
   padding: var(--space-7) var(--space-7) var(--space-6);
-  background: linear-gradient(165deg, var(--palette-navy-900), var(--palette-navy-950));
-  color: var(--palette-white);
+  /* Flat, not a gradient: the flood gradient is homepage-only, every app
+     panel is a solid ground. --ink is the app's own dark neutral, the same
+     one the homepage's institutional plates alias. */
+  background: var(--ink);
+  color: var(--white);
   display: flex;
   flex-direction: column;
 }
@@ -623,7 +626,7 @@ body {
   width: 62%;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--palette-teal-600) 22%, transparent), transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--teal) 22%, transparent), transparent 70%);
   pointer-events: none;
 }
 
@@ -640,8 +643,8 @@ body {
   width: 44px;
   height: 44px;
   border-radius: var(--radius-md);
-  background: var(--palette-white);
-  color: var(--palette-navy-900);
+  background: var(--white);
+  color: var(--ink);
   font-family: var(--font-display);
   font-weight: 700;
   font-size: var(--text-lg);
@@ -778,7 +781,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--palette-navy-950);
+  background: color-mix(in srgb, var(--ink) 80%, transparent);
   z-index: 100;
 }
 
@@ -795,8 +798,9 @@ body {
   overflow: hidden;
   border-radius: var(--radius-lg);
   padding: var(--space-5) var(--space-6);
-  background: linear-gradient(160deg, var(--palette-navy-900), var(--palette-navy-950));
-  color: var(--palette-white);
+  /* Flat, not a gradient: same reasoning as .ui-split-hero__panel above. */
+  background: var(--ink);
+  color: var(--white);
 }
 
 .ui-balance-hero::before {
@@ -807,7 +811,7 @@ body {
   width: 55%;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--palette-teal-600) 18%, transparent), transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--teal) 18%, transparent), transparent 70%);
   pointer-events: none;
 }
 
@@ -831,8 +835,10 @@ body {
   margin-top: var(--space-3);
   padding: 4px var(--space-3);
   border-radius: var(--radius-pill);
-  background: var(--palette-teal-tint-dark);
-  color: var(--palette-teal-300);
+  /* --teal-on-dark is exactly this: the verification-state tint tuned for
+     an ink/flood ground, not the flat --teal-tint meant for paper. */
+  background: color-mix(in srgb, var(--teal-on-dark) 18%, transparent);
+  color: var(--teal-on-dark);
   font-size: var(--text-xs);
   font-weight: 600;
 }
