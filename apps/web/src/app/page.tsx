@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { Source_Serif_4 } from 'next/font/google'
 
 /**
  * Homepage for Duothan 6.0 judges, not the customer app itself. A pure
@@ -12,16 +11,15 @@ import { Source_Serif_4 } from 'next/font/google'
  * sharing one. One content grid throughout: one max-width, one left margin,
  * one section padding value.
  *
- * Font loaded here, not in the shared root layout: Source Serif 4 is this
- * page's heading face only. Loading it in page.tsx (also a Server Component)
- * keeps the fetch scoped to "/" and leaves every other route's shared
- * @arka/ui font stack untouched.
+ * Font no longer loaded here (chore/indigo-tokens): Source Serif 4 is now
+ * loaded app-wide in apps/web/src/app/layout.tsx, the same variable class
+ * already reaching this page by inheritance, so a second, page-scoped
+ * next/font/google call would just fetch the same font file twice.
  */
-const sourceSerif = Source_Serif_4({ subsets: ['latin'], weight: ['400', '600'], variable: '--font-source-serif' })
 
 export default function Home() {
   return (
-    <div className={`dw ${sourceSerif.variable}`}>
+    <div className="dw">
       <nav className="dw-nav" aria-label="Primary">
         <div className="dw-nav__inner">
           <span className="dw-nav__brand">ARKA</span>

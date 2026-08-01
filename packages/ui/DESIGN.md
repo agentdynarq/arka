@@ -25,9 +25,14 @@ Rules that apply everywhere:
 
 - **The flood gradient (`--flood`, and its components `--flood-top`/
   `--flood-base`) is full-bleed homepage panels only, never a small element,
-  never inside the customer app or the Recovery Console.** It is not aliased
-  to or from anything else in the token system; it's new markup only, not
-  yet used by any existing screen as of this commit.
+  never inside the customer app or the Recovery Console.** Exactly four
+  panels on the homepage are flood-eligible: the hero, the contrast pair,
+  the final CTA, and the value strip. It is not aliased to or from anything
+  else in the token system; it's new markup only, not yet used by any
+  existing screen as of this commit. The Fig. 1-4 plates (architecture
+  diagram, verify-ledger terminal, failure comparison, hero line) stay
+  solid `--ink`, deliberately never the gradient — if those plates were
+  also gradient, the flood would stop meaning anything as a device.
 - **`--primary` is the single interactive color on all three surfaces.**
   Anywhere that used to be a navy or teal button is now indigo (see the
   judgement-call comments on `--color-accent`, base and ops, in
@@ -87,14 +92,25 @@ ops register, now directly to the new light neutrals rather than to
 for the homepage's actual plate panels, and the console needed to diverge
 from that rather than inherit it once it went light).
 
-## Known gaps from this pass (not fixed here, flagged for follow-up)
+## Resolved since the first indigo-tokens pass (fix/teal-on-dark)
 
-- `.ui-button--teal` (`--color-teal`/`--color-teal-strong`) still resolves
-  to the old dark teal palette. It's the one remaining non-primary colored
-  button on a surface meant to have a single interactive color, and the new
-  status colors are documented above as never a button fill — this variant
-  needs a decision (retire it in favor of `--primary`, or keep it for a
-  specific reason), not a blind repoint.
+- `--institutional-verified` is gone, renamed to `--teal-on-dark` (`#6fbfad`,
+  in the new-primitives status group in `tokens.css`) — the old `#40bfb5`
+  was tuned against paper, but reads as a bright-mint scam signal against
+  indigo. `apps/web/src/app/globals.css`'s own `--verified` (the primitive
+  actually rendered on the live homepage plates) got the same value fix,
+  keeping its own name since only tokens.css's copy needed a rename.
+- `.ui-button--teal` is retired. Both call sites (`transfer/page.tsx`'s
+  confirm button, `dashboard/page.tsx`'s Send button) now render as the
+  default `primary` variant; the modifier class is deleted from
+  `components.css`, and `'teal'` is removed from `ButtonVariant`.
+  `--color-teal`/`--color-teal-strong` are untouched and still needed —
+  they back `.ui-panel__eyebrow` text, the progress bar fill, the modal
+  panel's top border, and a couple of icon/text colors, none of which are
+  button fills.
+
+## Known gaps, still not fixed here (Lane C's, not Lane A's)
+
 - `packages/ui/src/components.css` has four places (`.ui-split-hero__panel`,
   `.ui-split-hero__mark`, the modal backdrop, `.ui-balance-hero`) that
   reference `--palette-navy-900`/`--palette-navy-950` directly, and three
@@ -114,7 +130,6 @@ from that rather than inherit it once it went light).
 - Don't invent new semantic names for values the existing ones already
   cover.
 - Source Serif 4 is loaded app-wide now (both apps' `layout.tsx`). A new
-  route doesn't need its own `next/font/google` call for it anymore, though
-  `apps/web/src/app/page.tsx` and `apps/web/src/app/judges/page.tsx` each
-  still load their own scoped instance from before this was app-wide —
-  harmless (same font file, an extra variable class), but redundant.
+  route doesn't need its own `next/font/google` call for it — the duplicate
+  scoped loads in `apps/web/src/app/page.tsx` and
+  `apps/web/src/app/judges/page.tsx` were collapsed in fix/teal-on-dark.
