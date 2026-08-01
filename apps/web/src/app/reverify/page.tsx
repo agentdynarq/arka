@@ -6,6 +6,7 @@ import { reVerify, login, verifyMfa, checkDemoModeEnabled, ApiError } from '@/li
 import { storeSession } from '@/lib/session'
 import { Stepper, Field, Button, Alert, OtpInput } from '@arka/ui'
 import { DemoMfaWidget } from '@/components/DemoMfaWidget'
+import './signin.css'
 
 type Step = 're-verify' | 'login' | 'mfa'
 
@@ -102,16 +103,14 @@ export default function ReVerifyPage() {
   }
 
   return (
-    <div className="ui-shell">
-      <main className="ui-main">
-        <div className="ui-main__inner">
-          <div className="ui-signin-brand">
-            <img src="/brand/logo-mark-blue.png" alt="" width={24} height={24} className="ui-sidebar__mark" />
-            <span className="ui-signin-wordmark">ARKA</span>
-          </div>
-          <p className="ui-signin-tagline">Your money is intact. Let&apos;s get you back to it.</p>
+    <div className="signin">
+      <div className="signin__inner">
+        <div className="signin__brand">
+          <span className="signin__wordmark">ARKA</span>
+        </div>
+        <p className="signin__tagline">Your money is intact. Let&apos;s get you back to it.</p>
 
-          <div className="ui-panel">
+        <div className="ui-panel">
             <p className="ui-panel__eyebrow">RESTORE ACCESS</p>
             <Stepper steps={STEP_LABELS} current={STEP_INDEX[step]} />
 
@@ -174,6 +173,16 @@ export default function ReVerifyPage() {
               <form onSubmit={handleMfa}>
                 <h1 className="ui-panel__title">Verify your identity</h1>
                 <p className="ui-panel__subtitle">Enter the 6-digit code from your authenticator app.</p>
+                <p className="signin__identity">
+                  <span>
+                    Signing in as <span className="signin__identity-name">{username}</span>
+                  </span>
+                  {/* Returns to step one rather than reloading, so the re-verification
+                      the customer already passed is re-entered deliberately. */}
+                  <button type="button" className="signin__identity-switch" onClick={() => setStep('re-verify')}>
+                    Not you?
+                  </button>
+                </p>
                 <div style={{ marginBottom: 'var(--space-2)' }}>
                   <OtpInput value={totpCode} onChange={setTotpCode} autoFocus />
                 </div>
@@ -187,11 +196,21 @@ export default function ReVerifyPage() {
             )}
           </div>
 
-          <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 'var(--space-6)', paddingTop: 'var(--space-4)' }}>
-            <span className="ui-meta">Secured with TLS 1.3 · protected by step-up authentication</span>
-          </div>
+        <div className="signin__footer">
+          <span>Secured with TLS 1.3 · protected by step-up authentication</span>
+          <div className="signin__footer-rule" />
+          {/* The Cell status element, same dot-plus-text anatomy as the sidebar's.
+              It cannot state "Served by cell-1 · Healthy" here: GET /v1/me/cell-status
+              is behind AccessTokenGuard and this screen is pre-auth, so the real
+              status is genuinely unknown until sign-in. Hardcoding a health it has
+              not checked is the one thing the element must never do, so it states
+              what is true now and defers the rest. */}
+          <span className="signin__cell">
+            <span className="signin__cell-dot" aria-hidden="true" />
+            <span>Cell-isolated · your Cell is shown once you sign in</span>
+          </span>
         </div>
-      </main>
+      </div>
     </div>
   )
 }
