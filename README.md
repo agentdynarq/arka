@@ -3,9 +3,6 @@
 **Banking that survives.** A cell-isolated digital banking platform, built for Duothan 6.0 by Team
 True Node, NSBM Green University.
 
-> Status: Phase 2 (Rebuild) build in progress. See [PHASE-2-PLAN.md](PHASE-2-PLAN.md) for scope and
-> schedule. This notice is removed at submission.
-
 ## The problem
 
 The 2065 collapse in the competition scenario was not a security failure. It was an architecture
@@ -107,16 +104,33 @@ See [docs/media/README.md](docs/media/README.md) for how these were recorded and
 
 ## Quickstart
 
-Requires Docker and Node 20+ with pnpm.
+This path was verified end to end on a fresh clone. Follow it in order.
+
+**Prerequisites.** Docker Desktop or Docker Engine with Compose v2. Node **22 or later**, which the
+root `package.json` enforces, so Node 20 fails at install. pnpm 11 or later, most easily via
+`corepack enable`. Ports 3000, 3001, 3002, 3300, 8080, 5433, 5434, 5435, 6380 and 6381 free.
 
 ```bash
 git clone <repo-url> arka && cd arka
 pnpm install
 cp .env.example .env
-docker compose up -d          # brings up two full Cells
+docker compose up -d --wait   # two full Cells, --wait blocks until every healthcheck passes
 pnpm seed                     # deterministic demo data
-pnpm dev
+pnpm dev                      # all five apps
 ```
+
+`--wait` matters. Without it Compose returns as soon as the containers start, and `pnpm seed` can
+reach Postgres before it is accepting connections.
+
+You should see, from `pnpm seed`:
+
+```
+cell-1: seeded 15 blocks (customer:alice, customer:bob, agent:west, merchant:kade)
+cell-2: seeded 14 blocks (customer:chandi, customer:deepal)
+```
+
+Re-running `pnpm seed` is safe. It reports `already seeded` and changes nothing. `pnpm seed --reset`
+rebuilds both Cells from scratch.
 
 Then open:
 
@@ -125,8 +139,25 @@ Then open:
 | Customer app | http://localhost:3000 |
 | Recovery Console | http://localhost:3300 |
 | API gateway | http://localhost:8080 |
+| Identity API, Cell 1 | http://localhost:3001 |
+| Recovery API | http://localhost:3002 |
 
-Demo credentials for every persona are in [USER-GUIDE.md](USER-GUIDE.md).
+The two apps call their own Cell's API directly rather than through the gateway, per
+[docs/adr/0006](docs/adr/0006-services-composed-in-one-deployable-per-cell.md), so `:3001` and `:3002` matter if you curl
+rather than click.
+
+**Sign in as alice**, at http://localhost:3000: customer ID `cust-alice`, registry document
+`DOC-ALICE-001`, username `alice`, password `demo-password-123`. At the MFA step press **"Check your
+phone for the code"** and the current code is shown on screen. That button needs
+`DEMO_MFA_ENDPOINT_ENABLED=true`, which `.env.example` already sets. The same code is also printed
+to the identity server's console at boot, but it rotates every 30 seconds, so the button is the
+reliable route.
+
+**Give it about 20 seconds after boot before the first transfer.** Payments ask the Recovery service
+whether their Cell is quarantined before a write, and until that service is listening the answer is
+`503 QUARANTINE_CHECK_UNAVAILABLE`. Retrying after a moment succeeds. Reads are unaffected.
+
+Demo credentials for every other persona are in [USER-GUIDE.md](USER-GUIDE.md).
 
 Two commands worth running to see the core claims for yourself:
 
@@ -134,6 +165,10 @@ Two commands worth running to see the core claims for yourself:
 pnpm verify-ledger      # walks the hash chain, prints records, breaks, and root hash
 pnpm test               # full suite, including the tamper-detection tests
 ```
+
+`pnpm verify-ledger` should end in `status: clean` for both Cells, with 15 and 14 records. It takes
+`--cell cell-1` to walk one Cell. The integration tests provision their own `*_test` databases and
+never touch seeded demo data, so running the suite after seeding is safe.
 
 ## Repository layout
 

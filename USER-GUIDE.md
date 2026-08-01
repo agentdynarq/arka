@@ -2,25 +2,40 @@
 
 How to run Arka and walk through it as each kind of user.
 
-> **Draft.** Sections marked `[FILL]` are completed as features land and are verified before
-> submission. This notice and every `[FILL]` marker must be gone before the repository is submitted.
-> Checklist in `../arka-ops/SUBMISSION.md`.
-
 ## 1. Running it
 
-Requires Docker and Node 20 or later with pnpm installed.
+Requires Docker with Compose v2, and Node **22 or later** with pnpm 11 or later. Node 20 fails at
+install: the root `package.json` sets `engines.node` to `>=22`. `corepack enable` is the easiest way
+to get the right pnpm.
+
+This path was verified end to end on a fresh clone. Follow it in order.
 
 ```bash
 git clone <repo-url> arka && cd arka
 pnpm install
 cp .env.example .env
-docker compose up -d
+docker compose up -d --wait
 pnpm seed
 pnpm dev
 ```
 
-`docker compose up` starts two complete, independent Cells. `pnpm seed` loads deterministic demo data
-so that everything below matches what you will actually see.
+`docker compose up` starts two complete, independent Cells. `--wait` holds until every container
+passes its healthcheck; without it, Compose returns as soon as the containers start and `pnpm seed`
+can reach Postgres before it accepts connections. `pnpm seed` loads deterministic demo data so that
+everything below matches what you will actually see, and prints:
+
+```
+cell-1: seeded 15 blocks (customer:alice, customer:bob, agent:west, merchant:kade)
+cell-2: seeded 14 blocks (customer:chandi, customer:deepal)
+```
+
+Running it again is safe. It reports `already seeded` and changes nothing. Use `pnpm seed --reset` to
+rebuild both Cells from scratch.
+
+**Give it about 20 seconds after boot before attempting the first transfer.** Payments check with the
+Recovery service whether their Cell is quarantined before any write, and until that service is
+listening the answer is `503 QUARANTINE_CHECK_UNAVAILABLE`. Retry after a moment and it succeeds.
+Reads work throughout.
 
 | Surface | URL | Who it is for |
 |---|---|---|
@@ -39,8 +54,24 @@ Every account below is seeded. Passwords are demo values and the data is fiction
 
 | Persona | Login | Password | MFA code | Cell |
 |---|---|---|---|---|
-| Returning customer | `alice` | `demo-password-123` | printed to Cell 1's identity server console at boot (fresh code, valid ~30s) | cell-1 |
-| Second customer, different Cell | `chandi` | `demo-password-123` | printed to Cell 2's identity server console at boot (fresh code, valid ~30s) | cell-2 |
+| Returning customer | `alice` | `demo-password-123` | press "Check your phone for the code" at the MFA step | cell-1 |
+| Second customer, different Cell | `chandi` | `demo-password-123` | press "Check your phone for the code" at the MFA step | cell-2 |
+
+**Getting the MFA code.** At the MFA step, press **"Check your phone for the code"** and the current
+code appears on screen. It rotates every 30 seconds and the panel shows the countdown, so take the
+code as you enter it rather than reading it early.
+
+That button calls `GET /v1/auth/demo/mfa-code`, which only exists when `DEMO_MFA_ENDPOINT_ENABLED=true`.
+`.env.example` sets it, so a clean clone has it on. If you built your `.env` by hand and the button
+returns a 404, that variable is why. It is judge convenience for a local demo and is never set in
+production, where the code reaches the customer's own device and never a screen.
+
+The same code is also printed to the identity server's console at boot, next to the re-verification
+values. That line is easy to miss once `pnpm dev` interleaves five apps' output, and it is stale
+within 30 seconds, so prefer the button.
+
+Alice's re-verification values, needed on the first screen before the password step: customer ID
+`cust-alice`, registry document `DOC-ALICE-001`. They are printed at boot too.
 | Merchant | No login: authorisation is the signed QR token itself (3.5) | | | cell-1 |
 | Authorised agent | No login: authorisation is the customer's OTP (3.6) | | | cell-1 |
 | Operator one | No login: `operatorId` is typed directly into the console (4.2) | | | control plane |
