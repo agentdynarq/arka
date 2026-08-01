@@ -175,6 +175,12 @@ export default function ReVerifyPage() {
             <Button type="submit" disabled={busy}>
               {busy ? 'Signing in...' : 'Sign in'}
             </Button>
+            <p className="ui-meta" style={{ marginTop: 'var(--space-4)' }}>
+              Bank operator?{' '}
+              <a href="http://localhost:3300" className="ui-link-row__item">
+                Open the Recovery Console
+              </a>
+            </p>
           </form>
         )}
 
