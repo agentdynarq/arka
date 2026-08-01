@@ -32,6 +32,15 @@
   margin-bottom: 6px;
 }
 
+/* The only mark on this screen, stacked above the wordmark rather than beside
+   it. Already --primary in the file, so a plain image with no mask. */
+.signin__mark {
+  display: block;
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 14px;
+}
+
 .signin__wordmark {
   font-family: var(--font-serif);
   font-weight: 600;
@@ -51,6 +60,78 @@
   font-weight: 400;
   line-height: 1.5;
   color: var(--ink-soft);
+}
+
+/* ---- step rail ----
+ * The shared Stepper already emits the right data-state (done/active/pending);
+ * what it does not do is render them differently. packages/ui paints active and
+ * done identically teal and sets every label to 600, so on step 1 all three
+ * circles read as filled and "Confirm access" reads as the current step.
+ * Restyled here rather than in packages/ui because the transfer screen's own
+ * three-step rail uses the same component.
+ */
+
+/* completed */
+.signin .ui-stepper__item[data-state='done'] .ui-stepper__circle {
+  position: relative;
+  background: var(--teal);
+  border-color: var(--teal);
+  /* The number stays in the DOM for assistive tech and is replaced visually. */
+  color: transparent;
+}
+
+.signin .ui-stepper__item[data-state='done'] .ui-stepper__circle::after {
+  content: '';
+  position: absolute;
+  width: 5px;
+  height: 9px;
+  margin-top: -2px;
+  border: solid var(--white);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.signin .ui-stepper__item[data-state='done'] .ui-stepper__label {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+
+/* current */
+.signin .ui-stepper__item[data-state='active'] .ui-stepper__circle {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--white);
+}
+
+.signin .ui-stepper__item[data-state='active'] .ui-stepper__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* upcoming */
+.signin .ui-stepper__item[data-state='pending'] .ui-stepper__circle {
+  background: var(--white);
+  border: 1px solid var(--hairline);
+  color: var(--ink-faint);
+}
+
+.signin .ui-stepper__item[data-state='pending'] .ui-stepper__label {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+
+.signin .ui-stepper__connector {
+  height: 1px;
+  background: var(--hairline);
+}
+
+/* Only the segment trailing a completed step is teal, so the rail reads as
+   progress travelled rather than progress promised. */
+.signin .ui-stepper__step:has(.ui-stepper__item[data-state='done']) .ui-stepper__connector {
+  background: var(--teal);
 }
 
 /* ---- card ---- */
