@@ -29,6 +29,14 @@ function screenshotExists(filename: string): boolean {
   return existsSync(path.join(process.cwd(), 'public', 'media', filename))
 }
 
+/** Same reasoning, for the quarantine video: Lane A delivers quarantine.mp4
+ *  and quarantine.webm around 21:00. Until both exist, falls back to the
+ *  existing linked quarantine.gif rather than a container pointed at files
+ *  that 404. */
+function mediaFileExists(filename: string): boolean {
+  return existsSync(path.join(process.cwd(), 'public', 'media', filename))
+}
+
 export default function Home() {
   return (
     <div className="dw">
@@ -954,10 +962,28 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FINAL CTA — near-empty, terminal block plus CTA, left-aligned inside a centered container */}
+      {/* FINAL CTA — near-empty, terminal block plus CTA, left-aligned inside a centered container.
+          "See it fail. Then see it survive." plus the inline quarantine video live here for now
+          (lane-b/furnishing task order builds the video before the final CTA gets its own
+          full-bleed flood rebuild) -- this section splits into two once that lands. */}
       <section className="dw-zone dw-final" style={{ '--rule-delay': '600ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-final__inner">
           <h2 className="dw-final__title">See it fail. Then see it survive.</h2>
+
+          <div className="dw-quarantine-video">
+            {mediaFileExists('quarantine.mp4') && mediaFileExists('quarantine.webm') ? (
+              <video className="dw-quarantine-video__el" muted loop playsInline controls poster="/media/quarantine-poster.jpg">
+                <source src="/media/quarantine.webm" type="video/webm" />
+                <source src="/media/quarantine.mp4" type="video/mp4" />
+              </video>
+            ) : (
+              <img
+                src="/media/quarantine.gif"
+                alt="A live quarantine: a transfer succeeds, the Cell is quarantined, the identical transfer is rejected, the dashboard still reads fine, the quarantine is lifted, and the transfer succeeds again."
+                className="dw-quarantine-video__el"
+              />
+            )}
+          </div>
 
           <div className="dw-final__actions">
             <div className="dw-terminal">

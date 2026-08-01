@@ -1843,6 +1843,24 @@ a.dw-proof__link {
   gap: var(--s6);
 }
 
+/* ---- Quarantine video: inline MP4/WebM once Lane A delivers the files,
+   the existing linked GIF until then (mediaFileExists() in page.tsx picks
+   which markup renders). Same hairline-bordered figure treatment as the
+   product showcase above, not a special case. ---- */
+.dw-quarantine-video {
+  margin-top: var(--s6);
+  max-width: 640px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.dw-quarantine-video__el {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 /* ---- Footer: paper, one hairline rule above, secondary ink. ---- */
 
 .dw-footer {
