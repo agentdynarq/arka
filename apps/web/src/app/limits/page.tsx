@@ -35,7 +35,7 @@ export default function LimitsPage() {
               <span style={{ fontWeight: 600, color: 'var(--ink)' }}>Daily Transfer Limit</span>
               <span style={{ color: 'var(--ink-soft)', fontSize: '14px' }}>LKR 45,000 / LKR 500,000</span>
             </div>
-            <ProgressBar value={9} />
+            <ProgressBar value={45000} max={500000} />
             <p style={{ fontSize: '13px', color: 'var(--ink-faint)', marginTop: '6px' }}>
               Resets daily at 00:00 UTC. Remaining quota: <strong>LKR 455,000.00</strong>
             </p>
@@ -60,7 +60,7 @@ export default function LimitsPage() {
               <div style={{ fontSize: '13px', color: 'var(--ink-soft)', marginBottom: '4px' }}>Security Clearance</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                 <span style={{ fontSize: '20px', fontWeight: 600, color: 'var(--ink)' }}>Tier 2 Verified</span>
-                <StatusWord tone="positive">Active</StatusWord>
+                <StatusWord tone="success">Active</StatusWord>
               </div>
               <div style={{ fontSize: '12px', color: 'var(--ink-faint)', marginTop: '4px' }}>Cell-isolated account</div>
             </div>

@@ -50,7 +50,7 @@ export default function SettingsPage() {
                   <div style={{ fontWeight: 600, color: 'var(--ink)' }}>Multi-Factor Authentication (MFA)</div>
                   <div style={{ fontSize: '13px', color: 'var(--ink-soft)' }}>TOTP authenticator app enabled</div>
                 </div>
-                <StatusWord tone="positive">Enabled</StatusWord>
+                <StatusWord tone="success">Enabled</StatusWord>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--ground)', borderRadius: 'var(--radius-sm)' }}>
@@ -73,7 +73,7 @@ export default function SettingsPage() {
             <div style={{ padding: '16px', background: 'var(--ground)', borderRadius: 'var(--radius-sm)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                 <span style={{ fontWeight: 600, color: 'var(--ink)' }}>Cell Isolation Protocol</span>
-                <StatusWord tone="positive">Active</StatusWord>
+                <StatusWord tone="success">Active</StatusWord>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--ink-soft)', lineHeight: 1.5, margin: 0 }}>
                 Your financial ledger and personal data are strictly isolated inside your Cell. No cross-cell routes or shared databases exist.
