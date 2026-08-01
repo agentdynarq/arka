@@ -98,7 +98,12 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
       <AppLayout
         sidebar={
           <Sidebar
-            wordmark="Arka"
+            wordmark={
+              <>
+                <img src="/brand/logo-mark-192.png" alt="" className="ui-sidebar__mark" />
+                <span className="ui-sidebar__wordmark-text">Arka</span>
+              </>
+            }
             context={username ? `${displayName(username)} · Personal account` : 'Personal account'}
             collapsed={collapsed}
             onToggleCollapse={() => setCollapsed((c) => !c)}

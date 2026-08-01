@@ -92,7 +92,12 @@ export function ConsoleShell({ children }: { readonly children: ReactNode }) {
       <AppLayout
         sidebar={
           <Sidebar
-            wordmark="Arka"
+            wordmark={
+              <>
+                <img src="/brand/logo-mark-192.png" alt="" className="ui-sidebar__mark" />
+                <span className="ui-sidebar__wordmark-text">Arka</span>
+              </>
+            }
             context={<OperatorField />}
             collapsed={collapsed}
             onToggleCollapse={() => setCollapsed((c) => !c)}
