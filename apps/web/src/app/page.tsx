@@ -30,6 +30,7 @@ export default function Home() {
             <a href="#doctrines">Doctrines</a>
             <a href="#proof">Proof</a>
             <a href="#scope">Honest scope</a>
+            <Link href="/judges">Judges</Link>
           </div>
           <div className="dw-nav__actions">
             <a href="#architecture" className="dw-nav__secondary">
@@ -122,9 +123,9 @@ export default function Home() {
 
               {/* True dimension line across the void: vertical end-caps at
                   its boundaries, a horizontal measure between them. */}
-              <line x1="410" y1="115" x2="410" y2="135" stroke="var(--plate-ink-soft)" />
-              <line x1="590" y1="115" x2="590" y2="135" stroke="var(--plate-ink-soft)" />
-              <line x1="410" y1="125" x2="590" y2="125" stroke="var(--plate-ink-soft)" strokeDasharray="4 4" />
+              <line x1="410" y1="115" x2="410" y2="135" stroke="var(--blue-plate)" />
+              <line x1="590" y1="115" x2="590" y2="135" stroke="var(--blue-plate)" />
+              <line x1="410" y1="125" x2="590" y2="125" stroke="var(--blue-plate)" strokeDasharray="4 4" />
               <text x="500" y="157" textAnchor="middle" fontFamily="var(--font-mono)" fontSize="16" letterSpacing="0.06em" fill="var(--plate-ink)">
                 NO ROUTE EXISTS
               </text>
@@ -252,7 +253,7 @@ export default function Home() {
       </section>
 
       {/* 02 · DOCTRINE 01 — single centered statement, the page's one quiet moment */}
-      <section className="dw-zone" id="doctrines" style={{ '--rule-delay': '120ms' } as React.CSSProperties}>
+      <section className="dw-zone dw-zone--tint" id="doctrines" style={{ '--rule-delay': '120ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-section dw-section--narrow dw-doctrine-quiet">
           <span className="dw-eyebrow">
             <span className="dw-eyebrow__n">02</span>Doctrine 01 &middot; Assume breach
@@ -657,7 +658,7 @@ export default function Home() {
       </section>
 
       {/* 07 · CELL AS CONFIGURATION — compact, almost a footnote */}
-      <section className="dw-zone" style={{ '--rule-delay': '420ms' } as React.CSSProperties}>
+      <section className="dw-zone dw-zone--tint" style={{ '--rule-delay': '420ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-section">
           <div className="dw-config__row">
             <div>
@@ -784,6 +785,12 @@ export default function Home() {
               <strong>Cloud deployment via Terraform</strong>
               Verified today with <code>docker compose up -d</code> against two local Cells. Phase 3 adds the
               deployment, the chaos rehearsal, and the live quarantine demonstration in front of a panel.
+            </li>
+            <li className="dw-scope__item">
+              <strong>The in-app MFA code widget</strong>
+              A demo-only endpoint returns the current TOTP code so a judge without an authenticator app can
+              complete the FR-01&ndash;FR-03 journey. 404s unless explicitly enabled, logs a boot warning when
+              it is, and never touches the real verification path. Not present in production.
             </li>
           </ul>
 
