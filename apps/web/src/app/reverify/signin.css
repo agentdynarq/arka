@@ -1,0 +1,219 @@
+/*
+ * Screen W1 only. Every rule is nested under .signin so nothing here reaches
+ * the dashboard, transfer or console, which share the same @arka/ui classes.
+ * The OTP boxes and the MFA trigger are shared components, so they are
+ * re-weighted through this scope rather than in packages/ui, where the change
+ * would also land on the transfer screen's step-up.
+ *
+ * Locked palette. No colour is introduced that is not already a token.
+ */
+
+.signin {
+  min-height: 100vh;
+  background: var(--ground);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* The 24px floor is the gutter at 390. Vertical padding keeps the card off
+     the edge on short viewports, where centring alone would clip it. */
+  padding: 48px 24px;
+}
+
+.signin__inner {
+  width: 100%;
+  max-width: 440px;
+}
+
+/* ---- header stack ---- */
+
+.signin__brand {
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.signin__wordmark {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 1.25rem;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+
+/* Regular sans, not the display serif. The card's own "Verify your identity"
+   is the one display voice on this screen, and two serifs stacked above each
+   other made the tagline compete with it. */
+.signin__tagline {
+  margin: 0 0 24px;
+  text-align: center;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+/* ---- card ---- */
+
+.signin .ui-panel {
+  background: var(--white);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-panel);
+  padding: 40px 40px 32px;
+  box-shadow:
+    0 1px 2px rgba(18, 20, 43, 0.04),
+    0 8px 24px rgba(18, 20, 43, 0.06);
+}
+
+/* ---- "Signing in as alice" ---- */
+
+.signin__identity {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 0 0 14px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.signin__identity-name {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.signin__identity-switch {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--primary);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.signin__identity-switch:hover {
+  text-decoration: underline;
+}
+
+/* ---- OTP ---- */
+
+.signin .ui-otp-input {
+  display: flex;
+  gap: 10px;
+}
+
+.signin .ui-otp-input__box {
+  width: 52px;
+  height: 60px;
+  padding: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 22px;
+  color: var(--ink-faint);
+  background: var(--white);
+  border: 1px solid var(--hairline);
+  border-radius: 3px;
+  box-shadow: none;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    color 120ms ease;
+}
+
+/* A filled cell reads at full ink so progress through the code is legible at
+   a glance; an empty one stays faint. */
+.signin .ui-otp-input__box:not(:placeholder-shown) {
+  color: var(--ink);
+}
+
+.signin .ui-otp-input__box:focus,
+.signin .ui-otp-input__box:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-tint);
+}
+
+/* ---- MFA trigger, quiet secondary control ---- */
+
+.signin .ui-mfa-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--primary);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.signin .ui-mfa-trigger:hover {
+  text-decoration: underline;
+}
+
+.signin .ui-mfa-trigger svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+/* ---- footer ---- */
+
+.signin__footer {
+  margin-top: 24px;
+  text-align: center;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+
+.signin__footer-rule {
+  height: 1px;
+  margin: 12px auto;
+  background: var(--hairline);
+}
+
+/* The Cell status element, same anatomy as the one in the app sidebar: dot,
+   then text. Laid out as a single centred row here rather than the sidebar's
+   stacked block. */
+.signin__cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.signin__cell-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--teal);
+  flex: none;
+}
+
+@media (max-width: 430px) {
+  .signin {
+    padding: 32px 24px;
+  }
+
+  .signin .ui-panel {
+    padding: 28px 22px 24px;
+  }
+
+  /* Six cells plus five 8px gaps plus the card's padding has to clear 390
+     without wrapping or scrolling sideways. */
+  .signin .ui-otp-input {
+    gap: 8px;
+  }
+
+  .signin .ui-otp-input__box {
+    width: 44px;
+    height: 54px;
+    font-size: 20px;
+  }
+}
