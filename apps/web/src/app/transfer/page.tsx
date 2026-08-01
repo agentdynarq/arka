@@ -13,17 +13,29 @@ import {
 } from '@/lib/api'
 import type { Dashboard, TransferOutcome } from '@/lib/api'
 import { getAccessToken, clearSession } from '@/lib/session'
-import { Main, Panel, Field, Button, Alert, Skeleton, OtpInput } from '@arka/ui'
+import { useCellStatus } from '@/lib/cell-status-context'
+import { PageHeader, Panel, Field, Button, Alert, Skeleton, OtpInput, Stepper } from '@arka/ui'
 
 type Stage =
   | { name: 'form' }
   | { name: 'step-up'; actionToken: string; idempotencyKey: string; toAccountId: string; amountMinorUnits: string }
   | { name: 'done'; result: Extract<TransferOutcome, { status: 'confirmed' }> }
 
+const STEPS = ['Details', "Confirm it's you", 'Done']
+
+function stepIndex(stage: Stage): number {
+  if (stage.name === 'form') return 0
+  if (stage.name === 'step-up') return 1
+  return 2
+}
+
 /**
- * Screen W3. FR-09 (instant transfer) and FR-04 (step-up on a new payee): a
- * new payee triggers step-up confirmation, and the modal explains why it
- * appeared, per the Phase 1 wireframe.
+ * Screen W3, a full page rather than a centred card: form on the left,
+ * a live review panel on the right, matching the shell's dashboard-style
+ * layout used everywhere else. FR-09 (instant transfer) and FR-04 (step-up
+ * on a new payee): step-up now renders as an explicit numbered step inline
+ * (the Stepper above), not the old full-screen modal that appeared with no
+ * warning.
  *
  * The idempotency key is generated once per transfer intent and reused
  * across the step-up round trip, so completing step-up and retrying is
@@ -32,6 +44,7 @@ type Stage =
  */
 export default function TransferPage() {
   const router = useRouter()
+  const cellStatus = useCellStatus()
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const [toAccountId, setToAccountId] = useState('')
@@ -58,20 +71,22 @@ export default function TransferPage() {
 
   if (!accessToken || !dashboard) {
     return (
-      <Main>
-        <Panel>
-          <Skeleton height="1.4rem" width="50%" />
-          <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <Skeleton height="44px" />
-            <Skeleton height="44px" />
-            <Skeleton height="44px" />
-          </div>
-        </Panel>
-      </Main>
+      <>
+        <PageHeader breadcrumb="Arka / Payments" title="Send money" />
+        <Skeleton height="320px" />
+      </>
     )
   }
 
   const fromAccount = dashboard.accounts[0]
+  const quarantined = cellStatus?.status === 'quarantined'
+
+  let previewAmountMinorUnits: bigint | null = null
+  try {
+    if (amount.trim()) previewAmountMinorUnits = BigInt(toMinorUnits(amount))
+  } catch {
+    previewAmountMinorUnits = null
+  }
 
   async function submitTransfer(event: React.FormEvent) {
     event.preventDefault()
@@ -79,6 +94,10 @@ export default function TransferPage() {
 
     if (!fromAccount) {
       setError('No account to transfer from')
+      return
+    }
+    if (quarantined) {
+      setError(`${cellStatus!.cellId} is quarantined and read-only. Transfers resume once the quarantine is lifted.`)
       return
     }
 
@@ -148,59 +167,102 @@ export default function TransferPage() {
 
   if (stage.name === 'done') {
     return (
-      <Main>
+      <>
+        <PageHeader breadcrumb="Arka / Payments" title="Send money" />
+        <Stepper steps={STEPS} current={2} />
         <Panel title="Transfer confirmed" subtitle={`Ledger block #${stage.result.ledgerBlockSeq}, confirmed immediately.`}>
           <p className="ui-meta">Transfer ID: {stage.result.transferId}</p>
           <Button onClick={() => router.replace('/dashboard')}>Back to dashboard</Button>
         </Panel>
-      </Main>
+      </>
     )
   }
 
-  if (stage.name === 'step-up') {
-    return (
-      <div className="ui-modal-backdrop">
-        <Panel
-          title="Confirm it's you"
-          subtitle={`${stage.toAccountId} is a new payee for this account, sending LKR ${formatMinorUnits(
-            stage.amountMinorUnits
-          )}. Enter the code from your authenticator app.`}
-        >
-          {error && <Alert>{error}</Alert>}
-          <form onSubmit={submitStepUp}>
-            <div style={{ marginBottom: 'var(--space-4)' }}>
-              <OtpInput value={totpCode} onChange={setTotpCode} autoFocus />
-            </div>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Verifying...' : 'Confirm transfer'}
-            </Button>
-          </form>
-          <p className="ui-meta" style={{ marginTop: 'var(--space-4)', textAlign: 'center' }}>
-            Never share this code. Arka staff will never ask for it.
-          </p>
-        </Panel>
-      </div>
-    )
-  }
+  const reviewToAccountId = stage.name === 'step-up' ? stage.toAccountId : toAccountId
+  const reviewAmount = stage.name === 'step-up' ? BigInt(stage.amountMinorUnits) : previewAmountMinorUnits
+  const reviewResultingBalance = fromAccount && reviewAmount !== null ? BigInt(fromAccount.balance) - reviewAmount : null
 
   return (
-    <Main>
-      <Panel
+    <>
+      <PageHeader
+        breadcrumb="Arka / Payments"
         title="Send money"
-        subtitle={fromAccount ? `From ${fromAccount.displayName}, balance LKR ${formatMinorUnits(fromAccount.balance)}` : undefined}
-      >
-        {error && <Alert>{error}</Alert>}
-        <form onSubmit={submitTransfer}>
-          <Field id="to" label="Pay to (account ID)" value={toAccountId} onChange={(e) => setToAccountId(e.target.value)} placeholder="customer:bob" />
-          <Field id="amount" label="Amount (LKR)" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50.00" />
-          <Button type="submit" disabled={submitting}>
-            {submitting ? 'Sending...' : 'Send'}
-          </Button>
-        </form>
-        <Button variant="ghost" onClick={() => router.replace('/dashboard')}>
-          Cancel
-        </Button>
-      </Panel>
-    </Main>
+        context={fromAccount ? `From ${fromAccount.displayName}, balance LKR ${formatMinorUnits(fromAccount.balance)}` : undefined}
+      />
+
+      {quarantined && (
+        <Alert tone="info">
+          {cellStatus!.cellId} is quarantined and read-only. Your balance and history are unaffected. Transfers resume when the
+          quarantine is lifted.
+        </Alert>
+      )}
+
+      <Stepper steps={STEPS} current={stepIndex(stage)} />
+
+      <div className="ui-dashboard">
+        <Panel className="ui-dashboard__main" title={stage.name === 'step-up' ? "Confirm it's you" : 'Send money'}>
+          {error && <Alert>{error}</Alert>}
+
+          {stage.name === 'form' && (
+            <form onSubmit={submitTransfer}>
+              <Field id="to" label="Pay to (account ID)" value={toAccountId} onChange={(e) => setToAccountId(e.target.value)} placeholder="customer:bob" />
+              <Field id="amount" label="Amount (LKR)" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50.00" />
+              <Button type="submit" disabled={submitting || quarantined}>
+                {submitting ? 'Sending...' : 'Send'}
+              </Button>
+            </form>
+          )}
+
+          {stage.name === 'step-up' && (
+            <form onSubmit={submitStepUp}>
+              <p className="ui-meta" style={{ marginBottom: 'var(--space-4)' }}>
+                {stage.toAccountId} is a new payee for this account, sending LKR {formatMinorUnits(stage.amountMinorUnits)}.
+                Enter the code from your authenticator app.
+              </p>
+              <div style={{ marginBottom: 'var(--space-4)' }}>
+                <OtpInput value={totpCode} onChange={setTotpCode} autoFocus />
+              </div>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? 'Verifying...' : 'Confirm transfer'}
+              </Button>
+              <p className="ui-meta" style={{ marginTop: 'var(--space-4)' }}>
+                Never share this code. Arka staff will never ask for it.
+              </p>
+            </form>
+          )}
+
+          {stage.name === 'form' && (
+            <Button variant="ghost" onClick={() => router.replace('/dashboard')}>
+              Cancel
+            </Button>
+          )}
+        </Panel>
+
+        <Panel className="ui-dashboard__rail" title="Review">
+          <dl className="ui-cell-panel__attrs">
+            <div className="ui-cell-panel__attr">
+              <dt>From</dt>
+              <dd>{fromAccount?.displayName ?? '-'}</dd>
+            </div>
+            <div className="ui-cell-panel__attr">
+              <dt>To</dt>
+              <dd>{reviewToAccountId || '-'}</dd>
+            </div>
+            <div className="ui-cell-panel__attr">
+              <dt>Amount</dt>
+              <dd>{reviewAmount !== null ? `LKR ${formatMinorUnits(reviewAmount.toString())}` : '-'}</dd>
+            </div>
+            <div className="ui-cell-panel__attr">
+              <dt>Resulting balance</dt>
+              <dd>{reviewResultingBalance !== null ? `LKR ${formatMinorUnits(reviewResultingBalance.toString())}` : '-'}</dd>
+            </div>
+            <div className="ui-cell-panel__attr">
+              <dt>Serving Cell</dt>
+              <dd>{cellStatus?.cellId || '-'}</dd>
+            </div>
+          </dl>
+        </Panel>
+      </div>
+    </>
   )
 }
