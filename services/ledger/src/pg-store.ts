@@ -165,6 +165,35 @@ export async function isPostgresReachable(connectionString: string): Promise<boo
  * `resetSchema()` (arka-ops/LOG.md, 28 July: `pnpm test` was wiping the
  * seeded demo because every integration test's default connection string
  * fell back to the same database the demo uses).
+ *
+ * Several suites share one database name (`arka_cell1_test`: accounts,
+ * identity, ledger, notifications, payments), and `turbo run test` runs
+ * independent packages concurrently by default, so on a cold cache all of
+ * them call this function for the same name at once. `CREATE DATABASE`
+ * is not one atomic check-then-insert from the caller's side: two
+ * concurrent sessions can both pass Postgres's own existence check and
+ * race the catalog insert, and the loser fails not with the expected
+ * `42P04` (database already exists) but with a raw
+ * `duplicate key value violates unique constraint "pg_database_datname_index"`
+ * (23505) -- reproduced directly against a dropped `arka_cell1_test` with
+ * all six suites forced to run in parallel, which is exactly the failure
+ * this function now prevents rather than merely tolerating a different
+ * error code for.
+ *
+ * Fixed with a Postgres session-level advisory lock keyed by hashtext of
+ * `databaseName`, so only suites racing for the SAME name ever serialise
+ * against each other; a suite targeting a different database (e.g.
+ * recovery's `arka_control_test`, on an entirely separate Postgres server)
+ * never waits on this one. The lock and the `CREATE DATABASE` both run on
+ * one dedicated client checked out of the pool, not on `adminPool`
+ * directly: a session-level advisory lock only blocks other sessions if
+ * held by a real, specific session, so acquiring it via one pool query and
+ * creating the database via another risks the two statements landing on
+ * different pooled connections, which would silently defeat the whole
+ * point. `client.release()` after use, rather than an explicit
+ * `pg_advisory_unlock`, is enough: Postgres releases session-level
+ * advisory locks automatically when the session ends, and this function
+ * never needs the lock held past its own return.
  */
 export async function ensureTestDatabase(connectionString: string, databaseName: string): Promise<string> {
   const target = new URL(connectionString)
@@ -172,11 +201,23 @@ export async function ensureTestDatabase(connectionString: string, databaseName:
   admin.pathname = '/postgres'
 
   const adminPool = new Pool({ connectionString: admin.toString(), connectionTimeoutMillis: 2000 })
+  const client = await adminPool.connect()
   try {
-    await adminPool.query(`CREATE DATABASE "${databaseName}"`)
-  } catch (error) {
-    if ((error as { code?: string }).code !== '42P04') throw error // 42P04: database already exists
+    await client.query('SELECT pg_advisory_lock(hashtext($1), 0)', [databaseName])
+    try {
+      await client.query(`CREATE DATABASE "${databaseName}"`)
+    } catch (error) {
+      const code = (error as { code?: string }).code
+      // 42P04: database already exists, the ordinary path once a previous
+      // run (or, before this fix, a race's winner) has created it.
+      // UNIQUE_VIOLATION on pg_database_datname_index: kept as defence in
+      // depth for any caller that reaches Postgres without going through
+      // this lock, not expected to trigger now that the lock serialises
+      // every known caller.
+      if (code !== '42P04' && code !== UNIQUE_VIOLATION) throw error
+    }
   } finally {
+    client.release()
     await adminPool.end()
   }
 
