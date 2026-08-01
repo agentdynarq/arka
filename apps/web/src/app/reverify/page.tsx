@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { reVerify, login, verifyMfa, ApiError } from '@/lib/api'
+import { reVerify, login, verifyMfa, checkDemoModeEnabled, ApiError } from '@/lib/api'
 import { storeSession } from '@/lib/session'
 import { SplitHero, Stepper, Field, Button, Alert, OtpInput } from '@arka/ui'
 import { DemoMfaWidget } from '@/components/DemoMfaWidget'
@@ -51,9 +51,22 @@ export default function ReVerifyPage() {
 
   const [username, setUsername] = useState('alice')
   const [password, setPassword] = useState('')
+  const [demoMode, setDemoMode] = useState(false)
 
   const [mfaToken, setMfaToken] = useState('')
   const [totpCode, setTotpCode] = useState('')
+
+  // Prefilling a real password is only ever honest if the same demo flag
+  // that gates the MFA code endpoint is also on. Probes it once on mount;
+  // a judge's own environment (flag off) never sees a prefilled password.
+  useEffect(() => {
+    checkDemoModeEnabled(username).then((enabled) => {
+      if (!enabled) return
+      setDemoMode(true)
+      setPassword((current) => (current === '' ? 'demo-password-123' : current))
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleReVerify(e: React.FormEvent) {
     e.preventDefault()
@@ -158,6 +171,7 @@ export default function ReVerifyPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+            {demoMode && <p className="ui-meta" style={{ marginTop: -8, marginBottom: 'var(--space-4)' }}>Demo credentials pre-filled · demo mode only</p>}
             <Button type="submit" disabled={busy}>
               {busy ? 'Signing in...' : 'Sign in'}
             </Button>
