@@ -58,7 +58,10 @@ export default function JudgesPage() {
               reach the dashboard.
             </li>
             <li className="dw-scope__item">
-              <strong>Run a transfer</strong> from the dashboard, watch the balance and history update.
+              <strong>Run a transfer</strong> from the dashboard, watch the balance and history update. If
+              the very first attempt within ~20 seconds of a fresh boot returns{' '}
+              <code>503 QUARANTINE_CHECK_UNAVAILABLE</code>, that&rsquo;s a cold-start race between two
+              services, not a broken quarantine check &mdash; wait a moment and retry, it clears itself.
             </li>
             <li className="dw-scope__item">
               <strong>Open the Recovery Console health map</strong>, confirm both Cells show healthy.
@@ -171,9 +174,15 @@ export default function JudgesPage() {
             <div className="dw-spec__row">
               <span className="dw-spec__k">Cell 2 customer</span>
               <span className="dw-spec__v">
-                <code>chandi</code> / <code>demo-password-123</code>. Re-verify with customerId{' '}
-                <code>cust-chandi</code>, registryDocumentId <code>DOC-CHANDI-001</code>. Use this login to
-                see Cell 2 keep serving while Cell 1 is quarantined.
+                <code>chandi</code> / <code>demo-password-123</code>, seeded by <code>pnpm seed</code> into
+                Cell 2. Re-verify with customerId <code>cust-chandi</code>, registryDocumentId{' '}
+                <code>DOC-CHANDI-001</code>. Logging in as chandi needs a second{' '}
+                <code>apps/identity</code> instance pointed at Cell 2 (<code>CELL_ID=cell-2</code>, its own{' '}
+                <code>DATABASE_URL</code> and <code>IDENTITY_PORT</code> &mdash; see{' '}
+                <code>apps/identity/README.md</code>), which plain <code>pnpm dev</code> does not start;
+                without it this login returns <code>401 INVALID_CREDENTIALS</code>. To see Cell 2 keep
+                serving while Cell 1 is quarantined, use the health map and integrity audit instead &mdash;
+                both Cells are visible there without a second instance.
               </span>
             </div>
             <div className="dw-spec__row">
