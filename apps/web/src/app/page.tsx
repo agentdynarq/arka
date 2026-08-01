@@ -483,6 +483,50 @@ export default function Home() {
         </div>
       </section>
 
+      {/* DOCTRINE GRID — unnumbered, like the value strip, product showcase
+          and contrast pair above it. Same three doctrines sections 02-04
+          each already state on their own, recapped together in one device
+          none of those three use: a 3-up bordered grid with corner tick
+          marks, the Cloudflare feature-grid convention. */}
+      <section className="dw-zone" style={{ '--rule-delay': '270ms' } as React.CSSProperties}>
+        <div className="dw-zone__inner dw-section">
+          <span className="dw-eyebrow">Three doctrines, every decision traces to one</span>
+          <div className="dw-doctrine-grid">
+            <div className="dw-doctrine-grid__cell">
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--tl" aria-hidden="true" />
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--tr" aria-hidden="true" />
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--bl" aria-hidden="true" />
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--br" aria-hidden="true" />
+              <h3 className="dw-doctrine-grid__title">Assume breach.</h3>
+              <p className="dw-doctrine-grid__note">
+                Every internal call is authenticated. Network location grants no trust.
+              </p>
+            </div>
+            <div className="dw-doctrine-grid__cell">
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--tl" aria-hidden="true" />
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--tr" aria-hidden="true" />
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--bl" aria-hidden="true" />
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--br" aria-hidden="true" />
+              <h3 className="dw-doctrine-grid__title">Contain by construction.</h3>
+              <p className="dw-doctrine-grid__note">
+                Customers are sharded across independent Cells that share nothing and have no network path to
+                each other.
+              </p>
+            </div>
+            <div className="dw-doctrine-grid__cell">
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--tl" aria-hidden="true" />
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--tr" aria-hidden="true" />
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--bl" aria-hidden="true" />
+              <span className="dw-doctrine-grid__tick dw-doctrine-grid__tick--br" aria-hidden="true" />
+              <h3 className="dw-doctrine-grid__title">Recovery is a feature.</h3>
+              <p className="dw-doctrine-grid__note">
+                An append-only hash-chained ledger makes tampering detectable and state rebuildable.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 05 · ARCHITECTURE — on the grid like every other section; the void
           animation is the interest here, not the diagram's width */}
       <section className="dw-zone" id="architecture" style={{ '--rule-delay': '300ms' } as React.CSSProperties}>

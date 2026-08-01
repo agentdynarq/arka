@@ -1225,6 +1225,107 @@ a.dw-spec__link {
   margin-left: auto;
 }
 
+/* ---- Doctrine grid: 3-up bordered feature grid with corner tick marks,
+   the Cloudflare device -- one small "+" at each cell's own four corners,
+   which reads as ticks at the grid's intersections once cells sit flush
+   against each other. ---- */
+.dw-doctrine-grid {
+  margin-top: var(--s7);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border: 1px solid var(--rule);
+}
+
+.dw-doctrine-grid__cell {
+  position: relative;
+  padding: var(--s7) var(--s6);
+  border-left: 1px solid var(--rule);
+}
+
+.dw-doctrine-grid__cell:first-child {
+  border-left: none;
+}
+
+.dw-doctrine-grid__tick {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  pointer-events: none;
+}
+
+.dw-doctrine-grid__tick::before,
+.dw-doctrine-grid__tick::after {
+  content: '';
+  position: absolute;
+  background: var(--dw-ink-faint);
+}
+
+.dw-doctrine-grid__tick::before {
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+.dw-doctrine-grid__tick::after {
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  transform: translateX(-50%);
+}
+
+.dw-doctrine-grid__tick--tl {
+  top: -4px;
+  left: -1px;
+}
+
+.dw-doctrine-grid__tick--tr {
+  top: -4px;
+  right: -1px;
+}
+
+.dw-doctrine-grid__tick--bl {
+  bottom: -4px;
+  left: -1px;
+}
+
+.dw-doctrine-grid__tick--br {
+  bottom: -4px;
+  right: -1px;
+}
+
+.dw-doctrine-grid__title {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 1.3rem;
+  color: var(--ink);
+}
+
+.dw-doctrine-grid__note {
+  margin-top: var(--s3);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 900px) {
+  .dw-doctrine-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dw-doctrine-grid__cell {
+    border-left: none;
+    border-top: 1px solid var(--rule);
+  }
+
+  .dw-doctrine-grid__cell:first-child {
+    border-top: none;
+  }
+}
+
 /* ---- Architecture: mobile fallback carries the same plate ground as the
    desktop diagram it stands in for. ---- */
 
