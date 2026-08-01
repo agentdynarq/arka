@@ -108,7 +108,7 @@ export default function Home() {
               </a>
             </div>
             <p className="dw-hero__credentials">
-              alice / demo-password-123 &middot; MFA code printed to the server console on boot
+              alice / demo-password-123 &middot; tap &ldquo;Check your phone for the code&rdquo; to sign in
             </p>
 
             <div className="dw-hero__line">

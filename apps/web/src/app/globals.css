@@ -692,7 +692,9 @@ a.dw-cta-secondary.dw-cta-secondary--flood {
   max-width: 62vw;
   max-height: 62vw;
   background-color: var(--white);
-  opacity: 0.1;
+  /* 0.1 did not read at all on a 1440 display. 0.16 is the ceiling before it
+     starts competing with the headline rather than sitting behind it. */
+  opacity: 0.16;
   -webkit-mask-image: url('/brand/logo-mark.png');
   mask-image: url('/brand/logo-mark.png');
   -webkit-mask-size: contain;
