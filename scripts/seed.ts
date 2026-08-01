@@ -121,7 +121,25 @@ const ALICE_TRANSACTIONS: readonly AliceTxn[] = [
 const ALICE_OPENING = 30_000_00n
 const BOB_OPENING = 30_000_00n
 
-const cellConfigs = loadCellConfigs().filter((c) => !requestedCell || c.cellId === requestedCell)
+/**
+ * The opening deposits have to be backdated too. Left to default they would be
+ * stamped now, which puts today's date on blocks 1 and 2 while every block after
+ * them is older, so a history sorted by sequence ends on an entry dated later
+ * than everything above it. A day before the earliest transaction keeps the
+ * ledger readable in the order it is displayed.
+ */
+const OPENING_DAYS_AGO = 10
+
+const allCellConfigs = loadCellConfigs()
+const cellConfigs = allCellConfigs.filter((c) => !requestedCell || c.cellId === requestedCell)
+
+// Fail fast on a typo rather than exiting 0 having seeded nothing, which reads
+// as a successful seed. verify-ledger.ts already behaves this way.
+if (requestedCell && cellConfigs.length === 0) {
+  const known = allCellConfigs.map((c) => c.cellId).join(', ')
+  console.error(`Unknown cell "${requestedCell}". Known Cells: ${known}`)
+  process.exit(1)
+}
 
 for (const config of cellConfigs) {
   const ledgerStore = new PgLedgerStore(config.connectionString)
@@ -149,8 +167,9 @@ for (const config of cellConfigs) {
     await accounts.open(second, customerIdOf(second), DISPLAY_NAMES[second] ?? second)
 
     if (config.cellId === 'cell-1') {
-      await ledger.record(opening(first, ALICE_OPENING))
-      await ledger.record(opening(second, BOB_OPENING))
+      const openedAt = isoAt(OPENING_DAYS_AGO, 3, 0)
+      await ledger.record(opening(first, ALICE_OPENING), openedAt)
+      await ledger.record(opening(second, BOB_OPENING), openedAt)
 
       for (const txn of ALICE_TRANSACTIONS) {
         const at = isoAt(txn.daysAgo, txn.hour, txn.minute)
