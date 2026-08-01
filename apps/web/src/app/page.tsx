@@ -81,6 +81,12 @@ export default function Home() {
       <header className="dw-zone dw-hero">
         <div className="dw-hero__flood">
           <div className="dw-hero__bloom" aria-hidden="true" />
+          {/* Sits here, before the content, so document order alone puts it under
+              the transaction-path plate: .dw-hero__line is position:relative and
+              later in the DOM, and --dw-panel is opaque, so the diagram is never
+              competing with it. Same mask technique as the final CTA's watermark,
+              so the two read as one logo rather than two. */}
+          <div className="dw-hero__watermark" aria-hidden="true" />
           <div className="dw-zone__inner dw-section">
             <span className="dw-hero__pill">Team True Node &middot; Duothan 6.0 &middot; Phase 2</span>
             <h1 className="dw-hero__claim">
