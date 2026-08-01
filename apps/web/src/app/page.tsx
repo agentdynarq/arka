@@ -1079,12 +1079,66 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="dw-zone dw-footer" style={{ '--rule-delay': '660ms' } as React.CSSProperties}>
-        <span className="dw-footer__brand">ARKA</span>
-        <span>Team True Node &middot; NSBM Green University &middot; Duothan 6.0 &middot; MIT License</span>
-        <a href="https://github.com/agentdynarq/arka" target="_blank" rel="noopener noreferrer">
-          github.com/agentdynarq/arka
-        </a>
+      {/* FOOTER — six real link columns, dense: same-page anchors, the two
+          real internal routes, and GitHub blob links to files confirmed
+          present in this repo (docs/ARCHITECTURE.md, docs/RUNBOOK.md,
+          USER-GUIDE.md, LICENSE), not invented pages. */}
+      <footer className="dw-zone dw-footer dw-footer--dense" style={{ '--rule-delay': '660ms' } as React.CSSProperties}>
+        <div className="dw-footer__grid">
+          <div className="dw-footer__col">
+            <span className="dw-footer__label">The argument</span>
+            <a href="#failure">The failure</a>
+            <a href="#doctrines">Doctrines</a>
+            <a href="#architecture">Architecture</a>
+            <a href="#scope">Honest scope</a>
+          </div>
+          <div className="dw-footer__col">
+            <span className="dw-footer__label">Proof</span>
+            <a href="#proof">Prefer verifiable</a>
+            <a href="/media/isolation.gif" target="_blank" rel="noopener noreferrer">
+              Isolation proof
+            </a>
+            <a href="/media/quarantine.gif" target="_blank" rel="noopener noreferrer">
+              Quarantine proof
+            </a>
+          </div>
+          <div className="dw-footer__col">
+            <span className="dw-footer__label">Documentation</span>
+            <a href="https://github.com/agentdynarq/arka/blob/main/docs/ARCHITECTURE.md" target="_blank" rel="noopener noreferrer">
+              Architecture
+            </a>
+            <a href="https://github.com/agentdynarq/arka/blob/main/docs/RUNBOOK.md" target="_blank" rel="noopener noreferrer">
+              Runbook
+            </a>
+            <a href="https://github.com/agentdynarq/arka/blob/main/USER-GUIDE.md" target="_blank" rel="noopener noreferrer">
+              User guide
+            </a>
+          </div>
+          <div className="dw-footer__col">
+            <span className="dw-footer__label">Try it</span>
+            <Link href="/reverify">Run the live demo</Link>
+            <Link href="/judges">Judges reference</Link>
+          </div>
+          <div className="dw-footer__col">
+            <span className="dw-footer__label">Repository</span>
+            <a href="https://github.com/agentdynarq/arka" target="_blank" rel="noopener noreferrer">
+              github.com/agentdynarq/arka
+            </a>
+            <a href="https://github.com/agentdynarq/arka/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">
+              MIT License
+            </a>
+          </div>
+          <div className="dw-footer__col">
+            <span className="dw-footer__label">Team True Node</span>
+            <span className="dw-footer__text">R M S Hasitha Bandara</span>
+            <span className="dw-footer__text">W A S Keshan</span>
+            <span className="dw-footer__text">NSBM Green University</span>
+          </div>
+        </div>
+        <div className="dw-footer__bottom">
+          <span className="dw-footer__brand">ARKA</span>
+          <span>Team True Node &middot; NSBM Green University &middot; Duothan 6.0 &middot; MIT License</span>
+        </div>
       </footer>
     </div>
   )

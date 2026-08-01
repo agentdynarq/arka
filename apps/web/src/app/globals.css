@@ -2071,6 +2071,56 @@ a.dw-proof__link {
   color: var(--ink-soft);
 }
 
+/* ---- Dense footer: six real link columns above the same brand/legal
+   line the simple footer always had, not a replacement for it. ---- */
+.dw-footer--dense {
+  display: block;
+  padding-top: var(--s8);
+}
+
+.dw-footer__grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--s6);
+  padding-bottom: var(--s7);
+}
+
+.dw-footer__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.dw-footer__label {
+  margin-bottom: var(--s1);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.dw-footer__text {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.dw-footer__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  flex-wrap: wrap;
+  padding-top: var(--s6);
+  border-top: 1px solid var(--rule);
+}
+
+@media (max-width: 900px) {
+  .dw-footer__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .dw-footer__brand {
   font-family: var(--font-serif);
   font-weight: 600;
