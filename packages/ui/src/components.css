@@ -518,34 +518,28 @@ body {
   flex-shrink: 0;
 }
 
-/* ---- Overview strip (compartments / cards) ---- */
+/* ---- Overview strip (clean divider columns) ---- */
 
 .ui-overview-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--space-4);
-  margin-bottom: var(--space-5);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-top: var(--space-6);
+  margin-bottom: var(--space-6);
+  padding: var(--space-2) 0;
 }
 
 .ui-overview-strip__col {
-  background: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 12px;
-  padding: 20px 22px;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03), 0 1px 3px rgba(15, 23, 42, 0.02);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.ui-overview-strip__col:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  padding: var(--space-3) var(--space-6);
+  border-left: 1px solid rgba(203, 213, 225, 0.7);
+  background: transparent;
+  box-shadow: none;
 }
 
 .ui-overview-strip__col:first-child {
-  padding-left: 22px;
-  border-left: 1px solid rgba(226, 232, 240, 0.9);
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border-top: 3px solid #4f46e5;
+  padding-left: 0;
+  border-left: none;
+  background: transparent;
+  border-top: none;
 }
 
 .ui-overview-strip__label {
@@ -554,13 +548,13 @@ body {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #64748b;
+  color: #94a3b8;
 }
 
 .ui-overview-strip__value {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: var(--text-xl);
+  font-size: 1.5rem;
   font-weight: 700;
   color: #0f172a;
 }
@@ -568,7 +562,7 @@ body {
 .ui-overview-strip__context {
   margin: var(--space-1) 0 0;
   font-size: var(--text-xs);
-  color: #475569;
+  color: #64748b;
 }
 
 /* ---- Generic text ---- */
