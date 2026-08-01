@@ -354,6 +354,56 @@ export default function Home() {
         </div>
       </section>
 
+      {/* CONTRAST PAIR — unnumbered, like the value strip and the product
+          showcase above it. Restates the same claim sections 01 and 03
+          already make, in a visual device neither of those uses: two
+          panels side by side, chaos against calm, same real service names
+          and the same real quarantine outcome as the rest of the page, not
+          new figures. */}
+      <section className="dw-zone" style={{ '--rule-delay': '150ms' } as React.CSSProperties}>
+        <div className="dw-contrast">
+          <div className="dw-contrast__col dw-contrast__col--collapse">
+            <div className="dw-contrast__inner">
+              <h2 className="dw-heading dw-heading--lg">One trust domain. One network. One Master Key.</h2>
+              <div className="dw-contrast__cards">
+                <div className="dw-contrast__card dw-contrast__card--1">
+                  <span className="dw-contrast__chip">STATUS: UNRESOLVED</span>
+                  <span>IDENTITY unreachable</span>
+                </div>
+                <div className="dw-contrast__card dw-contrast__card--2">
+                  <span className="dw-contrast__chip">STATUS: UNRESOLVED</span>
+                  <span>LEDGER writes failing</span>
+                </div>
+                <div className="dw-contrast__card dw-contrast__card--3">
+                  <span className="dw-contrast__chip">STATUS: UNRESOLVED</span>
+                  <span>MASTER KEY compromised</span>
+                </div>
+              </div>
+              <div className="dw-contrast__store">
+                <div className="dw-contrast__store-services">
+                  {['IDENTITY', 'ACCOUNTS', 'PAYMENTS', 'LEDGER', 'NOTIFICATIONS'].map((svc) => (
+                    <span key={svc} className="dw-contrast__store-svc">
+                      {svc}
+                    </span>
+                  ))}
+                </div>
+                <div className="dw-contrast__store-arrow" aria-hidden="true" />
+                <div className="dw-contrast__store-shared">ONE SHARED STORE</div>
+              </div>
+            </div>
+          </div>
+          <div className="dw-contrast__col dw-contrast__col--contain">
+            <div className="dw-contrast__inner">
+              <h2 className="dw-heading dw-heading--lg dw-contrast__heading--flood">Blast radius becomes a design parameter.</h2>
+              <p className="dw-contrast__confirm">
+                <span className="dw-mono">cell-1 quarantined</span> &middot; <span className="dw-mono">cell-2 serving</span> &middot;{' '}
+                <span className="dw-mono">0 records lost</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 02 · DOCTRINE 01 — single centered statement, the page's one quiet moment */}
       <section className="dw-zone dw-zone--tint" id="doctrines" style={{ '--rule-delay': '120ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-section dw-section--narrow dw-doctrine-quiet">

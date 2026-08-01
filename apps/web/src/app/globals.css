@@ -923,6 +923,152 @@ a.dw-cta-secondary.dw-cta-secondary--flood {
   }
 }
 
+/* ---- Contrast pair: full-bleed, like the value strip, not constrained to
+   --content -- two solid colour panels side by side need real visual
+   weight, not a small boxed card. Chaos (--dw-panel, overlapping cards, a
+   red status chip) against calm (a solid flood panel, one confirmation
+   line). No filled status pill anywhere: the chip is bordered/tinted red
+   text, not a solid fill. ---- */
+.dw-contrast {
+  display: flex;
+  min-height: 480px;
+}
+
+.dw-contrast__col {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: var(--s8) var(--gutter);
+}
+
+.dw-contrast__col--collapse {
+  background: var(--dw-panel);
+}
+
+/* Same scrim technique as .dw-hero__flood, and for the same reason: the
+   heading and confirmation row need to clear AA wherever they land on the
+   gradient, and this column's own independently-rendered --flood isn't
+   guaranteed to put them on the dark end. Duplicated rather than shared
+   with the hero's rule: the hero's own version is tangled up with its
+   bloom and inset margin, not a clean thing to factor out under a
+   deadline. */
+.dw-contrast__col--contain {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(165deg, color-mix(in srgb, var(--flood-base) 50%, transparent) 0%, transparent 55%), var(--flood);
+}
+
+.dw-contrast__inner {
+  position: relative;
+  z-index: 1;
+  max-width: 44ch;
+}
+
+.dw-contrast__heading--flood {
+  color: var(--on-flood);
+}
+
+.dw-contrast__cards {
+  margin-top: var(--s6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.dw-contrast__card {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  background: var(--dw-ground);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+/* A loose, overlapping stack, not a tidy list -- each card nudged and
+   rotated a little more than the last. */
+.dw-contrast__card--2 {
+  margin-left: var(--s5);
+  transform: rotate(-0.6deg);
+}
+
+.dw-contrast__card--3 {
+  margin-left: var(--s7);
+  transform: rotate(0.8deg);
+}
+
+.dw-contrast__chip {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--reject) 45%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--reject) 12%, transparent);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  color: var(--reject);
+}
+
+.dw-contrast__store {
+  margin-top: var(--s7);
+  padding-top: var(--s6);
+  border-top: 1px solid var(--rule);
+}
+
+.dw-contrast__store-services {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.dw-contrast__store-svc {
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft);
+}
+
+.dw-contrast__store-arrow {
+  width: 1px;
+  height: var(--s5);
+  margin: var(--s2) auto 0;
+  background: var(--rule);
+}
+
+.dw-contrast__store-shared {
+  margin-top: var(--s2);
+  padding: var(--s3);
+  text-align: center;
+  border: 1px solid var(--reject);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--reject);
+}
+
+.dw-contrast__confirm {
+  margin-top: var(--s6);
+  font-size: 1rem;
+  color: var(--on-flood-soft);
+}
+
+@media (max-width: 900px) {
+  .dw-contrast {
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .dw-contrast__col {
+    padding: var(--s6);
+  }
+}
+
 /* ---- Plates, shared: the four dark technical figures (hero line, failure
    comparison, architecture, verify-ledger terminal). Full content width,
    never shrunk into a card, never full-bleed. A caption sits beneath each
