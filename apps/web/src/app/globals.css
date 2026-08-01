@@ -1,13 +1,19 @@
 /**
  * Homepage at "/", built for Duothan 6.0 judges, not the customer app itself.
- * Direction: light institutional document — ink on paper, navy, serif,
- * conservative, rectangular — with four dark technical plates inset into it.
- * A deposit institution rebuilt after a collapse of public trust reads like
- * one, not like a crypto exchange. Scoped entirely under .dw. One content
- * grid throughout: one max-width, one left margin, one section padding
- * value, no full-bleed exceptions. Every number is real, pulled from
- * arka/README.md, docs/RUNBOOK.md and the actual docs/media/*.cast
- * recordings, never invented.
+ * Direction: light institutional document — ink on paper, indigo accent,
+ * serif, conservative, rectangular — with four dark technical plates inset
+ * into it. As of chore/indigo-tokens, "navy" above means the indigo flood
+ * system (see @arka/ui/tokens.css's new-primitives block and this file's own
+ * .dw primitives just below), shared with apps/web's other screens and
+ * apps/console, not a homepage-only hue. A deposit institution rebuilt after
+ * a collapse of public trust reads like one, not like a crypto exchange.
+ * Scoped entirely under .dw. One content grid throughout: one max-width, one
+ * left margin, one section padding value, no full-bleed exceptions today —
+ * the flood gradient primitive is reserved for a future full-bleed hero
+ * panel, not yet built as of this commit; when that markup lands, this line
+ * needs updating. Every number is real, pulled from arka/README.md,
+ * docs/RUNBOOK.md and the actual docs/media/*.cast recordings, never
+ * invented.
  */
 
 * {
@@ -15,51 +21,74 @@
 }
 
 .dw {
-  /* ---- Primitives: color. Paper is the default ground for the whole page.
-     Only the four plates (hero line, failure comparison, architecture, the
-     verify-ledger terminal) keep a dark ground, and they carry their own
-     --plate-* tokens below. Use nothing else. ---- */
-  --paper: #f7f6f3;
-  --ink: #0a1e30;
-  --ink-soft: #465a6b;
-  --rule: #d9d5ce;
+  /* ---- Primitives: color (chore/indigo-tokens). Every name below is
+     unchanged from the original "paper" direction — renaming them would be
+     the kind of call-site migration this pass isn't doing, since every rule
+     further down this file still reads these exact names — but the values
+     are now aliases onto the indigo flood system declared at :root by
+     @arka/ui/tokens.css (loaded globally in layout.tsx, ahead of this file,
+     so it's already in scope here by ordinary CSS inheritance; no
+     duplicated hex needed for anything that doesn't collide by name).
+     --ink and --ink-soft are the one exception: the new system's own
+     canonical tokens are ALSO named --ink/--ink-soft, so aliasing them
+     (`--ink: var(--ink)`) would be a self-reference — an invalid CSS cycle,
+     not a working alias — so those two get the literal new value directly
+     instead, matching @arka/ui/tokens.css's own --ink/--ink-soft exactly.
+     Paper is no longer the ground's own concept — see --ground in
+     tokens.css — but the four plates (hero line, failure comparison,
+     architecture, the verify-ledger terminal) still keep a dark ground,
+     now aliasing --ink rather than a navy of their own; --plate-* below
+     carries that, not the flood gradient, which is homepage-hero-only and
+     never a plate/panel fill (see its own definition in tokens.css). ---- */
+  --paper: var(--ground);
+  --ink: #12142b;
+  --ink-soft: #4a4e6b;
+  --rule: var(--hairline);
 
   /* Verification state only: the word "clean", the packet capsules, env
      values inside plates. Never a fill, button, heading, or link color.
-     Every real use of this token sits on a dark plate ground, never paper,
-     so it is tuned for that: #0E7C66 (the brief's paper-tuned value) only
-     clears ~3.3:1 on plate navy, which fails a 4.5:1 text bar. No single hue
-     clears 4.5:1 against both a near-white paper and a near-black plate at
-     once (the luminance bands required don't overlap) — since paper-side
-     usage doesn't actually occur, tuned for the side that does. */
+     Kept as its own tuned primitive rather than aliased to --teal: this
+     value is specifically tuned for a dark plate ground (5.88:1 there,
+     previously checked), while --teal is tuned for the new light grounds —
+     same reasoning as the original --reject/--reject-plate split below,
+     now applied to this pairing too. */
   --verified: #40bfb5;
   /* Failure state only: the 403 (paper, text) and the extinguished packet /
-     void mark (plate, graphical). Same non-overlap problem as verified, but
-     this token actually needs both contexts, so it splits into two: --reject
-     for the 403 on paper, --reject-plate for the marks inside plates. */
-  --reject: #b33a22;
-  --reject-plate: #e46944;
+     void mark (plate, graphical). Both now alias --red: the plate ground
+     itself is changing character (navy to --ink), so the old
+     brightened-for-a-dark-ground variant of --reject-plate no longer has a
+     distinct reason to differ from --reject — flagged as worth rechecking
+     once the new plate ground is live, not assumed correct by default. */
+  --reject: var(--red);
+  --reject-plate: var(--red);
 
   /* Accent, not action: links, eyebrow numbers, hover states, a tint band
      on two sections, dimension-line stroke work inside plates, small
-     annotation text. Never a button — the primary button stays navy fill,
-     white text, per the register's own rule (blue reads consumer-fintech
-     the moment it touches a CTA). Headings and body stay ink. */
-  --blue: #2c5f8a;
-  --blue-hover: #1f4666;
-  --blue-tint: #eaf1f7;
-  --blue-plate: #90b7d5; /* the same accent, lightened for a dark plate ground; decorative diagram stroke work only, never the packets or the void mark */
+     annotation text. Never a button — the primary button is now --primary
+     fill, white text (see --color-accent's own judgement-call comment in
+     tokens.css): "navy reads consumer-fintech" becomes moot once the whole
+     system is one deliberate indigo, but the "never a button" rule for this
+     token specifically still holds — --blue is accent, not action. Headings
+     and body stay ink. */
+  --blue: var(--primary);
+  --blue-hover: var(--primary-dk);
+  --blue-tint: var(--primary-tint);
+  --blue-plate: var(--on-flood-soft); /* decorative diagram stroke work on a dark plate only, never the packets or the void mark — --on-flood-soft is the new system's own "soft light text/lines on a dark ground" token, a closer role match than the saturated --primary */
 
-  /* ---- Plate primitives: the four dark technical figures only. ---- */
-  --plate: #0a1e30;
-  --plate-fill: #16324a; /* gateway / control-plane / terminal cards */
-  --plate-fill-2: #1e3f5c; /* Cell boxes, one tier lighter: the raised element */
-  --plate-line: #2f4d68; /* borders and rules inside a plate */
-  --plate-ink: #e7ecef; /* primary text on a plate */
-  --plate-ink-soft: #9bb0bf; /* secondary text on a plate; brightened from an earlier #94a7b8, which cleared 4.5:1 on --plate and --plate-fill but only 4.41:1 on --plate-fill-2 */
+  /* ---- Plate primitives: the four dark technical figures only. Alias
+     --ink, a solid neutral, not the flood gradient — the flood is reserved
+     for new full-bleed homepage hero markup exclusively (see its own
+     definition in tokens.css), never repurposed for an existing panel. ---- */
+  --plate: var(--ink);
+  --plate-fill: var(--ink); /* gateway / control-plane / terminal cards */
+  --plate-fill-2: color-mix(in srgb, var(--ink) 82%, var(--white)); /* Cell boxes, one tier lighter: the raised element */
+  --plate-line: var(--hairline-d); /* borders and rules inside a plate */
+  --plate-ink: var(--on-flood); /* primary text on a plate */
+  --plate-ink-soft: var(--on-flood-soft); /* secondary text on a plate */
 
   /* ---- Primitives: type. Serif for headings, sans for body and UI, mono
-     restricted to actual machine output. ---- */
+     restricted to actual machine output. Source Serif 4 is now loaded
+     app-wide (apps/web/src/app/layout.tsx), not scoped to this route. ---- */
   --font-serif: var(--font-source-serif), Georgia, 'Times New Roman', serif;
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);
