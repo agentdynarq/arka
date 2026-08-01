@@ -15,7 +15,10 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$HERE/.." && pwd)"
 MEDIA_DIR="$REPO_ROOT/apps/web/public/media"
 DOCS_MEDIA_DIR="$REPO_ROOT/docs/media"
-MAX_VIDEO_BYTES=$((400 * 1024))
+# 400 * 1000, not 400 * 1024, so the output is under 400KB whether the budget is
+# read as decimal kB or binary KiB. The difference is 9,600 bytes and a webm can
+# land in exactly that gap.
+MAX_VIDEO_BYTES=$((400 * 1000))
 
 require() {
   command -v "$1" >/dev/null 2>&1 || { echo "capture-optimise: '$1' is required but not on PATH" >&2; exit 1; }
@@ -116,8 +119,21 @@ convert_quarantine_video() {
 
   ffmpeg -y -loglevel error -i "$gif" -vframes 1 -q:v 3 "$poster"
   echo "  quarantine-poster.jpg: $(( $(file_size "$poster") / 1024 ))KB"
+
+  # docs/media is where the recording lives, apps/web/public/media is what the
+  # site actually serves. quarantine.gif is already in both; the mp4, webm and
+  # poster that replace it have to be too or the homepage <video> 404s.
+  mkdir -p "$MEDIA_DIR"
+  cp "$mp4" "$webm" "$poster" "$MEDIA_DIR/"
+  echo "  published mp4, webm and poster to $MEDIA_DIR"
 }
 
-optimise_all_pngs
-convert_quarantine_video
+case "${1:-all}" in
+  png) optimise_all_pngs ;;
+  # Re-encoding already-verified captures for a lossless byte saving is not worth
+  # invalidating a reviewed frame, so a video-only run stays available.
+  video) convert_quarantine_video ;;
+  all) optimise_all_pngs; convert_quarantine_video ;;
+  *) echo "usage: capture-optimise.sh [all|png|video]" >&2; exit 1 ;;
+esac
 echo "capture-optimise: done"
