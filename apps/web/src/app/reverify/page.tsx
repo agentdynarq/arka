@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { reVerify, login, verifyMfa, checkDemoModeEnabled, ApiError } from '@/lib/api'
 import { storeSession } from '@/lib/session'
-import { SplitHero, Stepper, Field, Button, Alert, OtpInput } from '@arka/ui'
+import { Stepper, Field, Button, Alert, OtpInput } from '@arka/ui'
 import { DemoMfaWidget } from '@/components/DemoMfaWidget'
 
 type Step = 're-verify' | 'login' | 'mfa'
@@ -12,33 +12,18 @@ type Step = 're-verify' | 'login' | 'mfa'
 const STEP_LABELS = ['Verify identity', 'Sign in', 'Confirm access']
 const STEP_INDEX: Record<Step, number> = { 're-verify': 0, login: 1, mfa: 2 }
 
-const BULLETS = [
-  {
-    title: 'Your records survived',
-    description: 'Customer data was preserved in secure backups. Nothing about you was lost.',
-  },
-  {
-    title: 'Verified ledger',
-    description: 'Every balance is restored from a tamper-evident ledger and verified before you see it.',
-  },
-  {
-    title: 'No master key',
-    description: 'No single secret controls this bank anymore. Recovery requires independent keyholders.',
-  },
-]
-
 /**
- * Screen W1: regain access. Matches the Phase 1 wireframe's split layout
- * (figma.com/design/SfK9xpHnONjJvRcfbLt8Av): a dark trust panel beside the
- * live form. Three steps, matching the "done when" bar for 28 July lane B:
- * a seeded customer re-verifies against the preserved registry (FR-01),
- * passes MFA (FR-03), and reaches a real dashboard.
+ * Screen W1: regain access. A centred card on the shared light ground, same
+ * anatomy as W2-W6, not the earlier dark split-hero treatment. Three steps,
+ * matching the "done when" bar for 28 July lane B: a seeded customer
+ * re-verifies against the preserved registry (FR-01), passes MFA (FR-03), and
+ * reaches a real dashboard.
  *
  * The wireframe's step 1 fields (NIC, mobile, email) assume a different
  * backend matching model than what FR-01 actually implements here
  * (customerId plus registryDocumentId, see apps/identity's ReVerifyController).
- * The visual treatment matches the wireframe; the fields stay bound to the
- * real API rather than fields that would look right but not work.
+ * The fields stay bound to the real API rather than fields that would look
+ * right but not work.
  */
 export default function ReVerifyPage() {
   const router = useRouter()
@@ -117,93 +102,96 @@ export default function ReVerifyPage() {
   }
 
   return (
-    <SplitHero
-      tagline="Banking that survives."
-      headline={
-        <>
-          Your money is intact.
-          <br />
-          Let&apos;s get you back to it.
-        </>
-      }
-      bullets={BULLETS}
-      footer="ARKA · CELL-ISOLATED BANKING PLATFORM"
-    >
-      <div style={{ width: '100%', maxWidth: 460 }}>
-        <p className="ui-panel__eyebrow">RESTORE ACCESS</p>
-        <Stepper steps={STEP_LABELS} current={STEP_INDEX[step]} />
+    <div className="ui-shell">
+      <main className="ui-main">
+        <div className="ui-main__inner">
+          <div className="ui-signin-brand">
+            <img src="/brand/logo-mark-blue.png" alt="" width={24} height={24} className="ui-sidebar__mark" />
+            <span className="ui-signin-wordmark">ARKA</span>
+          </div>
+          <p className="ui-signin-tagline">Your money is intact. Let&apos;s get you back to it.</p>
 
-        {error && <Alert>{error}</Alert>}
+          <div className="ui-panel">
+            <p className="ui-panel__eyebrow">RESTORE ACCESS</p>
+            <Stepper steps={STEP_LABELS} current={STEP_INDEX[step]} />
 
-        {step === 're-verify' && (
-          <form onSubmit={handleReVerify}>
-            <h1 className="ui-panel__title">Re-verify your identity</h1>
-            <p className="ui-panel__subtitle">
-              We match you against the preserved customer registry. Liveness check is simulated.
-            </p>
-            <Field id="customerId" label="Customer ID" value={customerId} onChange={(e) => setCustomerId(e.target.value)} required />
-            <Field
-              id="registryDocumentId"
-              label="Registry document ID"
-              value={registryDocumentId}
-              onChange={(e) => setRegistryDocumentId(e.target.value)}
-              required
-            />
-            <Button type="submit" disabled={busy}>
-              {busy ? 'Verifying...' : 'Continue to sign in'}
-            </Button>
-            <p className="ui-meta" style={{ marginTop: 'var(--space-4)' }}>
-              Having trouble? Visit an authorized agent with your NIC and we will verify you in person.
-            </p>
-          </form>
-        )}
+            {error && <Alert>{error}</Alert>}
 
-        {step === 'login' && (
-          <form onSubmit={handleLogin}>
-            <h1 className="ui-panel__title">Sign in</h1>
-            <p className="ui-panel__subtitle">Identity re-verified. Enter your credentials to continue.</p>
-            <Field id="username" label="Username" value={username} onChange={(e) => setUsername(e.target.value)} required />
-            <Field
-              id="password"
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            {demoMode && <p className="ui-meta" style={{ marginTop: -8, marginBottom: 'var(--space-4)' }}>Demo credentials pre-filled · demo mode only</p>}
-            <Button type="submit" disabled={busy}>
-              {busy ? 'Signing in...' : 'Sign in'}
-            </Button>
-            <p className="ui-meta" style={{ marginTop: 'var(--space-4)' }}>
-              Bank operator?{' '}
-              <a href="http://localhost:3300" className="ui-link-row__item">
-                Open the Recovery Console
-              </a>
-            </p>
-          </form>
-        )}
+            {step === 're-verify' && (
+              <form onSubmit={handleReVerify}>
+                <h1 className="ui-panel__title">Re-verify your identity</h1>
+                <p className="ui-panel__subtitle">
+                  We match you against the preserved customer registry. Liveness check is simulated.
+                </p>
+                <Field id="customerId" label="Customer ID" value={customerId} onChange={(e) => setCustomerId(e.target.value)} required />
+                <Field
+                  id="registryDocumentId"
+                  label="Registry document ID"
+                  value={registryDocumentId}
+                  onChange={(e) => setRegistryDocumentId(e.target.value)}
+                  required
+                />
+                <Button type="submit" disabled={busy}>
+                  {busy ? 'Verifying...' : 'Continue to sign in'}
+                </Button>
+                <p className="ui-meta" style={{ marginTop: 'var(--space-4)' }}>
+                  Having trouble? Visit an authorized agent with your NIC and we will verify you in person.
+                </p>
+              </form>
+            )}
 
-        {step === 'mfa' && (
-          <form onSubmit={handleMfa}>
-            <h1 className="ui-panel__title">Verify your identity</h1>
-            <p className="ui-panel__subtitle">Enter the 6-digit code from your authenticator app.</p>
-            <div style={{ marginBottom: 'var(--space-2)' }}>
-              <OtpInput value={totpCode} onChange={setTotpCode} autoFocus />
-            </div>
-            <div style={{ marginBottom: 'var(--space-4)' }}>
-              <DemoMfaWidget username={username} />
-            </div>
-            <Button type="submit" disabled={busy}>
-              {busy ? 'Verifying...' : 'Verify and continue'}
-            </Button>
-          </form>
-        )}
+            {step === 'login' && (
+              <form onSubmit={handleLogin}>
+                <h1 className="ui-panel__title">Sign in</h1>
+                <p className="ui-panel__subtitle">Identity re-verified. Enter your credentials to continue.</p>
+                <Field id="username" label="Username" value={username} onChange={(e) => setUsername(e.target.value)} required />
+                <Field
+                  id="password"
+                  label="Password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                {demoMode && (
+                  <p className="ui-meta" style={{ marginTop: -8, marginBottom: 'var(--space-4)' }}>
+                    Demo credentials pre-filled · demo mode only
+                  </p>
+                )}
+                <Button type="submit" disabled={busy}>
+                  {busy ? 'Signing in...' : 'Sign in'}
+                </Button>
+                <p className="ui-meta" style={{ marginTop: 'var(--space-4)' }}>
+                  Bank operator?{' '}
+                  <a href="http://localhost:3300" className="ui-link-row__item">
+                    Open the Recovery Console
+                  </a>
+                </p>
+              </form>
+            )}
 
-        <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 'var(--space-6)', paddingTop: 'var(--space-4)' }}>
-          <span className="ui-meta">Secured with TLS 1.3 · protected by step-up authentication</span>
+            {step === 'mfa' && (
+              <form onSubmit={handleMfa}>
+                <h1 className="ui-panel__title">Verify your identity</h1>
+                <p className="ui-panel__subtitle">Enter the 6-digit code from your authenticator app.</p>
+                <div style={{ marginBottom: 'var(--space-2)' }}>
+                  <OtpInput value={totpCode} onChange={setTotpCode} autoFocus />
+                </div>
+                <div style={{ marginBottom: 'var(--space-4)' }}>
+                  <DemoMfaWidget username={username} />
+                </div>
+                <Button type="submit" disabled={busy}>
+                  {busy ? 'Verifying...' : 'Verify and continue'}
+                </Button>
+              </form>
+            )}
+          </div>
+
+          <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 'var(--space-6)', paddingTop: 'var(--space-4)' }}>
+            <span className="ui-meta">Secured with TLS 1.3 · protected by step-up authentication</span>
+          </div>
         </div>
-      </div>
-    </SplitHero>
+      </main>
+    </div>
   )
 }

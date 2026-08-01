@@ -1004,7 +1004,33 @@ body {
   }
 }
 
-/* ---- Split hero (screen W1) ---- */
+/* ---- Sign-in brand (screen W1, the centred-card treatment) ---- */
+
+.ui-signin-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.ui-signin-wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-lg);
+  letter-spacing: 0.1em;
+  color: var(--ink);
+}
+
+.ui-signin-tagline {
+  margin: 0 0 var(--space-6);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.5rem;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+/* ---- Split hero (unused since W1's rebuild, kept for its own README note) ---- */
 
 .ui-split-hero {
   display: flex;
