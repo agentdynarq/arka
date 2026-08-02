@@ -106,7 +106,7 @@ export default function ReVerifyPage() {
     <div className="signin">
       <div className="signin__bg-container" aria-hidden="true">
         <img
-          src="/api/reverify-bg"
+          src="/media/reverify-bg.png"
           alt=""
           className="signin__bg-image"
         />
