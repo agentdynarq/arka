@@ -61,11 +61,11 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* 00 · HERO — an indigo flood panel, inset from the page edges, the
+      {/* 00 · HERO: an indigo flood panel, inset from the page edges, the
           one deliberate break from the rest of the page's one-grid system
           (see the file header comment). Everything that was here before
           the flood pass is still here: the gapped transaction line, the
-          NO ROUTE EXISTS dimension label, the stat strip — recoloured
+          NO ROUTE EXISTS dimension label, the stat strip, recoloured
           onto var(--ink)/var(--on-flood-soft) rather than paper, which
           they already resolve to correctly through the alias chain
           @arka/ui/tokens.css and this file's own primitives both went
@@ -218,7 +218,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Value strip — immediately below the hero, full width, on --dw-panel.
+      {/* Value strip: immediately below the hero, full width, on --dw-panel.
           Four measured values, not four invented claims: same numbers as
           the hero's own stat strip and the verify-ledger terminal below,
           restated as one line each instead of a mono-only capsule row. */}
@@ -239,7 +239,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* PRODUCT SHOWCASE — unnumbered interstitial, like the value strip
+      {/* PRODUCT SHOWCASE: unnumbered interstitial, like the value strip
           above it, not one of the file's own ten numbered chapters.
           Screenshots become the brightest thing on the page now that the
           ground is dark, which is exactly right, so .dw-showcase__img
@@ -298,7 +298,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 01 · THE FAILURE — full-bleed diagram, mono eyebrow as the only heading */}
+      {/* 01 · THE FAILURE: full-bleed diagram, mono eyebrow as the only heading */}
       <section className="dw-zone" id="failure" style={{ '--rule-delay': '60ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-section">
           <span className="dw-eyebrow">
@@ -371,7 +371,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CONTRAST PAIR — unnumbered, like the value strip and the product
+      {/* CONTRAST PAIR: unnumbered, like the value strip and the product
           showcase above it. Restates the same claim sections 01 and 03
           already make, in a visual device neither of those uses: two
           panels side by side, chaos against calm, same real service names
@@ -421,7 +421,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 02 · DOCTRINE 01 — single centered statement, the page's one quiet moment */}
+      {/* 02 · DOCTRINE 01: single centered statement, the page's one quiet moment */}
       <section className="dw-zone dw-zone--tint" id="doctrines" style={{ '--rule-delay': '120ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-section dw-section--narrow dw-doctrine-quiet">
           <span className="dw-eyebrow">
@@ -435,7 +435,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 03 · DOCTRINE 02 — dense spec table, claim / mechanism / path / proof */}
+      {/* 03 · DOCTRINE 02: dense spec table, claim / mechanism / path / proof */}
       <section className="dw-zone" style={{ '--rule-delay': '180ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-section">
           <span className="dw-eyebrow">
@@ -479,7 +479,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 04 · DOCTRINE 03 — right-aligned, the page's one right-flowing section */}
+      {/* 04 · DOCTRINE 03: right-aligned, the page's one right-flowing section */}
       <section className="dw-zone" style={{ '--rule-delay': '240ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-section">
           <div className="dw-doctrine-mirror">
@@ -492,7 +492,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* DOCTRINE GRID — unnumbered, like the value strip, product showcase
+      {/* DOCTRINE GRID: unnumbered, like the value strip, product showcase
           and contrast pair above it. Same three doctrines sections 02-04
           each already state on their own, recapped together in one device
           none of those three use: a 3-up bordered grid with corner tick
@@ -536,7 +536,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 05 · ARCHITECTURE — on the grid like every other section; the void
+      {/* 05 · ARCHITECTURE: on the grid like every other section; the void
           animation is the interest here, not the diagram's width */}
       <section className="dw-zone" id="architecture" style={{ '--rule-delay': '300ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-section">
@@ -771,7 +771,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 06 · PROOF — paper ground, like every other section. Only the
+      {/* 06 · PROOF: paper ground, like every other section. Only the
           verify-ledger terminal (plate d) stays dark; the status timeline
           and the 403 sit directly on paper. */}
       <section className="dw-zone" id="proof" style={{ '--rule-delay': '360ms' } as React.CSSProperties}>
@@ -870,7 +870,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 07 · CELL AS CONFIGURATION — compact, almost a footnote */}
+      {/* 07 · CELL AS CONFIGURATION: compact, almost a footnote */}
       <section className="dw-zone dw-zone--tint" style={{ '--rule-delay': '420ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-section">
           <div className="dw-config__row">
@@ -898,7 +898,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 08 · SURFACES — the light paper zone, unchanged */}
+      {/* 08 · SURFACES: the light paper zone, unchanged */}
       <section className="dw-zone" id="surfaces" style={{ '--rule-delay': '480ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-section">
           <span className="dw-eyebrow">
@@ -963,7 +963,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 09 · HONEST SCOPE — legal-appendix register, two columns */}
+      {/* 09 · HONEST SCOPE: legal-appendix register, two columns */}
       <section className="dw-zone" id="scope" style={{ '--rule-delay': '540ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-section">
           <span className="dw-eyebrow">
@@ -1015,7 +1015,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* QUARANTINE VIDEO — split out of the old combined final-CTA block now
+      {/* QUARANTINE VIDEO: split out of the old combined final-CTA block now
           that the final CTA below gets its own full-bleed flood treatment. */}
       <section className="dw-zone" style={{ '--rule-delay': '600ms' } as React.CSSProperties}>
         <div className="dw-zone__inner dw-final__inner">
@@ -1038,7 +1038,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FINAL CTA — full-bleed flood, like the hero. Headline and subhead
+      {/* FINAL CTA: full-bleed flood, like the hero. Headline and subhead
           are both exact reuses of real phrases already on this page
           ("Banking that survives." from the hero, "Prefer verifiable to
           impressive." from Proof's own heading), not new copy. Logo
@@ -1088,7 +1088,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FOOTER — six real link columns, dense: same-page anchors, the two
+      {/* FOOTER: six real link columns, dense: same-page anchors, the two
           real internal routes, and GitHub blob links to files confirmed
           present in this repo (docs/ARCHITECTURE.md, docs/RUNBOOK.md,
           USER-GUIDE.md, LICENSE), not invented pages. */}
