@@ -24,6 +24,10 @@ interface CellRow {
   integrity?: IntegrityEvidence
 }
 
+/** Poll cadence for the health map, and how many polls the latency graph keeps. */
+const REFRESH_MS = 5000
+const LATENCY_HISTORY = 60
+
 const STATUS_TONE: Record<CellHealthSnapshot['status'], BadgeTone> = {
   healthy: 'success',
   degraded: 'warning',
@@ -95,91 +99,136 @@ const PHASE_3_ACTIONS = [
  * into the sidebar (`lib/operator-context.tsx`), not a real session, same
  * simplification the FR-02 account-opening flow made for KYC review.
  */
-function CellLatencyGraph({ cell1Latency = 8, cell2Latency = 12 }: { cell1Latency?: number; cell2Latency?: number }) {
-  const cell1Data = [10, 14, 9, 12, 8, 11, 7, 9, cell1Latency || 8]
-  const cell2Data = [15, 18, 14, 16, 12, 15, 11, 13, cell2Latency || 12]
-  const timestamps = ['1:15', '1:17', '1:19', '1:21', '1:23', '1:25', '1:27', '1:29', 'Now']
+/** One poll of the health map, kept so the graph can plot a real history. */
+interface LatencySample {
+  at: Date
+  byCell: Record<string, number | undefined>
+}
+
+const SERIES_COLOURS = ['#4F46E5', '#0D9488', '#B45309', '#7C3AED']
+
+/**
+ * Latency over time, plotted only from samples this page actually observed.
+ * Nothing is seeded, back-filled or smoothed: before two polls have landed
+ * the panel says it is still collecting rather than drawing a line. Cells are
+ * whatever the health map returned, never a hardcoded cell-1/cell-2 pair.
+ */
+function CellLatencyGraph({ samples, intervalMs }: { samples: LatencySample[]; intervalMs: number }) {
+  const cellIds = useMemo(() => {
+    const seen = new Set<string>()
+    for (const sample of samples) for (const id of Object.keys(sample.byCell)) seen.add(id)
+    return [...seen].sort()
+  }, [samples])
+
+  const observed = samples.flatMap((s) => Object.values(s.byCell)).filter((v): v is number => v !== undefined)
+  const windowSeconds = Math.round((samples.length * intervalMs) / 1000)
+
+  /** P95 of what was actually measured. Fewer than 20 samples cannot support one, so it is not shown. */
+  const p95 = useMemo(() => {
+    if (observed.length < 20) return null
+    const sorted = [...observed].sort((a, b) => a - b)
+    return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)]
+  }, [observed])
 
   const width = 600
   const height = 140
   const padding = 20
+  const max = Math.max(10, ...observed) * 1.15
 
-  const getPoints = (data: number[]) => {
-    const max = 25
-    const step = (width - padding * 2) / (data.length - 1)
-    return data.map((val, i) => {
-      const x = padding + i * step
-      const y = height - padding - (val / max) * (height - padding * 2)
-      return `${x.toFixed(1)},${y.toFixed(1)}`
-    })
+  function pointsFor(cellId: string) {
+    if (samples.length < 2) return ''
+    const step = (width - padding * 2) / (samples.length - 1)
+    return samples
+      .map((sample, i) => {
+        const value = sample.byCell[cellId]
+        if (value === undefined) return null
+        const x = padding + i * step
+        const y = height - padding - (value / max) * (height - padding * 2)
+        return `${x.toFixed(1)},${y.toFixed(1)}`
+      })
+      .filter((p): p is string => p !== null)
+      .join(' ')
   }
 
-  const points1 = getPoints(cell1Data).join(' ')
-  const points2 = getPoints(cell2Data).join(' ')
-
-  const area1 = `${padding},${height - padding} ${points1} ${width - padding},${height - padding}`
-  const area2 = `${padding},${height - padding} ${points2} ${width - padding},${height - padding}`
+  const latest = samples[samples.length - 1]
+  const axisLabels = samples.length >= 2 ? [samples[0], samples[samples.length - 1]] : []
 
   return (
-    <Panel title="Cell Probe Latency & Performance" subtitle="Real-time network response times (ms) across isolated Cell nodes">
+    <Panel
+      title="Cell probe latency"
+      subtitle={`Sampled every ${Math.round(intervalMs / 1000)}s by this console since it was opened. History is not stored server-side, so it starts empty on every load.`}
+    >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-          <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#4F46E5' }} />
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
-                Cell 1: <strong style={{ color: '#4F46E5' }}>{cell1Latency}ms</strong>
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#0D9488' }} />
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
-                Cell 2: <strong style={{ color: '#0D9488' }}>{cell2Latency}ms</strong>
-              </span>
-            </div>
+          <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
+            {cellIds.map((cellId, i) => {
+              const colour = SERIES_COLOURS[i % SERIES_COLOURS.length]
+              const value = latest?.byCell[cellId]
+              return (
+                <div key={cellId} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: colour }} />
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                    {cellId}: <strong style={{ color: colour }}>{value !== undefined ? `${value}ms` : 'no reading'}</strong>
+                  </span>
+                </div>
+              )
+            })}
           </div>
 
           <div style={{ display: 'flex', gap: 16, fontSize: '12px', color: '#64748B' }}>
-            <span>P95: <strong>14ms</strong></span>
-            <span>P99: <strong>18ms</strong></span>
-            <span>Uptime: <strong style={{ color: '#059669' }}>99.99%</strong></span>
+            <span>
+              Samples: <strong>{samples.length}</strong>
+            </span>
+            <span>
+              Window: <strong>{windowSeconds}s</strong>
+            </span>
+            {p95 !== null && (
+              <span>
+                P95: <strong>{p95}ms</strong>
+              </span>
+            )}
           </div>
         </div>
 
-        <div style={{ width: '100%', overflowX: 'auto' }}>
-          <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
-            <defs>
-              <linearGradient id="cell1Grad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#4F46E5" stopOpacity="0.25" />
-                <stop offset="100%" stopColor="#4F46E5" stopOpacity="0.0" />
-              </linearGradient>
-              <linearGradient id="cell2Grad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#0D9488" stopOpacity="0.25" />
-                <stop offset="100%" stopColor="#0D9488" stopOpacity="0.0" />
-              </linearGradient>
-            </defs>
+        {samples.length < 2 ? (
+          <p className="ui-meta" style={{ margin: 0 }}>
+            Collecting samples. The first line appears after the second poll.
+          </p>
+        ) : (
+          <div style={{ width: '100%', overflowX: 'auto' }}>
+            <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+              <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="#F1F5F9" strokeWidth="1" />
+              <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="#F1F5F9" strokeWidth="1" />
+              <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#E2E8F0" strokeWidth="1" />
 
-            <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="#F1F5F9" strokeWidth="1" />
-            <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="#F1F5F9" strokeWidth="1" />
-            <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#E2E8F0" strokeWidth="1" />
+              {cellIds.map((cellId, i) => (
+                <polyline
+                  key={cellId}
+                  points={pointsFor(cellId)}
+                  fill="none"
+                  stroke={SERIES_COLOURS[i % SERIES_COLOURS.length]}
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              ))}
 
-            <polygon points={area2} fill="url(#cell2Grad)" />
-            <polygon points={area1} fill="url(#cell1Grad)" />
-
-            <polyline points={points2} fill="none" stroke="#0D9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            <polyline points={points1} fill="none" stroke="#4F46E5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-
-            {timestamps.map((t, i) => {
-              const x = padding + i * ((width - padding * 2) / (timestamps.length - 1))
-              return (
-                <text key={t} x={x} y={height - 4} textAnchor="middle" fontSize="9" fill="#94A3B8" fontFamily="sans-serif">
-                  {t}
+              {axisLabels.map((sample, i) => (
+                <text
+                  key={sample.at.toISOString()}
+                  x={i === 0 ? padding : width - padding}
+                  y={height - 4}
+                  textAnchor={i === 0 ? 'start' : 'end'}
+                  fontSize="9"
+                  fill="#94A3B8"
+                  fontFamily="sans-serif"
+                >
+                  {sample.at.toLocaleTimeString()}
                 </text>
-              )
-            })}
-          </svg>
-        </div>
+              ))}
+            </svg>
+          </div>
+        )}
       </div>
     </Panel>
   )
@@ -193,6 +242,7 @@ export default function HealthMapPage() {
   const [reasons, setReasons] = useState<Record<string, string>>({})
   const [busyCellId, setBusyCellId] = useState<string | null>(null)
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null)
+  const [latencySamples, setLatencySamples] = useState<LatencySample[]>([])
 
   const [auditSearch, setAuditSearch] = useState('')
   const [auditFilter, setAuditFilter] = useState('all')
@@ -240,7 +290,13 @@ export default function HealthMapPage() {
       )
       setRows(withDetail)
       setTrail(await fetchAuditTrail())
-      setLastRefreshedAt(new Date())
+      const at = new Date()
+      setLatencySamples((prev) => {
+        const byCell: Record<string, number | undefined> = {}
+        for (const row of withDetail) byCell[row.health.cellId] = row.health.latencyMs
+        return [...prev, { at, byCell }].slice(-LATENCY_HISTORY)
+      })
+      setLastRefreshedAt(at)
       setError(null)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not reach the Recovery Console API')
@@ -249,7 +305,7 @@ export default function HealthMapPage() {
 
   useEffect(() => {
     refresh()
-    const interval = setInterval(refresh, 5000)
+    const interval = setInterval(refresh, REFRESH_MS)
     return () => clearInterval(interval)
   }, [refresh])
 
@@ -297,10 +353,7 @@ export default function HealthMapPage() {
               { label: 'Pending approvals', value: String(pendingCount), context: 'Awaiting a second, distinct operator' },
             ]}
           />
-          <CellLatencyGraph
-            cell1Latency={rows.find((r) => r.health.cellId === 'cell-1')?.health.latencyMs ?? 8}
-            cell2Latency={rows.find((r) => r.health.cellId === 'cell-2')?.health.latencyMs ?? 12}
-          />
+          <CellLatencyGraph samples={latencySamples} intervalMs={REFRESH_MS} />
         </>
       )}
 
