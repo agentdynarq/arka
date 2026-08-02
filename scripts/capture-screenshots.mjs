@@ -37,6 +37,8 @@ const WEB = process.env.WEB_URL ?? 'http://127.0.0.1:3000'
 const CONSOLE = process.env.CONSOLE_URL ?? 'http://127.0.0.1:3300'
 const VIEWPORT = { width: 1440, height: 900 }
 const DEVICE_SCALE_FACTOR = 2
+/** Must match REFRESH_MS in apps/console/src/app/health-map/page.tsx. */
+const HEALTH_POLL_MS = 5000
 
 const ALICE_USERNAME = 'alice'
 const ALICE_PASSWORD = 'demo-password-123'
@@ -165,6 +167,16 @@ async function captureHealthMapPending(browser) {
     // quarantine state arrive on separate fetches, so the card can paint a frame
     // before the state does, and the whole point of this shot is that banner.
     await cell1Card.getByText(/awaiting second approval/i).waitFor()
+    // The latency graph plots only samples this console has itself observed, so
+    // it is empty on arrival and gains one point per poll. Shooting immediately
+    // captures the honest but useless "collecting samples" state, so wait for
+    // the first line to exist and then for a few more polls to give it shape.
+    await page.locator('svg polyline').first().waitFor({ timeout: 30_000 })
+    await page.waitForTimeout(HEALTH_POLL_MS * 4)
+    // That graph is tall enough to push the Cell cards off a 900px viewport, and
+    // the pending banner is what this shot is for. Scrolling the card into view
+    // keeps the banner in frame with the tail of the graph still above it.
+    await cell1Card.scrollIntoViewIfNeeded()
     await page.waitForTimeout(300)
     await shot(page, '03-console-health-map.png')
   } finally {
