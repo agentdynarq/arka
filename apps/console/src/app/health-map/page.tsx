@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   fetchHealthMap,
@@ -14,7 +14,7 @@ import {
   ApiError,
 } from '@/lib/api'
 import type { CellHealthSnapshot, QuarantineStatus, AuditTrailEntry, IntegrityEvidence } from '@/lib/api'
-import { PageHeader, OverviewStrip, Panel, Field, Button, Alert, Badge, Skeleton, EmptyState, Row } from '@arka/ui'
+import { PageHeader, OverviewStrip, Panel, Field, SelectField, Button, Alert, Badge, Skeleton, EmptyState, Row } from '@arka/ui'
 import type { BadgeTone } from '@arka/ui'
 import { useOperatorId } from '@/lib/operator-context'
 
@@ -23,6 +23,10 @@ interface CellRow {
   quarantine: QuarantineStatus
   integrity?: IntegrityEvidence
 }
+
+/** Poll cadence for the health map, and how many polls the latency graph keeps. */
+const REFRESH_MS = 5000
+const LATENCY_HISTORY = 60
 
 const STATUS_TONE: Record<CellHealthSnapshot['status'], BadgeTone> = {
   healthy: 'success',
@@ -95,6 +99,141 @@ const PHASE_3_ACTIONS = [
  * into the sidebar (`lib/operator-context.tsx`), not a real session, same
  * simplification the FR-02 account-opening flow made for KYC review.
  */
+/** One poll of the health map, kept so the graph can plot a real history. */
+interface LatencySample {
+  at: Date
+  byCell: Record<string, number | undefined>
+}
+
+const SERIES_COLOURS = ['#4F46E5', '#0D9488', '#B45309', '#7C3AED']
+
+/**
+ * Latency over time, plotted only from samples this page actually observed.
+ * Nothing is seeded, back-filled or smoothed: before two polls have landed
+ * the panel says it is still collecting rather than drawing a line. Cells are
+ * whatever the health map returned, never a hardcoded cell-1/cell-2 pair.
+ */
+function CellLatencyGraph({ samples, intervalMs }: { samples: LatencySample[]; intervalMs: number }) {
+  const cellIds = useMemo(() => {
+    const seen = new Set<string>()
+    for (const sample of samples) for (const id of Object.keys(sample.byCell)) seen.add(id)
+    return [...seen].sort()
+  }, [samples])
+
+  const observed = samples.flatMap((s) => Object.values(s.byCell)).filter((v): v is number => v !== undefined)
+  const windowSeconds = Math.round((samples.length * intervalMs) / 1000)
+
+  /** P95 of what was actually measured. Fewer than 20 samples cannot support one, so it is not shown. */
+  const p95 = useMemo(() => {
+    if (observed.length < 20) return null
+    const sorted = [...observed].sort((a, b) => a - b)
+    return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)]
+  }, [observed])
+
+  const width = 600
+  const height = 140
+  const padding = 20
+  const max = Math.max(10, ...observed) * 1.15
+
+  function pointsFor(cellId: string) {
+    if (samples.length < 2) return ''
+    const step = (width - padding * 2) / (samples.length - 1)
+    return samples
+      .map((sample, i) => {
+        const value = sample.byCell[cellId]
+        if (value === undefined) return null
+        const x = padding + i * step
+        const y = height - padding - (value / max) * (height - padding * 2)
+        return `${x.toFixed(1)},${y.toFixed(1)}`
+      })
+      .filter((p): p is string => p !== null)
+      .join(' ')
+  }
+
+  const latest = samples[samples.length - 1]
+  const axisLabels = samples.length >= 2 ? [samples[0], samples[samples.length - 1]] : []
+
+  return (
+    <Panel
+      title="Cell probe latency"
+      subtitle={`Sampled every ${Math.round(intervalMs / 1000)}s by this console since it was opened. History is not stored server-side, so it starts empty on every load.`}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
+            {cellIds.map((cellId, i) => {
+              const colour = SERIES_COLOURS[i % SERIES_COLOURS.length]
+              const value = latest?.byCell[cellId]
+              return (
+                <div key={cellId} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: colour }} />
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                    {cellId}: <strong style={{ color: colour }}>{value !== undefined ? `${value}ms` : 'no reading'}</strong>
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+
+          <div style={{ display: 'flex', gap: 16, fontSize: '12px', color: '#64748B' }}>
+            <span>
+              Samples: <strong>{samples.length}</strong>
+            </span>
+            <span>
+              Window: <strong>{windowSeconds}s</strong>
+            </span>
+            {p95 !== null && (
+              <span>
+                P95: <strong>{p95}ms</strong>
+              </span>
+            )}
+          </div>
+        </div>
+
+        {samples.length < 2 ? (
+          <p className="ui-meta" style={{ margin: 0 }}>
+            Collecting samples. The first line appears after the second poll.
+          </p>
+        ) : (
+          <div style={{ width: '100%', overflowX: 'auto' }}>
+            <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+              <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="#F1F5F9" strokeWidth="1" />
+              <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="#F1F5F9" strokeWidth="1" />
+              <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#E2E8F0" strokeWidth="1" />
+
+              {cellIds.map((cellId, i) => (
+                <polyline
+                  key={cellId}
+                  points={pointsFor(cellId)}
+                  fill="none"
+                  stroke={SERIES_COLOURS[i % SERIES_COLOURS.length]}
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              ))}
+
+              {axisLabels.map((sample, i) => (
+                <text
+                  key={sample.at.toISOString()}
+                  x={i === 0 ? padding : width - padding}
+                  y={height - 4}
+                  textAnchor={i === 0 ? 'start' : 'end'}
+                  fontSize="9"
+                  fill="#94A3B8"
+                  fontFamily="sans-serif"
+                >
+                  {sample.at.toLocaleTimeString()}
+                </text>
+              ))}
+            </svg>
+          </div>
+        )}
+      </div>
+    </Panel>
+  )
+}
+
 export default function HealthMapPage() {
   const [operatorId] = useOperatorId()
   const [rows, setRows] = useState<CellRow[] | null>(null)
@@ -103,6 +242,41 @@ export default function HealthMapPage() {
   const [reasons, setReasons] = useState<Record<string, string>>({})
   const [busyCellId, setBusyCellId] = useState<string | null>(null)
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null)
+  const [latencySamples, setLatencySamples] = useState<LatencySample[]>([])
+
+  const [auditSearch, setAuditSearch] = useState('')
+  const [auditFilter, setAuditFilter] = useState('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const PAGE_SIZE = 5
+
+  const filteredTrail = useMemo(() => {
+    return trail.filter((entry) => {
+      if (auditFilter === 'quarantine' && !entry.action.startsWith('quarantine.')) return false
+      if (auditFilter === 'lift' && !entry.action.startsWith('lift.')) return false
+      if (auditFilter === 'cell-1' && entry.cellId !== 'cell-1') return false
+      if (auditFilter === 'cell-2' && entry.cellId !== 'cell-2') return false
+
+      if (auditSearch.trim()) {
+        const q = auditSearch.toLowerCase()
+        const actorMatch = entry.actor.toLowerCase().includes(q)
+        const actionMatch = describeAction(entry.action).toLowerCase().includes(q) || entry.action.toLowerCase().includes(q)
+        const cellMatch = (entry.cellId ?? '').toLowerCase().includes(q)
+        return actorMatch || actionMatch || cellMatch
+      }
+
+      return true
+    })
+  }, [trail, auditFilter, auditSearch])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [auditSearch, auditFilter])
+
+  const totalPages = Math.max(1, Math.ceil(filteredTrail.length / PAGE_SIZE))
+  const paginatedTrail = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return filteredTrail.slice(start, start + PAGE_SIZE)
+  }, [filteredTrail, currentPage])
 
   const refresh = useCallback(async () => {
     try {
@@ -116,7 +290,13 @@ export default function HealthMapPage() {
       )
       setRows(withDetail)
       setTrail(await fetchAuditTrail())
-      setLastRefreshedAt(new Date())
+      const at = new Date()
+      setLatencySamples((prev) => {
+        const byCell: Record<string, number | undefined> = {}
+        for (const row of withDetail) byCell[row.health.cellId] = row.health.latencyMs
+        return [...prev, { at, byCell }].slice(-LATENCY_HISTORY)
+      })
+      setLastRefreshedAt(at)
       setError(null)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not reach the Recovery Console API')
@@ -125,7 +305,7 @@ export default function HealthMapPage() {
 
   useEffect(() => {
     refresh()
-    const interval = setInterval(refresh, 5000)
+    const interval = setInterval(refresh, REFRESH_MS)
     return () => clearInterval(interval)
   }, [refresh])
 
@@ -164,14 +344,17 @@ export default function HealthMapPage() {
 
       {!rows && !error && <Skeleton height="80px" />}
       {rows && (
-        <OverviewStrip
-          columns={[
-            { label: 'Cells healthy', value: `${healthyCount} of ${rows.length}` },
-            { label: 'Ledger head block', value: ledgerHeads || '-', context: 'Latest verified block per Cell' },
-            { label: 'Last probe latency', value: avgLatency !== null ? `${avgLatency}ms` : '-', context: 'Averaged across Cells' },
-            { label: 'Pending approvals', value: String(pendingCount), context: 'Awaiting a second, distinct operator' },
-          ]}
-        />
+        <>
+          <OverviewStrip
+            columns={[
+              { label: 'Cells healthy', value: `${healthyCount} of ${rows.length}` },
+              { label: 'Ledger head block', value: ledgerHeads || '-', context: 'Latest verified block per Cell' },
+              { label: 'Last probe latency', value: avgLatency !== null ? `${avgLatency}ms` : '-', context: 'Averaged across Cells' },
+              { label: 'Pending approvals', value: String(pendingCount), context: 'Awaiting a second, distinct operator' },
+            ]}
+          />
+          <CellLatencyGraph samples={latencySamples} intervalMs={REFRESH_MS} />
+        </>
       )}
 
       {!rows && !error && (
@@ -293,34 +476,105 @@ export default function HealthMapPage() {
       <div className="ui-dashboard">
         <div className="ui-dashboard__main">
           <Panel title="Audit trail" subtitle="Every operator action, append-only and hash-chained (FR-25).">
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <Field
+                  id="audit-search"
+                  label="Search audit trail"
+                  placeholder="Filter by operator, action, or cell..."
+                  value={auditSearch}
+                  onChange={(e) => setAuditSearch(e.target.value)}
+                />
+              </div>
+              <div style={{ width: 160 }}>
+                <SelectField
+                  id="audit-filter"
+                  label="Category"
+                  value={auditFilter}
+                  onChange={(e) => setAuditFilter(e.target.value)}
+                  options={[
+                    { value: 'all', label: 'All actions' },
+                    { value: 'quarantine', label: 'Quarantine only' },
+                    { value: 'lift', label: 'Lift only' },
+                    { value: 'cell-1', label: 'Cell-1' },
+                    { value: 'cell-2', label: 'Cell-2' },
+                  ]}
+                />
+              </div>
+            </div>
+
             <div data-testid="audit-trail">
-              {trail.length === 0 ? (
-                <EmptyState title="No operator actions recorded yet" hint="Quarantine or lift actions will appear here." />
+              {filteredTrail.length === 0 ? (
+                <EmptyState title="No matching audit entries" hint="Try adjusting your search query or category filter." />
               ) : (
-                <table className="ui-table">
-                  <thead>
-                    <tr>
-                      <th>Time</th>
-                      <th>Operator</th>
-                      <th>Action</th>
-                      <th>Cell</th>
-                      <th>Result</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {trail.map((entry) => (
-                      <tr key={entry.id} data-action={entry.action}>
-                        <td className="ui-hash">{new Date(entry.occurredAt).toLocaleTimeString()}</td>
-                        <td>{entry.actor}</td>
-                        <td>{describeAction(entry.action)}</td>
-                        <td className="ui-hash">{entry.cellId ?? '-'}</td>
-                        <td>
-                          <Badge tone={auditTone(entry.action)}>{describeResult(entry.action)}</Badge>
-                        </td>
+                <>
+                  <table className="ui-table">
+                    <thead>
+                      <tr>
+                        <th>Time</th>
+                        <th>Operator</th>
+                        <th>Action</th>
+                        <th>Cell</th>
+                        <th>Result</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {paginatedTrail.map((entry) => (
+                        <tr key={entry.id} data-action={entry.action}>
+                          <td className="ui-hash">{new Date(entry.occurredAt).toLocaleTimeString()}</td>
+                          <td>{entry.actor}</td>
+                          <td>{describeAction(entry.action)}</td>
+                          <td className="ui-hash">{entry.cellId ?? '-'}</td>
+                          <td>
+                            <Badge tone={auditTone(entry.action)}>{describeResult(entry.action)}</Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginTop: 16,
+                      paddingTop: 12,
+                      borderTop: '1px solid var(--hairline)',
+                      fontSize: '13px',
+                      color: 'var(--ink-soft)',
+                      flexWrap: 'wrap',
+                      gap: 12,
+                    }}
+                  >
+                    <span>
+                      Showing {Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredTrail.length)}–
+                      {Math.min(currentPage * PAGE_SIZE, filteredTrail.length)} of {filteredTrail.length} entries
+                    </span>
+
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <Button
+                        variant="secondary"
+                        fullWidth={false}
+                        disabled={currentPage <= 1}
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      >
+                        Previous
+                      </Button>
+                      <span style={{ fontWeight: 600, color: 'var(--ink)' }}>
+                        Page {currentPage} of {totalPages}
+                      </span>
+                      <Button
+                        variant="secondary"
+                        fullWidth={false}
+                        disabled={currentPage >= totalPages}
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           </Panel>

@@ -120,26 +120,39 @@ function IntegrityPageInner() {
         ))}
       </div>
 
-      <Panel title="Run a verification">
-        <div style={{ maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <SelectField
-            id="cell"
-            label="Cell"
-            value={selectedCellId}
-            onChange={(e) => setSelectedCellId(e.target.value)}
-            options={(overview ?? []).map((e) => ({ value: e.cellId, label: e.cellId }))}
-          />
-          <Field
-            id="upTo"
-            label="Up to block (optional, default genesis to head)"
-            inputMode="numeric"
-            placeholder="e.g. 100"
-            value={upTo}
-            onChange={(event) => setUpTo(event.target.value)}
-          />
-          <Button disabled={busy || !selectedCellId} onClick={() => runVerification(selectedCellId, parsedUpTo())}>
-            {busy ? 'Verifying...' : 'Run verification'}
-          </Button>
+      <Panel title="Run a verification" subtitle="Walk the hash chain block-by-block to detect any tampering or broken cryptographic links.">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px', alignItems: 'start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <SelectField
+              id="cell"
+              label="Cell"
+              value={selectedCellId}
+              onChange={(e) => setSelectedCellId(e.target.value)}
+              options={(overview ?? []).map((e) => ({ value: e.cellId, label: e.cellId }))}
+            />
+            <Field
+              id="upTo"
+              label="Up to block (optional, default genesis to head)"
+              inputMode="numeric"
+              placeholder="e.g. 100"
+              value={upTo}
+              onChange={(event) => setUpTo(event.target.value)}
+            />
+            <div style={{ marginTop: '8px' }}>
+              <Button disabled={busy || !selectedCellId} onClick={() => runVerification(selectedCellId, parsedUpTo())}>
+                {busy ? 'Verifying...' : 'Run verification'}
+              </Button>
+            </div>
+          </div>
+
+          <div style={{ padding: '20px 24px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+            <h4 style={{ margin: '0 0 10px', fontSize: '15px', fontWeight: 600, color: '#0F172A' }}>Ledger Verification Architecture</h4>
+            <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#475569', lineHeight: 1.6 }}>
+              <li style={{ marginBottom: '6px' }}><strong>Append-Only Double-Entry Ledger:</strong> Every transaction generates immutable, hash-chained blocks.</li>
+              <li style={{ marginBottom: '6px' }}><strong>Tamper Detection:</strong> Modifying a block breaks subsequent hash signatures instantly.</li>
+              <li><strong>Live Replay:</strong> State is reconstructed dynamically by verifying the block sequence.</li>
+            </ul>
+          </div>
         </div>
       </Panel>
 
@@ -152,11 +165,11 @@ function IntegrityPageInner() {
               alignItems: 'center',
               gap: 16,
               flexWrap: 'wrap',
-              padding: 'var(--space-4)',
-              borderRadius: 'var(--radius-md)',
+              padding: '16px 20px',
+              borderRadius: '10px',
               border: `1.4px solid ${evidence.result.ok ? 'var(--color-banner-success-border)' : 'var(--color-danger)'}`,
               background: evidence.result.ok ? 'var(--color-banner-success-bg)' : 'var(--color-danger-tint)',
-              marginBottom: 'var(--space-4)',
+              marginBottom: '20px',
             }}
           >
             <div>
@@ -172,8 +185,7 @@ function IntegrityPageInner() {
                   : `Chain broken at block ${evidence.result.brokenAt}: ${evidence.result.reason}`}
               </p>
               <p className="ui-meta" style={{ marginTop: 4 }}>
-                Balances are computed live from this chain on every read, never cached separately, so there is no stored
-                projection to diverge from it.
+                Balances are computed live from this chain on every read, never cached separately, so there is no stored projection to diverge from it.
               </p>
             </div>
             <a
@@ -185,51 +197,50 @@ function IntegrityPageInner() {
             </a>
           </div>
 
-          <dl className="ui-cell-panel__attrs">
-            <div className="ui-cell-panel__attr">
-              <dt>Status</dt>
-              <dd data-testid="evidence-status">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+            <div style={{ padding: '14px 18px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>Status</span>
+              <span data-testid="evidence-status">
                 <Badge tone={evidence.result.ok ? 'success' : 'danger'}>{evidence.result.ok ? 'clean' : 'broken'}</Badge>
-              </dd>
+              </span>
             </div>
-            <div className="ui-cell-panel__attr">
-              <dt>Verified at</dt>
-              <dd>{new Date(evidence.verifiedAt).toLocaleString()}</dd>
+
+            <div style={{ padding: '14px 18px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>Verified At</span>
+              <span style={{ fontSize: '13px', fontWeight: 600, fontFamily: 'var(--font-mono)', color: '#0F172A' }}>{new Date(evidence.verifiedAt).toLocaleTimeString()}</span>
             </div>
-            <div className="ui-cell-panel__attr">
-              <dt>Walked up to</dt>
-              <dd>{evidence.upTo ?? 'head'}</dd>
+
+            <div style={{ padding: '14px 18px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>Walked Up To</span>
+              <span style={{ fontSize: '13px', fontWeight: 600, fontFamily: 'var(--font-mono)', color: '#0F172A' }}>{evidence.upTo ?? 'head'}</span>
             </div>
-            <div className="ui-cell-panel__attr">
-              <dt>Records</dt>
-              <dd>{evidence.result.records}</dd>
+
+            <div style={{ padding: '14px 18px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>Records</span>
+              <span style={{ fontSize: '13px', fontWeight: 600, fontFamily: 'var(--font-mono)', color: '#0F172A' }}>{evidence.result.records}</span>
             </div>
-            <div className="ui-cell-panel__attr">
-              <dt>Root hash</dt>
-              <dd style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
-                <span className="ui-hash" style={{ wordBreak: 'break-all', textAlign: 'right' }}>
-                  {evidence.result.rootHash ?? '(empty chain)'}
-                </span>
-                {evidence.result.rootHash && (
-                  <button type="button" className="ui-copy-control" onClick={() => copyRootHash(evidence.result.rootHash!)}>
-                    {copied ? 'Copied' : 'Copy'}
-                  </button>
-                )}
-              </dd>
+          </div>
+
+          <div style={{ padding: '16px 20px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ flex: 1, minWidth: '240px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#64748B', marginBottom: '4px' }}>Root Hash</div>
+              <span className="ui-hash" style={{ wordBreak: 'break-all', fontFamily: 'var(--font-mono)', fontSize: '13px', color: '#0F172A' }}>
+                {evidence.result.rootHash ?? '(empty chain)'}
+              </span>
             </div>
-            {!evidence.result.ok && (
-              <>
-                <div className="ui-cell-panel__attr">
-                  <dt>Broken at</dt>
-                  <dd>block {evidence.result.brokenAt}</dd>
-                </div>
-                <div className="ui-cell-panel__attr">
-                  <dt>Reason</dt>
-                  <dd>{evidence.result.reason}</dd>
-                </div>
-              </>
+            {evidence.result.rootHash && (
+              <button type="button" className="ui-copy-control" onClick={() => copyRootHash(evidence.result.rootHash!)}>
+                {copied ? 'Copied' : 'Copy'}
+              </button>
             )}
-          </dl>
+          </div>
+
+          {!evidence.result.ok && (
+            <div style={{ marginTop: '12px', padding: '16px 20px', background: '#FEF2F2', borderRadius: '10px', border: '1px solid #FECACA', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#991B1B' }}>Broken at Block {evidence.result.brokenAt}</div>
+              <div style={{ fontSize: '13px', color: '#7F1D1D' }}>{evidence.result.reason}</div>
+            </div>
+          )}
         </Panel>
       )}
     </>

@@ -104,6 +104,15 @@ export default function ReVerifyPage() {
 
   return (
     <div className="signin">
+      <div className="signin__bg-container" aria-hidden="true">
+        <img
+          src="/media/reverify-bg.png"
+          alt=""
+          className="signin__bg-image"
+        />
+        <div className="signin__bg-overlay" />
+      </div>
+
       <div className="signin__inner">
         <div className="signin__brand">
           <img src="/brand/logo-mark-blue.png" alt="" width={36} height={36} className="signin__mark" />

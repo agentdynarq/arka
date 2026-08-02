@@ -99,6 +99,9 @@ export default function Home() {
               <a href="#architecture" className="dw-cta-secondary dw-cta-secondary--flood">
                 Read the architecture
               </a>
+              <Link href="/judges" className="dw-cta-secondary dw-cta-secondary--flood">
+                For Judges
+              </Link>
             </div>
             <p className="dw-hero__credentials">
               alice / demo-password-123 &middot; tap &ldquo;Check your phone for the code&rdquo; to sign in
