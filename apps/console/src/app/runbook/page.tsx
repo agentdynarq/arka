@@ -46,11 +46,18 @@ export default function RunbookPage() {
           </div>
         </Panel>
 
-        {/* Procedure 3: Root Recovery & Quorum Consensus */}
-        <Panel title="P3: 3-of-5 Quorum Recovery" subtitle="Root disaster recovery without a single point of failure or master key.">
-          <div style={{ padding: '16px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+        {/* Procedure 3: Root Recovery & Quorum Consensus. Target design, not a Phase 2 capability. */}
+        <Panel title="P3: 3-of-5 Quorum Recovery" subtitle="Target design (ADR 0003, docs/RUNBOOK.md P4). Not implemented in Phase 2.">
+          <div style={{ padding: '16px', background: '#FFFBEB', borderRadius: '10px', border: '1px solid #FDE68A' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span style={{ fontWeight: 600, color: '#0F172A' }}>Not implemented in this build</span>
+              <StatusWord tone="warning">Phase 3</StatusWord>
+            </div>
             <p style={{ margin: '0 0 10px', fontSize: '13px', color: '#475569', lineHeight: 1.6 }}>
-              No master key exists. In the event of catastrophic infrastructure loss, a minimum 3-of-5 quorum of keyholders must assemble their Shamir secret shares to reconstruct the root recovery key and rebuild Cell state from the append-only ledger logs.
+              There is no per-Cell signing key in the current code and no quorum ceremony tooling, so this procedure would fail if attempted today. Tamper-evidence in Phase 2 is the hash chain alone, walked and recomputed by P2 above. The steps are recorded so a reviewer sees the design honestly rather than a capability that was silently dropped.
+            </p>
+            <p style={{ margin: 0, fontSize: '13px', color: '#475569', lineHeight: 1.6 }}>
+              As designed: no master key exists. After catastrophic infrastructure loss a minimum 3-of-5 quorum of independent keyholders assembles to reconstruct the root recovery key, then Cell state is rebuilt by replaying the append-only ledger.
             </p>
           </div>
         </Panel>
