@@ -3,7 +3,7 @@ import Link from 'next/link'
 /**
  * Reference card for Duothan 6.0 judges, not a second homepage. Pure Server
  * Component: no "use client", no state, no fetch. Every command, port,
- * credential, and file size here is real — pulled from README.md,
+ * credential, and file size here is real, pulled from README.md,
  * docs/RUNBOOK.md, apps/identity/README.md, and the actual files in
  * apps/web/public/media/. No aspirational content: if a step doesn't work
  * today, it isn't listed.
@@ -50,7 +50,7 @@ export default function JudgesPage() {
           <h2 className="dw-heading dw-heading--lg">Start here.</h2>
           <ol className="dw-scope__list" style={{ columns: 1, maxWidth: '62ch' }}>
             <li className="dw-scope__item">
-              <strong>Bring the stack up</strong> &mdash; run the four startup commands below, wait for
+              <strong>Bring the stack up</strong>: run the four startup commands below, wait for
               &ldquo;ready&rdquo;.
             </li>
             <li className="dw-scope__item">
@@ -61,14 +61,14 @@ export default function JudgesPage() {
               <strong>Run a transfer</strong> from the dashboard, watch the balance and history update. If
               the very first attempt within ~20 seconds of a fresh boot returns{' '}
               <code>503 QUARANTINE_CHECK_UNAVAILABLE</code>, that&rsquo;s a cold-start race between two
-              services, not a broken quarantine check &mdash; wait a moment and retry, it clears itself.
+              services, not a broken quarantine check. Wait a moment and retry, it clears itself.
             </li>
             <li className="dw-scope__item">
               <strong>Open the Recovery Console health map</strong>, confirm both Cells show healthy.
             </li>
             <li className="dw-scope__item">
               <strong>Quarantine Cell 1</strong> under dual approval (two tabs, two operator IDs), then
-              retry the transfer &mdash; it&rsquo;s rejected, read-only, Cell 2 unaffected.
+              retry the transfer. It&rsquo;s rejected, read-only, Cell 2 unaffected.
             </li>
             <li className="dw-scope__item">
               <strong>Lift the quarantine</strong> the same way, then run <code>pnpm verify-ledger</code> and
@@ -96,7 +96,7 @@ export default function JudgesPage() {
                 </div>
                 <div style={{ color: 'var(--plate-ink-soft)' }}>
                   &nbsp;&nbsp;Postgres + Redis for both Cells and the control plane. Does NOT start the app
-                  services below &mdash; those run via pnpm. ~10&ndash;15s.
+                  services below. Those run via pnpm. ~10&ndash;15s.
                 </div>
                 <br />
                 <div>
@@ -131,7 +131,7 @@ export default function JudgesPage() {
                 </a>
               </span>
               <span className="dw-spec__v">
-                Marketing site (this page and the homepage) AND the customer app &mdash; same Next.js
+                Marketing site (this page and the homepage) AND the customer app, same Next.js
                 process, same port. Re-verify at <code>/reverify</code>, dashboard, transfer, agent
                 cash-in/out, QR. For a depositor.
               </span>
@@ -150,7 +150,7 @@ export default function JudgesPage() {
             <div className="dw-spec__row">
               <span className="dw-spec__k">localhost:8080</span>
               <span className="dw-spec__v">
-                API gateway. TLS/OIDC + MFA + the Cell Router in front of both Cells. No UI &mdash; backend
+                API gateway. TLS/OIDC + MFA + the Cell Router in front of both Cells. No UI, backend
                 only, the one component that knows more than one Cell exists.
               </span>
             </div>
@@ -178,17 +178,17 @@ export default function JudgesPage() {
                 Cell 2. Re-verify with customerId <code>cust-chandi</code>, registryDocumentId{' '}
                 <code>DOC-CHANDI-001</code>. Logging in as chandi needs a second{' '}
                 <code>apps/identity</code> instance pointed at Cell 2 (<code>CELL_ID=cell-2</code>, its own{' '}
-                <code>DATABASE_URL</code> and <code>IDENTITY_PORT</code> &mdash; see{' '}
+                <code>DATABASE_URL</code> and <code>IDENTITY_PORT</code>. See{' '}
                 <code>apps/identity/README.md</code>), which plain <code>pnpm dev</code> does not start;
                 without it this login returns <code>401 INVALID_CREDENTIALS</code>. To see Cell 2 keep
-                serving while Cell 1 is quarantined, use the health map and integrity audit instead &mdash;
+                serving while Cell 1 is quarantined, use the health map and integrity audit instead,
                 both Cells are visible there without a second instance.
               </span>
             </div>
             <div className="dw-spec__row">
               <span className="dw-spec__k">Operator ID</span>
               <span className="dw-spec__v">
-                Free text on the health map, default <code>operator-1</code> &mdash; there is no operator
+                Free text on the health map, default <code>operator-1</code>. There is no operator
                 login in this scope. For dual approval, open two browser tabs and type two different
                 values (e.g. <code>operator-1</code> and <code>operator-2</code>), one action per tab.
               </span>
@@ -197,7 +197,7 @@ export default function JudgesPage() {
               <span className="dw-spec__k">MFA code, two ways</span>
               <span className="dw-spec__v">
                 In-app: the phone-icon widget on the re-verify screen&rsquo;s MFA step. From a terminal: the
-                identity server prints a fresh valid code to its console once, at boot &mdash; look for a
+                identity server prints a fresh valid code to its console once, at boot. Look for a
                 line starting &ldquo;[DEMO MODE] Current TOTP code:&rdquo; in the <code>pnpm dev</code>{' '}
                 output (turbo prefixes it <code>@arka/identity-app:dev</code>). Restart that one process to
                 print a new code if 30 seconds have passed.
@@ -216,7 +216,7 @@ export default function JudgesPage() {
             <div className="dw-spec__row">
               <span className="dw-spec__k">The argument</span>
               <span className="dw-spec__v">
-                <a href="/#architecture">localhost:3000/#architecture</a> &mdash; the Cell topology, the void
+                <a href="/#architecture">localhost:3000/#architecture</a>, the Cell topology, the void
                 animation, the ledger spine filling.
               </span>
             </div>
@@ -226,7 +226,7 @@ export default function JudgesPage() {
                 <a href="http://localhost:3300/health-map" target="_blank" rel="noopener noreferrer">
                   localhost:3300/health-map
                 </a>{' '}
-                &mdash; request quarantine, approve from a second tab, watch Cell 1 flip read-only while
+                to request quarantine, approve from a second tab, watch Cell 1 flip read-only while
                 Cell 2 stays green.
               </span>
             </div>
@@ -236,7 +236,7 @@ export default function JudgesPage() {
                 <a href="http://localhost:3300/integrity" target="_blank" rel="noopener noreferrer">
                   localhost:3300/integrity
                 </a>{' '}
-                &mdash; walk the hash chain block by block.
+                to walk the hash chain block by block.
               </span>
             </div>
           </div>
@@ -280,7 +280,7 @@ export default function JudgesPage() {
           </div>
           <p className="dw-caption">
             Walks the hash chain block by block and recomputes it. An auditor never has to trust this page,
-            or any dashboard &mdash; recompute independently.
+            or any dashboard, recompute independently.
           </p>
         </div>
       </section>
