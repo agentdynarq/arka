@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { AppLayout, Sidebar, SidebarGroup, SidebarLinkPlaceholder, SidebarCellStatus, Field, Button } from '@arka/ui'
 import type { CellStatusTone } from '@arka/ui'
 import { fetchHealthMap } from '@/lib/api'
@@ -81,12 +81,14 @@ function OperatorField() {
 /**
  * The Recovery Console's persistent chrome: the health map and integrity
  * audit under one sidebar, plus the same Cell status element apps/web's
- * sidebar carries. Sign-out resets the free-text operator identity and
- * navigates back to the root (which redirects to health-map).
+ * sidebar carries. There is still no console session (see
+ * `lib/operator-context.tsx`), so the control in the sign-out slot resets the
+ * free-text operator identity and returns to the root, which redirects to
+ * health-map. It is labelled for what it does rather than borrowing the
+ * customer app's wording for a session that does not exist here.
  */
 export function ConsoleShell({ children }: { readonly children: ReactNode }) {
   const pathname = usePathname()
-  const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
 
   return (
@@ -109,16 +111,14 @@ export function ConsoleShell({ children }: { readonly children: ReactNode }) {
                 variant="danger"
                 fullWidth
                 onClick={() => {
-                  try {
-                    localStorage.clear()
-                    sessionStorage.clear()
-                  } catch {
-                    // Ignore storage errors
-                  }
-                  window.location.replace('http://localhost:3000/reverify')
+                  /* The operator identity is React state, not a stored session, so a
+                     same-origin reload of the root is exactly what resets it. Deliberately
+                     not a link to the customer app: the two are separate origins and the
+                     console must not assume where apps/web is served from. */
+                  window.location.replace('/')
                 }}
               >
-                Sign out
+                Reset operator
               </Button>
             }
           >
