@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     // The console still opts into @arka/ui's `data-surface="ops"` register,
     // but as of chore/indigo-tokens that register is light, the same family
-    // as the customer app and the homepage — kept as a distinct attribute
+    // as the customer app and the homepage, kept as a distinct attribute
     // rather than removed, so a genuinely dark register could still be
     // reintroduced through this same seam if one is ever needed again.
     <html lang="en" data-surface="ops" className={`${sourceSerif.variable} ${inter.variable} ${jetbrainsMono.variable}`}>

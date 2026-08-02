@@ -1,11 +1,11 @@
 /**
  * Homepage at "/", built for Duothan 6.0 judges, not the customer app itself.
- * Direction: dark institutional instrument — white ink on a near-black
- * indigo ground, indigo accent, serif, conservative, rectangular — with
+ * Direction: dark institutional instrument (white ink on a near-black
+ * indigo ground, indigo accent, serif, conservative, rectangular) with
  * panels one step up from the ground for anything that was previously a
  * "plate" (lane-b/furnishing: the ground itself went dark, see --dw-ground
  * and its neighbours in the .dw primitives just below; before this the
- * page was light paper with four dark plates inset into it — the flood
+ * page was light paper with four dark plates inset into it. The flood
  * hero read as a coloured box dropped on a white page rather than light
  * emerging from darkness, so the whole ground moved to match it, the same
  * device cloudflare.com uses). Indigo accent means the flood system (see
@@ -15,7 +15,7 @@
  * a collapse of public trust reads like one, not like a crypto exchange.
  * Scoped entirely under .dw. One content grid throughout for every section
  * except one: the hero is the one deliberate full-bleed exception, a wider
- * inset flood panel rather than the standard --content column — see
+ * inset flood panel rather than the standard --content column, see
  * .dw-hero__flood's own comment for why. No other section breaks the grid.
  * Every number is real, pulled from arka/README.md, docs/RUNBOOK.md and the
  * actual docs/media/*.cast recordings, never invented.
@@ -50,8 +50,8 @@
 
   /* Verification state only: the word "clean", the packet capsules, env
      values inside plates. Never a fill, button, heading, or link color.
-     Matches @arka/ui/tokens.css's --teal-on-dark exactly (fix/teal-on-dark)
-     — every ground on this page is dark now, not just the plates, so this
+     Matches @arka/ui/tokens.css's --teal-on-dark exactly (fix/teal-on-dark).
+     Every ground on this page is dark now, not just the plates, so this
      is simply "the" verified color here, not a plate-specific exception
      anymore. Local name kept (not renamed to --teal-on-dark) since nothing
      asked for a call-site migration across this file's ten usages, only a
@@ -59,7 +59,7 @@
   --verified: #6fbfad;
   /* Failure state only: the 403 and the extinguished packet / void mark.
      Both lifted to #E0603F (was --red, #B33A22): --red is tuned as dark
-     text on a light ground — 5.48:1 there — but only ~3.3:1 as text on
+     text on a light ground (5.48:1 there) but only ~3.3:1 as text on
      --dw-ground, failing AA. #E0603F clears ~5.5:1 on --dw-ground and
      ~5.1:1 on --dw-panel, checked. Homepage-local value, not added to
      @arka/ui/tokens.css: this page's grounds are darker than either of
@@ -68,21 +68,21 @@
   --reject-plate: #e0603f;
 
   /* Accent, not action: links, eyebrow numbers, hover states, dimension-line
-     stroke work inside plates, small annotation text. Never a button — the
+     stroke work inside plates, small annotation text. Never a button. The
      primary button is --primary fill, white text, below. Repointed from
      --primary to --on-flood-soft (was: var(--primary), var(--primary-dk)):
-     --primary itself is only ~2.5:1 on --dw-ground, failing AA — it's tuned
+     --primary itself is only ~2.5:1 on --dw-ground, failing AA. It's tuned
      as a button fill on light or flood grounds, not as text on near-black.
      --on-flood-soft (~10.7:1 on --dw-ground, checked) already existed for
      exactly this "light accent text on a dark ink ground" role, so this is
      a reuse, not a new token. */
   --blue: var(--on-flood-soft);
   --blue-hover: var(--on-flood);
-  --blue-tint: var(--primary-tint); /* orphaned as of this commit: .dw-zone--tint now reads --dw-panel directly, see its own rule. Left as a valid, unused declaration rather than removed — no call site reads it anymore. */
+  --blue-tint: var(--primary-tint); /* orphaned as of this commit: .dw-zone--tint now reads --dw-panel directly, see its own rule. Left as a valid, unused declaration rather than removed, no call site reads it anymore. */
   --blue-plate: var(--on-flood-soft); /* decorative diagram stroke work on a dark plate only, never the packets or the void mark */
 
   /* ---- Plate primitives: the four dark technical figures, now aliasing
-     --dw-panel rather than --ink — --ink is text-on-dark now (white), not
+     --dw-panel rather than --ink. --ink is text-on-dark now (white), not
      a background any plate, panel, or terminal could still use as its own
      fill. --dw-panel is one step up from --dw-ground on purpose, so a
      plate still reads as a distinct object on the page, not an
@@ -122,7 +122,7 @@
      a z-index:-1 pseudo-element: an element's own background always paints
      before any of its descendants regardless of z-index, so a
      negative-z-index child of .dw could never show through .dw's own opaque
-     fill. Two background layers on one box sidesteps that entirely — the
+     fill. Two background layers on one box sidesteps that entirely, the
      noise image paints over the ground color, both on .dw itself. Every
      zone and plate paints its own opaque background on top of this in
      turn, so the grain shows only where the plain ground actually shows
@@ -204,7 +204,7 @@ body:has(.dw) {
   overflow-x: clip;
 }
 
-/* One or two sections only, to break the uniform ground — not a pattern
+/* One or two sections only, to break the uniform ground, not a pattern
    applied broadly. A panel band, not a new ground colour system: headings
    and body inside stay ink, only the section's own background shifts.
    Reads var(--dw-panel) directly (lane-b/furnishing), not --blue-tint:
@@ -436,7 +436,7 @@ body:has(.dw) {
    a solid fill reads well against the new near-black ground (7.9:1 for
    white text on it, checked) and matches "one interactive colour" rather
    than introducing a second, separate reversed-white-button treatment for
-   every non-flood surface — the flood-specific white fill
+   every non-flood surface. The flood-specific white fill
    (.dw-cta-primary--flood) stays exactly as it was, a deliberate exception
    for sitting on the saturated gradient specifically, not the norm. */
 a.dw-cta-primary,
@@ -494,7 +494,7 @@ a.dw-nav__secondary {
    var(--blue) (now indigo) reads as near-invisible indigo-on-indigo for
    the secondary, so it moves to the on-flood family. Compound selectors
    match the base rules' own specificity so these reliably win regardless
-   of source order. Shared between the hero and the final CTA — both
+   of source order. Shared between the hero and the final CTA, both
    flood-ground sections. */
 a.dw-cta-primary.dw-cta-primary--flood {
   background: var(--white);
@@ -528,7 +528,7 @@ a.dw-cta-secondary.dw-cta-secondary--flood {
 /* The one deliberate break from the page's one-grid, no-full-bleed system:
    a full-bleed indigo flood panel, inset from the true page edges rather
    than touching them (hence the radius; a true edge-to-edge fill wouldn't
-   need one). --radius-panel (12px), not --institutional-radius (3px) —
+   need one). --radius-panel (12px), not --institutional-radius (3px):
    this is the flood system's own panel, not a paper-register plate. Wider
    than --content on purpose: the text column inside still respects it
    (dw-zone__inner.dw-section, unchanged), but the coloured panel itself
@@ -542,7 +542,7 @@ a.dw-cta-secondary.dw-cta-secondary--flood {
   overflow: hidden;
   border-radius: var(--radius-panel);
   /* Two layers: a scrim first (on top), the flood gradient beneath. The
-     scrim exists for one reason — --on-flood-soft (the subhead's specified
+     scrim exists for one reason: --on-flood-soft (the subhead's specified
      color) computes to roughly 9:1 against --flood-base but only ~2.7:1
      against --flood-top, and the subhead sits left-aligned near the top of
      a 135deg gradient, i.e. near the bright corner, not the dark one. Sized
@@ -560,7 +560,7 @@ a.dw-cta-secondary.dw-cta-secondary--flood {
   }
 }
 
-/* A soft light source rising from the panel's bottom edge — the reference's
+/* A soft light source rising from the panel's bottom edge, the reference's
    own device for a flood hero. A large, blurred radial glow, not a shape:
    deliberately not a new DOM element, just an extra background layer so it
    participates in the same overflow:hidden clip as the flood gradient. */
@@ -594,7 +594,7 @@ a.dw-cta-secondary.dw-cta-secondary--flood {
   }
 }
 
-/* Replaces the numbered eyebrow for the hero specifically — every other
+/* Replaces the numbered eyebrow for the hero specifically, every other
    section keeps its own "01 · Doctrine" eyebrow untouched; this is the one
    deliberately different treatment, a bordered pill instead. Centered on
    its own, the one exception to the hero's otherwise left-aligned column
@@ -670,7 +670,7 @@ a.dw-cta-secondary.dw-cta-secondary--flood {
   font-size: clamp(2.1rem, 4.6vw, 3.6rem);
   /* var(--on-flood), not var(--ink): the hero sits on the flood panel now,
      not paper. Computes to ~4.9:1 against --flood-top and ~19:1 against
-     --flood-base, checked — passes AA at both ends of the gradient. */
+     --flood-base, checked, passes AA at both ends of the gradient. */
   color: var(--on-flood);
 }
 
@@ -934,7 +934,7 @@ a.dw-cta-secondary.dw-cta-secondary--flood {
 }
 
 /* ---- Product showcase: real screenshots (or their identical-aspect
-   stand-ins until Lane A's captures land), never tinted or darkened —
+   stand-ins until Lane A's captures land), never tinted or darkened,
    deliberately the brightest thing on the page now that the ground is
    dark. 1440x900, the aspect Lane A is capturing at. ---- */
 .dw-showcase__figure {
@@ -1157,7 +1157,7 @@ a.dw-cta-secondary.dw-cta-secondary--flood {
 }
 
 /* Fig. 1's caption is the one .dw-caption that sits inside a flood panel
-   rather than on paper — var(--ink-soft) is nearly invisible against the
+   rather than on paper, var(--ink-soft) is nearly invisible against the
    flood, caught in preview before this shipped. */
 .dw-hero__flood .dw-caption {
   color: var(--on-flood-soft);

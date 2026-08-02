@@ -1,6 +1,6 @@
 # @arka/ui design tokens
 
-Source of truth: `src/tokens.css`. Two layers — primitives (`--palette-*`,
+Source of truth: `src/tokens.css`. Two layers: primitives (`--palette-*`,
 raw values with no meaning of their own) and semantic tokens (`--color-*`,
 `--radius-*`, `--font-*`, what every component in `src/*.tsx` actually
 reads, aliased to a primitive). Nothing under `src/*.tsx` should ever
@@ -9,16 +9,16 @@ primitive values and semantic aliases here, never a component file.
 
 ## The indigo flood system (current, chore/indigo-tokens)
 
-One palette across all three surfaces — the homepage (`apps/web/src/app/
+One palette across all three surfaces: the homepage (`apps/web/src/app/
 globals.css`'s `.dw` scope), the customer app (`apps/web`), and the Recovery
-Console (`apps/console`) — replacing three registers that used to feel like
+Console (`apps/console`), replacing three registers that used to feel like
 three different products. New primitives live at `:root` in `tokens.css`
 (the flood gradient, cool neutral grounds, a single indigo primary, a
 three-color status triad, and the type stack); the previous
 `--institutional-*` block and `.dw`'s own primitives are now aliases onto
 these, mapped by role rather than by hue, so no call site anywhere needed to
 change. Full per-token reasoning is in the comments directly above each
-block in `tokens.css` and `globals.css` — read those before touching a
+block in `tokens.css` and `globals.css`. Read those before touching a
 value here.
 
 Rules that apply everywhere:
@@ -31,7 +31,7 @@ Rules that apply everywhere:
   else in the token system; it's new markup only, not yet used by any
   existing screen as of this commit. The Fig. 1-4 plates (architecture
   diagram, verify-ledger terminal, failure comparison, hero line) stay
-  solid `--ink`, deliberately never the gradient — if those plates were
+  solid `--ink`, deliberately never the gradient. If those plates were
   also gradient, the flood would stop meaning anything as a device.
 - **`--primary` is the single interactive color on all three surfaces.**
   Anywhere that used to be a navy or teal button is now indigo (see the
@@ -43,7 +43,7 @@ Rules that apply everywhere:
 - **Source Serif 4 for headings, Inter for body, JetBrains Mono for machine
   output only, loaded app-wide** (both `apps/web/src/app/layout.tsx` and
   `apps/console/src/app/layout.tsx`), not scoped to one route anymore. The
-  serif is required, not a style preference — it's what keeps the indigo
+  serif is required, not a style preference. It's what keeps the indigo
   from reading as a crypto product. Don't substitute a geometric sans for
   it. Space Grotesk is gone entirely (no import, no `@font-face`, no `<link>`
   anywhere in the tree).
@@ -52,19 +52,19 @@ Rules that apply everywhere:
 
 ## Registers that exist today
 
-Both registers share one set of semantic token names — that's what lets a
+Both registers share one set of semantic token names, and that is what lets a
 component be written once and rendered correctly in either.
 
-**Light "customer" register** — default `:root`. Every screen in `apps/web`
+**Light "customer" register**, default `:root`. Every screen in `apps/web`
 uses this; nothing in that app sets `data-surface`. Radius scale
 (`--radius-sm/md/lg`) now aliases the new `--radius` primitive (3px,
 nearly square, not a rounded scale); `--radius-pill` (999px) is unchanged.
 
-**"Ops" register** — `:root[data-surface='ops']`, opted into by
+**"Ops" register**, `:root[data-surface='ops']`, opted into by
 `apps/console/src/app/layout.tsx` setting `data-surface="ops"` on `<html>`.
 Applies to every screen in `apps/console` uniformly (no per-screen opt-in
 inside that app today). As of chore/indigo-tokens this register is **light**,
-the same family as the customer register — "dark ops panel" was the previous
+the same family as the customer register. "Dark ops panel" was the previous
 direction; the attribute and the seam it opts into both still exist, so a
 genuinely dark register could be reintroduced through it later if one is
 ever needed, but nothing in `apps/console` renders dark today.
@@ -75,7 +75,7 @@ A third value set, `--institutional-*`, originally the marketing homepage's
 own palette: light paper ground, navy ink, four dark "plate" panels, Source
 Serif 4 headings, 3px radius throughout (nearly square, deliberately not a
 scale). As of chore/indigo-tokens every one of these is an alias onto the
-new primitives above, not a second, separately-tuned palette — see the
+new primitives above, not a second, separately-tuned palette, see the
 block comment directly above `--institutional-*` in `tokens.css` for the
 two mappings that are not a straight hue swap (the "plate" tokens alias the
 new `--ink` neutral, not the flood gradient; `--institutional-verified`
@@ -83,7 +83,7 @@ keeps its own tuned value rather than aliasing `--teal` directly, since it's
 specifically calibrated for a dark plate ground).
 
 **The semantic aliases are still repointed to these primitives, in both
-registers**, exactly as before this pass — `--color-bg-*`, `--color-text-*`,
+registers**, exactly as before this pass: `--color-bg-*`, `--color-text-*`,
 `--color-border-*`, `--color-focus-ring`, `--font-display` and
 `--radius-sm/md/lg` all resolve to `--institutional-*` (light) or, in the
 ops register, now directly to the new light neutrals rather than to
@@ -95,7 +95,7 @@ from that rather than inherit it once it went light).
 ## Resolved since the first indigo-tokens pass (fix/teal-on-dark)
 
 - `--institutional-verified` is gone, renamed to `--teal-on-dark` (`#6fbfad`,
-  in the new-primitives status group in `tokens.css`) — the old `#40bfb5`
+  in the new-primitives status group in `tokens.css`). The old `#40bfb5`
   was tuned against paper, but reads as a bright-mint scam signal against
   indigo. `apps/web/src/app/globals.css`'s own `--verified` (the primitive
   actually rendered on the live homepage plates) got the same value fix,
@@ -104,7 +104,7 @@ from that rather than inherit it once it went light).
   confirm button, `dashboard/page.tsx`'s Send button) now render as the
   default `primary` variant; the modifier class is deleted from
   `components.css`, and `'teal'` is removed from `ButtonVariant`.
-  `--color-teal`/`--color-teal-strong` are untouched and still needed —
+  `--color-teal`/`--color-teal-strong` are untouched and still needed,
   they back `.ui-panel__eyebrow` text, the progress bar fill, the modal
   panel's top border, and a couple of icon/text colors, none of which are
   button fills.
@@ -116,7 +116,7 @@ from that rather than inherit it once it went light).
   reference `--palette-navy-900`/`--palette-navy-950` directly, and three
   more (`.ui-split-hero__panel::before`, `.ui-balance-hero__badge`, the
   balance-hero glow) that reference `--palette-teal-300`/`--palette-teal-600`
-  directly — none of these go through the semantic layer at all, so none of
+  directly. None of these go through the semantic layer at all, so none of
   them picked up the new palette. Still hardcoded navy/teal.
 - `apps/web/src/app/reverify/page.tsx`'s split-hero panel and
   `apps/web/src/app/dashboard/page.tsx`'s balance hero are the two screens
@@ -130,6 +130,6 @@ from that rather than inherit it once it went light).
 - Don't invent new semantic names for values the existing ones already
   cover.
 - Source Serif 4 is loaded app-wide now (both apps' `layout.tsx`). A new
-  route doesn't need its own `next/font/google` call for it — the duplicate
+  route doesn't need its own `next/font/google` call for it, the duplicate
   scoped loads in `apps/web/src/app/page.tsx` and
   `apps/web/src/app/judges/page.tsx` were collapsed in fix/teal-on-dark.

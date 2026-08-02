@@ -55,7 +55,7 @@
   --palette-ops-green-text: #6ee7b7;
 
   /* ---- New system primitives: indigo flood. Source of truth for every
-     surface at once — homepage, apps/web, apps/console share these, no
+     surface at once: homepage, apps/web, apps/console share these, no
      per-app variant, that is the whole point of this pass. Institutional
      (--institutional-*) below is now aliased to these, mapped by role,
      not by hue: see the comment on that block for the reasoning behind
@@ -152,7 +152,7 @@
   /* ---- Semantic: brand and status ---- */
   /* Judgement call (chore/indigo-tokens): --color-accent no longer follows
      --institutional-ink. That primitive is now a neutral structural color
-     (headings, body text — see the alias below), not the button/action
+     (headings, body text, see the alias below), not the button/action
      color, so the two roles split here: --primary is the single interactive
      color on all three surfaces (homepage, apps/web, apps/console), where
      --institutional-ink previously WAS the navy button fill in this
@@ -181,7 +181,7 @@
      green/amber/red/teal-600 spread, and --color-danger already flowed
      through --institutional-reject (below), so leaving success/info/
      warning on the old hues would have left the status system half
-     migrated — red new, everything else old. No separate "info" hue exists
+     migrated, red new, everything else old. No separate "info" hue exists
      in the new triad, so info collapses onto the same teal as success. */
   --color-success: var(--teal);
   --color-success-tint: var(--teal-tint);
@@ -227,7 +227,7 @@
    * Source Serif 4 is now loaded app-wide (chore/indigo-tokens), in both
    * apps/web/src/app/layout.tsx and apps/console/src/app/layout.tsx, the
    * same next/font/google pattern already used for Inter and JetBrains
-   * Mono there — not scoped to a single route anymore. Falls back to
+   * Mono there, not scoped to a single route anymore. Falls back to
    * Georgia/Times New Roman only if that ever changes. */
   --font-display: var(--institutional-font-serif);
   --font-sans: var(--font-sans-stack);
@@ -242,7 +242,7 @@
 
 /**
  * Institutional primitives. Originally the marketing homepage's own palette
- * (apps/web/src/app/globals.css, the `.dw` scope) — navy ink on paper, dark
+ * (apps/web/src/app/globals.css, the `.dw` scope), navy ink on paper, dark
  * "plate" panels, teal verification. As of chore/indigo-tokens, every value
  * below is an alias onto the indigo flood system declared earlier in this
  * file, mapped by role rather than by hue, so every screen and every plate
@@ -254,21 +254,21 @@
  *
  * Two sub-groups, because the homepage itself has two grounds:
  *   --institutional-* : the light "paper" register (maps to the customer
- *     register above — default :root).
+ *     register above, default :root).
  *   --institutional-plate-* : the dark "plate" register (maps to the ops
- *     register below — :root[data-surface='ops']).
+ *     register below, :root[data-surface='ops']).
  *
  * Two mappings are not a straight hue swap and are called out inline below:
  * the "plate" tokens (the homepage's four dark technical panels) now alias
- * the new --ink neutral rather than anything flood-colored — the flood
+ * the new --ink neutral rather than anything flood-colored. The flood
  * gradient is reserved for new full-bleed homepage markup only (exactly
  * four panels: hero, contrast pair, final CTA, value strip), never
  * repurposed for an existing small or medium surface, and never the Fig.
- * 1-4 plates specifically — gradient plates would make the device stop
+ * 1-4 plates specifically, gradient plates would make the device stop
  * meaning anything. --institutional-verified is gone as of fix/
  * teal-on-dark: it's now --teal-on-dark (in the new-primitives status
  * group above), not aliased here at all, same reasoning as the original
- * --reject/--reject-plate split just below — a dark-ground-tuned
+ * --reject/--reject-plate split just below, a dark-ground-tuned
  * verification color needs a different value from --teal, not a
  * differently-named pointer to the same one.
  */
@@ -280,7 +280,7 @@
   --institutional-rule: var(--hairline);
   --institutional-reject: var(--red); /* the 403, text on paper */
 
-  /* Dark "plate" register — the homepage's four dark technical panels only
+  /* Dark "plate" register: the homepage's four dark technical panels only
      (architecture diagram, verify-ledger terminal, failure comparison, hero
      line). Aliases --ink, a solid neutral, not the flood gradient: see the
      comment above this block. */
@@ -301,7 +301,7 @@
      loaded app-wide via --font-jetbrains-mono). */
   --institutional-font-serif: var(--font-source-serif, Georgia, 'Times New Roman', serif);
 
-  /* Radius: 3px throughout, not a scale — nearly square is the whole point
+  /* Radius: 3px throughout, not a scale, nearly square is the whole point
      (no pill buttons, no pill cards). One value, unlike --radius-sm/md/lg
      above, which is deliberately a scale for the older, rounder system.
      Aliases the new --radius primitive so both have one edit point. */
@@ -316,18 +316,18 @@
  * That means this block can no longer simply inherit whatever
  * --institutional-plate-* now resolves to (those alias --ink, a solid dark
  * neutral, kept dark on purpose for the homepage's four actual plate
- * panels — see the comment on that block). Every value here is instead
+ * panels, see the comment on that block). Every value here is instead
  * repointed directly to a light neutral or --primary, decoupling the
  * console's ground from the homepage's plate primitives. Still opted into
  * with `data-surface="ops"` on a page's root element, not a second
- * stylesheet, so it stays on the same token names as everywhere else — a
+ * stylesheet, so it stays on the same token names as everywhere else, a
  * future screen could still opt into an actually-dark register through
  * this same attribute if one is ever needed again.
  */
 :root[data-surface='ops'] {
   /* Three light tiers instead of three dark ones: canvas is the most
      recessed (page background), surface the base card, surface-raised the
-     brightest — lighter reads as "raised" once the register is light,
+     brightest, lighter reads as "raised" once the register is light,
      the mirror image of the old dark-plate convention where raised meant
      lighter-on-dark; here it means lighter-still-on-light. */
   --color-bg-canvas: var(--mist);
@@ -343,7 +343,7 @@
 
   /* Single primary interactive color across all three surfaces (see the
      judgement-call comment on --color-accent above, in the base :root
-     block) — the console's button is no longer its own light-rectangle
+     block): the console's button is no longer its own light-rectangle
      variant, it is the same indigo. */
   --color-accent: var(--primary);
   --color-accent-hover: var(--primary-dk);
@@ -352,14 +352,14 @@
 
   /* --color-danger/--color-warning/--color-info are still deliberately left
      unset here, inheriting the base-register values above (now --red/
-     --amber/--teal) — unchanged behavior, only the underlying hues moved.
+     --amber/--teal), unchanged behavior, only the underlying hues moved.
      Ink, not a brand or status color, for the focus ring: still generic UI
      chrome, not a verification signal, same reasoning as the base
      register. */
   --color-focus-ring: var(--ink);
 
   /* W6's "chain verified" banner: now the same teal as every other success
-     signal, on the same light grounds as the rest of this register — the
+     signal, on the same light grounds as the rest of this register, the
      dark-plate-specific tuning this used to need no longer applies once
      the register itself is light. */
   --color-banner-success-bg: var(--teal-tint);

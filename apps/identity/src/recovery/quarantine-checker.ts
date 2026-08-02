@@ -5,7 +5,7 @@
  * customer-keyed `write-check` endpoint: that re-derives a Cell from a
  * customer id via the Cell Router's hash, which can disagree with the Cell
  * this process actually is (see arka-ops/LOG.md, 28 July, on the Cell
- * Router's own reshuffle caveat) — asking about a Cell this process already
+ * Router's own reshuffle caveat), asking about a Cell this process already
  * knows unambiguously avoids that indirection entirely.
  *
  * Fails closed: if the check itself cannot be completed (network error,
