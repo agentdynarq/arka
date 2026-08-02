@@ -149,7 +149,7 @@ export default function AuditTrailPage() {
                 <tbody>
                   {paginatedTrail.map((entry) => (
                     <tr key={entry.id}>
-                      <td className="ui-hash" style={{ fontSize: '12px', color: '#64748B' }}>{entry.id.slice(0, 8)}...</td>
+                      <td className="ui-hash" style={{ color: 'var(--color-text-tertiary)' }}>{entry.id.slice(0, 8)}...</td>
                       <td className="ui-hash">{new Date(entry.occurredAt).toLocaleString()}</td>
                       <td style={{ fontWeight: 600 }}>{entry.actor}</td>
                       <td>{describeAction(entry.action)}</td>

@@ -145,12 +145,18 @@ function IntegrityPageInner() {
             </div>
           </div>
 
-          <div style={{ padding: '20px 24px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-            <h4 style={{ margin: '0 0 10px', fontSize: '15px', fontWeight: 600, color: '#0F172A' }}>Ledger Verification Architecture</h4>
-            <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#475569', lineHeight: 1.6 }}>
-              <li style={{ marginBottom: '6px' }}><strong>Append-Only Double-Entry Ledger:</strong> Every transaction generates immutable, hash-chained blocks.</li>
-              <li style={{ marginBottom: '6px' }}><strong>Tamper Detection:</strong> Modifying a block breaks subsequent hash signatures instantly.</li>
-              <li><strong>Live Replay:</strong> State is reconstructed dynamically by verifying the block sequence.</li>
+          <div className="ui-tile">
+            <div className="ui-tile__heading">Ledger verification architecture</div>
+            <ul className="ui-tile__body" style={{ paddingLeft: 'var(--space-4)' }}>
+              <li style={{ marginBottom: 'var(--space-1)' }}>
+                <strong>Append-only double-entry ledger:</strong> every transaction generates immutable, hash-chained blocks.
+              </li>
+              <li style={{ marginBottom: 'var(--space-1)' }}>
+                <strong>Tamper detection:</strong> modifying a block breaks every subsequent hash.
+              </li>
+              <li>
+                <strong>Live replay:</strong> state is reconstructed by verifying the block sequence, never read from a cache.
+              </li>
             </ul>
           </div>
         </div>
@@ -165,11 +171,11 @@ function IntegrityPageInner() {
               alignItems: 'center',
               gap: 16,
               flexWrap: 'wrap',
-              padding: '16px 20px',
-              borderRadius: '10px',
+              padding: 'var(--space-4) var(--space-5)',
+              borderRadius: 'var(--radius-md)',
               border: `1.4px solid ${evidence.result.ok ? 'var(--color-banner-success-border)' : 'var(--color-danger)'}`,
               background: evidence.result.ok ? 'var(--color-banner-success-bg)' : 'var(--color-danger-tint)',
-              marginBottom: '20px',
+              marginBottom: 'var(--space-5)',
             }}
           >
             <div>
@@ -197,36 +203,34 @@ function IntegrityPageInner() {
             </a>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', marginBottom: '12px' }}>
-            <div style={{ padding: '14px 18px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>Status</span>
+          <div className="ui-grid" style={{ marginBottom: 'var(--space-3)' }}>
+            <div className="ui-tile ui-tile--split">
+              <span className="ui-tile__label">Status</span>
               <span data-testid="evidence-status">
                 <Badge tone={evidence.result.ok ? 'success' : 'danger'}>{evidence.result.ok ? 'clean' : 'broken'}</Badge>
               </span>
             </div>
 
-            <div style={{ padding: '14px 18px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>Verified At</span>
-              <span style={{ fontSize: '13px', fontWeight: 600, fontFamily: 'var(--font-mono)', color: '#0F172A' }}>{new Date(evidence.verifiedAt).toLocaleTimeString()}</span>
+            <div className="ui-tile ui-tile--split">
+              <span className="ui-tile__label">Verified at</span>
+              <span className="ui-tile__value ui-tile__value--mono">{new Date(evidence.verifiedAt).toLocaleTimeString()}</span>
             </div>
 
-            <div style={{ padding: '14px 18px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>Walked Up To</span>
-              <span style={{ fontSize: '13px', fontWeight: 600, fontFamily: 'var(--font-mono)', color: '#0F172A' }}>{evidence.upTo ?? 'head'}</span>
+            <div className="ui-tile ui-tile--split">
+              <span className="ui-tile__label">Walked up to</span>
+              <span className="ui-tile__value ui-tile__value--mono">{evidence.upTo ?? 'head'}</span>
             </div>
 
-            <div style={{ padding: '14px 18px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>Records</span>
-              <span style={{ fontSize: '13px', fontWeight: 600, fontFamily: 'var(--font-mono)', color: '#0F172A' }}>{evidence.result.records}</span>
+            <div className="ui-tile ui-tile--split">
+              <span className="ui-tile__label">Records</span>
+              <span className="ui-tile__value ui-tile__value--mono">{evidence.result.records}</span>
             </div>
           </div>
 
-          <div style={{ padding: '16px 20px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div className="ui-tile ui-tile--split">
             <div style={{ flex: 1, minWidth: '240px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#64748B', marginBottom: '4px' }}>Root Hash</div>
-              <span className="ui-hash" style={{ wordBreak: 'break-all', fontFamily: 'var(--font-mono)', fontSize: '13px', color: '#0F172A' }}>
-                {evidence.result.rootHash ?? '(empty chain)'}
-              </span>
+              <div className="ui-tile__label">Root hash</div>
+              <span className="ui-hash ui-tile__value ui-tile__value--mono">{evidence.result.rootHash ?? '(empty chain)'}</span>
             </div>
             {evidence.result.rootHash && (
               <button type="button" className="ui-copy-control" onClick={() => copyRootHash(evidence.result.rootHash!)}>
@@ -236,9 +240,9 @@ function IntegrityPageInner() {
           </div>
 
           {!evidence.result.ok && (
-            <div style={{ marginTop: '12px', padding: '16px 20px', background: '#FEF2F2', borderRadius: '10px', border: '1px solid #FECACA', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#991B1B' }}>Broken at Block {evidence.result.brokenAt}</div>
-              <div style={{ fontSize: '13px', color: '#7F1D1D' }}>{evidence.result.reason}</div>
+            <div className="ui-tile ui-tile--danger" style={{ marginTop: 'var(--space-3)' }}>
+              <div className="ui-tile__heading">Broken at block {evidence.result.brokenAt}</div>
+              <p className="ui-tile__body">{evidence.result.reason}</p>
             </div>
           )}
         </Panel>

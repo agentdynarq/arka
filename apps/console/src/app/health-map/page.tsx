@@ -92,20 +92,20 @@ const PHASE_3_ACTIONS = [
   { title: 'Rotate Cell keys', detail: 'No per-Cell signing key exists yet to rotate (docs/adr/0003)' },
 ] as const
 
-/**
- * Screen W5: the Recovery Console's health map and quarantine controls
- * (FR-21, FR-22), plus the operator audit trail (FR-25). No operator login
- * wired into this screen in this scope: identity is a free-text field lifted
- * into the sidebar (`lib/operator-context.tsx`), not a real session, same
- * simplification the FR-02 account-opening flow made for KYC review.
- */
 /** One poll of the health map, kept so the graph can plot a real history. */
 interface LatencySample {
   at: Date
   byCell: Record<string, number | undefined>
 }
 
-const SERIES_COLOURS = ['#4F46E5', '#0D9488', '#B45309', '#7C3AED']
+/** Indexed by position in the sorted cell list, never by cell id: see the
+    --color-series-* comment in tokens.css. */
+const SERIES_COLOURS = [
+  'var(--color-series-1)',
+  'var(--color-series-2)',
+  'var(--color-series-3)',
+  'var(--color-series-4)',
+]
 
 /**
  * Latency over time, plotted only from samples this page actually observed.
@@ -167,7 +167,7 @@ function CellLatencyGraph({ samples, intervalMs }: { samples: LatencySample[]; i
               return (
                 <div key={cellId} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ width: 10, height: 10, borderRadius: '50%', background: colour }} />
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
                     {cellId}: <strong style={{ color: colour }}>{value !== undefined ? `${value}ms` : 'no reading'}</strong>
                   </span>
                 </div>
@@ -175,7 +175,7 @@ function CellLatencyGraph({ samples, intervalMs }: { samples: LatencySample[]; i
             })}
           </div>
 
-          <div style={{ display: 'flex', gap: 16, fontSize: '12px', color: '#64748B' }}>
+          <div style={{ display: 'flex', gap: 16, fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
             <span>
               Samples: <strong>{samples.length}</strong>
             </span>
@@ -197,9 +197,9 @@ function CellLatencyGraph({ samples, intervalMs }: { samples: LatencySample[]; i
         ) : (
           <div style={{ width: '100%', overflowX: 'auto' }}>
             <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
-              <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="#F1F5F9" strokeWidth="1" />
-              <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="#F1F5F9" strokeWidth="1" />
-              <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#E2E8F0" strokeWidth="1" />
+              <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="var(--color-border)" strokeWidth="1" />
+              <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="var(--color-border)" strokeWidth="1" />
+              <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="var(--color-border-strong)" strokeWidth="1" />
 
               {cellIds.map((cellId, i) => (
                 <polyline
@@ -220,7 +220,7 @@ function CellLatencyGraph({ samples, intervalMs }: { samples: LatencySample[]; i
                   y={height - 4}
                   textAnchor={i === 0 ? 'start' : 'end'}
                   fontSize="9"
-                  fill="#94A3B8"
+                  fill="var(--color-text-tertiary)"
                   fontFamily="sans-serif"
                 >
                   {sample.at.toLocaleTimeString()}
@@ -234,6 +234,13 @@ function CellLatencyGraph({ samples, intervalMs }: { samples: LatencySample[]; i
   )
 }
 
+/**
+ * Screen W5: the Recovery Console's health map and quarantine controls
+ * (FR-21, FR-22), plus the operator audit trail (FR-25). No operator login
+ * wired into this screen in this scope: identity is a free-text field lifted
+ * into the sidebar (`lib/operator-context.tsx`), not a real session, same
+ * simplification the FR-02 account-opening flow made for KYC review.
+ */
 export default function HealthMapPage() {
   const [operatorId] = useOperatorId()
   const [rows, setRows] = useState<CellRow[] | null>(null)

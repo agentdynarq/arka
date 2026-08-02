@@ -148,11 +148,11 @@ body {
   align-self: flex-start;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #FAFAFC 0%, #F1F3F9 100%);
-  border-right: 1px solid rgba(226, 232, 240, 0.9);
+  background: linear-gradient(180deg, var(--white) 0%, var(--color-bg-canvas) 100%);
+  border-right: 1px solid var(--color-border);
   padding: var(--space-5) var(--space-4);
   transition: width var(--transition-base);
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-sidebar[data-collapsed='true'] {
@@ -196,7 +196,7 @@ body {
   flex-shrink: 0;
   width: 24px;
   height: 24px;
-  filter: drop-shadow(0 2px 4px rgba(79, 70, 229, 0.2));
+  filter: drop-shadow(0 2px 4px color-mix(in srgb, var(--color-accent) 20%, transparent));
 }
 
 .ui-sidebar[data-collapsed='true'] .ui-sidebar__wordmark {
@@ -206,10 +206,10 @@ body {
 .ui-sidebar__context {
   margin-top: var(--space-2);
   font-size: var(--text-xs);
-  color: #475569;
+  color: var(--color-text-secondary);
   line-height: 1.5;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: color-mix(in srgb, var(--white) 85%, transparent);
+  border: 1px solid var(--color-border);
   padding: 6px 10px;
   border-radius: 8px;
   backdrop-filter: blur(4px);
@@ -233,7 +233,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: #64748B;
+  color: var(--color-text-tertiary);
 }
 
 .ui-sidebar__link {
@@ -246,7 +246,7 @@ body {
   border-left: 3px solid transparent;
   font-size: var(--text-sm);
   font-weight: 500;
-  color: #475569;
+  color: var(--color-text-secondary);
   text-decoration: none;
   transition: all 0.18s ease;
 }
@@ -258,7 +258,7 @@ body {
   flex-shrink: 0;
   width: 20px;
   height: 20px;
-  color: #64748B;
+  color: var(--color-text-tertiary);
   transition: color 0.18s ease, transform 0.18s ease;
 }
 
@@ -268,26 +268,26 @@ body {
 }
 
 .ui-sidebar__link:hover {
-  background: rgba(255, 255, 255, 0.9);
-  color: #0F172A;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+  background: color-mix(in srgb, var(--white) 90%, transparent);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-sidebar__link:hover .ui-sidebar__link-icon {
-  color: #4F46E5;
+  color: var(--color-accent);
   transform: translateX(2px);
 }
 
 .ui-sidebar__link[data-active='true'] {
-  background: linear-gradient(90deg, rgba(79, 70, 229, 0.10) 0%, rgba(99, 102, 241, 0.14) 100%);
-  border-left-color: #4F46E5;
-  color: #4F46E5;
+  background: var(--color-accent-tint);
+  border-left-color: var(--color-accent);
+  color: var(--color-accent);
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(79, 70, 229, 0.08);
+  box-shadow: var(--shadow-sm);
 }
 
 .ui-sidebar__link[data-active='true'] .ui-sidebar__link-icon {
-  color: #4F46E5;
+  color: var(--color-accent);
 }
 
 .ui-sidebar__link--placeholder {
@@ -312,17 +312,17 @@ body {
 
 /* Sign out button styling in sidebar */
 .ui-sidebar__bottom .ui-button {
-  color: var(--color-danger, #e11d48);
-  border: 1px solid rgba(225, 29, 72, 0.25);
-  background: rgba(225, 29, 72, 0.06);
+  color: var(--color-danger);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 25%, transparent);
+  background: var(--color-danger-tint);
   font-weight: 600;
   transition: all 0.15s ease;
 }
 
 .ui-sidebar__bottom .ui-button:hover:not(:disabled) {
-  background: var(--color-danger, #e11d48);
-  color: #ffffff;
-  border-color: var(--color-danger, #e11d48);
+  background: var(--color-danger);
+  color: var(--color-accent-text);
+  border-color: var(--color-danger);
 }
 
 
@@ -530,7 +530,7 @@ body {
 
 .ui-overview-strip__col {
   padding: var(--space-3) var(--space-6);
-  border-left: 1px solid rgba(203, 213, 225, 0.7);
+  border-left: 1px solid var(--color-border);
   background: transparent;
   box-shadow: none;
 }
@@ -548,7 +548,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
 }
 
 .ui-overview-strip__value {
@@ -556,13 +556,13 @@ body {
   font-family: var(--font-mono);
   font-size: 1.5rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .ui-overview-strip__context {
   margin: var(--space-1) 0 0;
   font-size: var(--text-xs);
-  color: #64748b;
+  color: var(--color-text-tertiary);
 }
 
 /* ---- Generic text ---- */
@@ -584,6 +584,98 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: var(--space-3);
+}
+
+/* ---- Tile ----
+ * A recessed block inside a Panel: a label, a value, an optional note. The
+ * console's newer screens (audit trail, runbook, integrity evidence, limits)
+ * had each rebuilt this shape inline with literal hex, which put a second
+ * grey palette next to the token system. One class, so the register is set
+ * in exactly one place like every other component here.
+ *
+ * `--split` puts the label and value on one row for attribute lists;
+ * `--danger`/`--warning` restate the same anatomy in a status tint. */
+
+.ui-tile {
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-bg-tint);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.ui-tile--split {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.ui-tile--danger {
+  background: var(--color-danger-tint);
+  border-color: var(--color-danger);
+}
+
+.ui-tile--warning {
+  background: var(--color-warning-tint);
+  border-color: var(--color-warning);
+}
+
+.ui-tile__label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+}
+
+.ui-tile--danger .ui-tile__label,
+.ui-tile--warning .ui-tile__label {
+  color: var(--color-text-secondary);
+}
+
+.ui-tile__value {
+  margin-top: var(--space-1);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* Split tiles put the value beside the label, so it must not re-add the
+   stacked variant's top margin. */
+.ui-tile--split .ui-tile__value {
+  margin-top: 0;
+}
+
+.ui-tile__value--mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  word-break: break-all;
+}
+
+.ui-tile__note {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--color-text-tertiary);
+}
+
+.ui-tile__body {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.ui-tile__body:first-child {
+  margin-top: 0;
+}
+
+.ui-tile__heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
 }
 
 /* ---- Dashboard two-column layout (W2, W5-style rails) ---- */
@@ -669,11 +761,11 @@ body {
 /* ---- Panel / card (elevated compartment) ---- */
 
 .ui-panel {
-  background: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: var(--color-bg-surface-raised);
+  border: 1px solid var(--color-border);
   border-radius: 14px;
   padding: 28px 32px;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03), 0 1px 3px rgba(15, 23, 42, 0.02);
+  box-shadow: var(--shadow-md);
   margin-bottom: 24px;
 }
 
@@ -1688,22 +1780,22 @@ body {
   align-items: center;
   gap: 8px;
   padding: 10px 18px;
-  background: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: var(--color-bg-surface-raised);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
-  color: #334155;
+  color: var(--color-text-secondary);
   text-decoration: none;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+  box-shadow: var(--shadow-sm);
   transition: all 0.18s ease;
 }
 
 .ui-link-row__item:hover {
-  background: #4f46e5;
-  color: #ffffff;
-  border-color: #4f46e5;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
