@@ -194,6 +194,22 @@
   --color-info: var(--teal);
   --color-info-tint: var(--teal-tint);
 
+  /* ---- Semantic: chart series ----
+   * Identity only, never status. A line on W5's latency graph says "this is
+   * cell-2", not "cell-2 is unhealthy", so these deliberately do NOT reuse
+   * the --teal/--red/--amber triad: a cell drawn in red would read as
+   * failing when it is merely the second one in the list. The first two are
+   * --primary and --teal, the same two hues the graph already used, so
+   * nothing visible moves for the two Cells that exist today. Three and four
+   * exist so a third or fourth Cell picks up a distinct color instead of
+   * wrapping onto --primary, since "a Cell is configuration, not code" means
+   * the count is not fixed. Consumers index these by position in the sorted
+   * cell list, so no component hardcodes which Cell gets which color. */
+  --color-series-1: var(--primary);
+  --color-series-2: var(--teal);
+  --color-series-3: #6d28d9;
+  --color-series-4: #a2571c;
+
   /* A large status banner (W6's "chain verified") reads differently from a
    * small Badge pill: pills stay a light tint even in the dark ops register
    * (the wireframe shows this deliberately), a full-width banner does not. */
