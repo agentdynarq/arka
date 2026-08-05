@@ -1,0 +1,51 @@
+# Two hostnames per Cell host, both resolving to this machine via nip.io, so
+# real Let's Encrypt certificates are issued without owning a domain.
+#
+#   cell-1.<ip>.nip.io      the customer app
+#   cell-1-api.<ip>.nip.io  the Cell's identity API, called from the browser
+#
+# They are separate hostnames rather than paths on one host because
+# NEXT_PUBLIC_IDENTITY_API_URL is baked into the customer app at build time and
+# a bare origin is the least surprising thing to bake in.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$PUBLIC_HOST} {
+	encode gzip
+	reverse_proxy web:3000
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}
+
+{$API_HOST} {
+	encode gzip
+	reverse_proxy identity:3001
+
+	# The customer app is served from a different hostname, so its fetches are
+	# cross-origin and preflighted.
+	@cors_preflight method OPTIONS
+	handle @cors_preflight {
+		header {
+			Access-Control-Allow-Origin "https://{$PUBLIC_HOST}"
+			Access-Control-Allow-Methods "GET, POST, PATCH, DELETE, OPTIONS"
+			Access-Control-Allow-Headers "Content-Type, Authorization, Idempotency-Key"
+			Access-Control-Allow-Credentials "true"
+			Access-Control-Max-Age "86400"
+		}
+		respond 204
+	}
+
+	header {
+		Access-Control-Allow-Origin "https://{$PUBLIC_HOST}"
+		Access-Control-Allow-Credentials "true"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+	}
+}

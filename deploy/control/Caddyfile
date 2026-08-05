@@ -1,0 +1,58 @@
+# Three hostnames on the control plane host, all resolving here via nip.io.
+#
+#   arka.<ip>.nip.io      the Recovery Console
+#   arka-api.<ip>.nip.io  the control plane API, called from the console browser
+#   arka-gw.<ip>.nip.io   the Gateway, which answers "which Cell is this customer in"
+#
+# Separate hostnames rather than paths because the Gateway and the Recovery API
+# both mount controllers under /v1 and would collide on a shared origin.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$CONSOLE_HOST} {
+	encode gzip
+	reverse_proxy console:3300
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}
+
+{$API_HOST} {
+	encode gzip
+	reverse_proxy recovery:3002
+
+	@cors_preflight method OPTIONS
+	handle @cors_preflight {
+		header {
+			Access-Control-Allow-Origin "https://{$CONSOLE_HOST}"
+			Access-Control-Allow-Methods "GET, POST, PATCH, DELETE, OPTIONS"
+			Access-Control-Allow-Headers "Content-Type, Authorization, Idempotency-Key"
+			Access-Control-Allow-Credentials "true"
+			Access-Control-Max-Age "86400"
+		}
+		respond 204
+	}
+
+	header {
+		Access-Control-Allow-Origin "https://{$CONSOLE_HOST}"
+		Access-Control-Allow-Credentials "true"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+	}
+}
+
+{$GATEWAY_HOST} {
+	encode gzip
+	reverse_proxy gateway:8080
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+	}
+}

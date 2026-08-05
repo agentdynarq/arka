@@ -1,0 +1,128 @@
+# One Cell, on its own EC2 host in its own VPC. Deployed once per Cell with a
+# different .env, which is the whole of "a Cell is configuration, not code"
+# (docs/adr/0001). This file contains no Cell identifier anywhere. If a Cell
+# ever needs a line here that another Cell does not, the defect is in the
+# services, not in this file.
+#
+# Postgres and Redis publish on the host deliberately, bound to the private
+# address, because the control plane observes Cells at the data layer. The
+# security group permits those ports from the control plane's Elastic IP and
+# from nothing else. See docs/PHASE-3-ARCHITECTURE.md section 3.
+
+name: arka-cell
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: arka-cell-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${CELL_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${CELL_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${CELL_POSTGRES_DB}
+    ports:
+      - "${PRIVATE_IP}:5432:5432"
+    volumes:
+      - cell-pgdata:/var/lib/postgresql/data
+    networks:
+      - cell
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CELL_POSTGRES_USER} -d ${CELL_POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: arka-cell-redis
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${CELL_REDIS_PASSWORD}"]
+    ports:
+      - "${PRIVATE_IP}:6379:6379"
+    networks:
+      - cell
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${CELL_REDIS_PASSWORD} ping | grep PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  identity:
+    image: arka:phase3
+    container_name: arka-cell-identity
+    restart: unless-stopped
+    command: ["pnpm", "--filter", "@arka/identity-app", "run", "start"]
+    environment:
+      CELL_ID: ${CELL_ID}
+      DATABASE_URL: postgres://${CELL_POSTGRES_USER}:${CELL_POSTGRES_PASSWORD}@postgres:5432/${CELL_POSTGRES_DB}
+      IDENTITY_PORT: 3001
+      # The control plane, reached over public 443. apps/identity asks it
+      # whether this Cell is quarantined before any risky write (FR-22).
+      RECOVERY_URL: ${RECOVERY_URL}
+      QR_SIGNING_KEY: ${QR_SIGNING_KEY}
+      # The judge-convenience TOTP endpoint the sign-in screen's "Check your
+      # phone for the code" button calls. Documented as demo-only in
+      # apps/identity/src/auth/demo-mfa.controller.ts.
+      DEMO_MFA_ENDPOINT_ENABLED: ${DEMO_MFA_ENDPOINT_ENABLED:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cell
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3001/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  web:
+    image: arka:phase3
+    container_name: arka-cell-web
+    restart: unless-stopped
+    command: ["pnpm", "--filter", "@arka/web", "run", "start"]
+    environment:
+      NODE_ENV: production
+    depends_on:
+      identity:
+        condition: service_healthy
+    networks:
+      - cell
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: arka-cell-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST}
+      API_HOST: ${API_HOST}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - web
+      - identity
+    networks:
+      - cell
+
+networks:
+  cell:
+    driver: bridge
+
+volumes:
+  cell-pgdata:
+  caddy-data:
+  caddy-config:

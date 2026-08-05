@@ -1,0 +1,28 @@
+# node_modules is excluded because @node-rs/argon2 is a native module: an
+# install performed on the build machine does not run inside the image. The
+# install happens in the Dockerfile, on Linux, or the identity app crashes on
+# boot with a cryptic loader error.
+node_modules
+**/node_modules
+
+# Build output. Regenerated inside the image.
+dist
+**/dist
+.next
+**/.next
+.turbo
+**/.turbo
+
+# Never goes near an image.
+.env
+**/.env
+*.pem
+*.tfstate
+*.tfstate.*
+.terraform
+
+.git
+.github
+docs/media
+e2e
+**/*.log

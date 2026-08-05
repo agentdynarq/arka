@@ -21,10 +21,15 @@ function cellConfig(cellId: string, envPrefix: string): CellConfig {
   const password = required(`${envPrefix}_POSTGRES_PASSWORD`)
   const db = required(`${envPrefix}_POSTGRES_DB`)
   const port = required(`${envPrefix}_POSTGRES_PORT`)
+  // Optional, and localhost is the local `docker compose` case. Phase 3 runs
+  // each Cell on its own host, so `pnpm verify-ledger` (runbook P1, performed
+  // live) needs to be told where the Cell is. See apps/recovery's matching
+  // read of the same variable.
+  const host = process.env[`${envPrefix}_POSTGRES_HOST`] ?? 'localhost'
 
   return {
     cellId,
-    connectionString: `postgres://${user}:${password}@localhost:${port}/${db}`,
+    connectionString: `postgres://${user}:${password}@${host}:${port}/${db}`,
   }
 }
 

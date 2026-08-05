@@ -31,9 +31,11 @@ table, a security group, an Elastic IP, and one EC2 instance running Ubuntu 24.0
 connection, no transit gateway, no shared resource of any kind between Cells. Two Cells must produce
 two entirely disjoint sets of AWS objects.
 
-Security group rules are in section 3. The Cell rule permitting inbound 443 only from the control
-plane's Elastic IP `/32` is the load-bearing one. Get it wrong and the central claim of the project is
-false.
+Security group rules are in section 3 of the architecture document. Cell hosts serve 80 and 443
+publicly, because customers browse their own Cell directly. The load-bearing rule is the one that does
+not exist: **no security group anywhere opens 5432 or 6379.** Databases and Redis stay on the Cell's
+internal Docker network with no published host port. If you find yourself adding a database ingress
+rule to make something work, stop and report it.
 
 Ordering note: allocate `aws_eip.control` as its own resource before the instance it attaches to, so
 the Cell modules can reference its address without a cycle.
@@ -50,8 +52,9 @@ morning. Do not apply it.
 - `terraform apply` completes and prints three public IPs.
 - SSH works to all three hosts as `ubuntu`.
 - `docker --version` and `caddy version` succeed on each host.
-- From the Cell 1 host, `curl --max-time 10 https://cell-2.<eip>.nip.io/` times out. Capture this
-  output. It is demo evidence, not just a test.
+- From the Cell 1 host, `nc -vz <cell-2-ip> 5432` fails to connect. Capture this output. It is demo
+  evidence, not just a test.
+- `aws ec2 describe-vpc-peering-connections` returns an empty list. Capture that too.
 - From the control plane host, port 443 on both Cell hosts is reachable.
 - `terraform destroy` is not run. State stays on the machine that applied it.
 

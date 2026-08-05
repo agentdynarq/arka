@@ -1,0 +1,138 @@
+# The control plane, on its own EC2 host in its own VPC. Deployed once.
+#
+# It holds operator actions and Cell health observations, never customer data,
+# so its Postgres is its own and is never a Cell's. It is the only component in
+# the system that holds a credential for more than one Cell, which is exactly
+# why it is the only component that can observe them all.
+#
+# Adding a Cell here is a block of CELL3_* variables in .env plus cell-3 in
+# CELL_IDS. No line of this file changes.
+
+name: arka-control
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: arka-control-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${CONTROL_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${CONTROL_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${CONTROL_POSTGRES_DB}
+    volumes:
+      - control-pgdata:/var/lib/postgresql/data
+    networks:
+      - control
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CONTROL_POSTGRES_USER} -d ${CONTROL_POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  recovery:
+    image: arka:phase3
+    container_name: arka-control-recovery
+    restart: unless-stopped
+    command: ["pnpm", "--filter", "@arka/recovery-app", "run", "start"]
+    environment:
+      RECOVERY_PORT: 3002
+      CONTROL_PLANE_DATABASE_URL: postgres://${CONTROL_POSTGRES_USER}:${CONTROL_POSTGRES_PASSWORD}@postgres:5432/${CONTROL_POSTGRES_DB}
+      CELL_IDS: ${CELL_IDS}
+      # One block per Cell. The *_HOST variables are what make a Cell on its
+      # own EC2 host observable; everything else is the same naming the local
+      # compose stack already uses.
+      CELL1_POSTGRES_HOST: ${CELL1_POSTGRES_HOST}
+      CELL1_POSTGRES_PORT: ${CELL1_POSTGRES_PORT:-5432}
+      CELL1_POSTGRES_USER: ${CELL1_POSTGRES_USER}
+      CELL1_POSTGRES_PASSWORD: ${CELL1_POSTGRES_PASSWORD}
+      CELL1_POSTGRES_DB: ${CELL1_POSTGRES_DB}
+      CELL1_REDIS_HOST: ${CELL1_REDIS_HOST}
+      CELL1_REDIS_PORT: ${CELL1_REDIS_PORT:-6379}
+      CELL1_REDIS_PASSWORD: ${CELL1_REDIS_PASSWORD}
+      CELL2_POSTGRES_HOST: ${CELL2_POSTGRES_HOST}
+      CELL2_POSTGRES_PORT: ${CELL2_POSTGRES_PORT:-5432}
+      CELL2_POSTGRES_USER: ${CELL2_POSTGRES_USER}
+      CELL2_POSTGRES_PASSWORD: ${CELL2_POSTGRES_PASSWORD}
+      CELL2_POSTGRES_DB: ${CELL2_POSTGRES_DB}
+      CELL2_REDIS_HOST: ${CELL2_REDIS_HOST}
+      CELL2_REDIS_PORT: ${CELL2_REDIS_PORT:-6379}
+      CELL2_REDIS_PASSWORD: ${CELL2_REDIS_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - control
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3002/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  gateway:
+    image: arka:phase3
+    container_name: arka-control-gateway
+    restart: unless-stopped
+    command: ["pnpm", "--filter", "@arka/gateway", "run", "start"]
+    environment:
+      GATEWAY_PORT: 8080
+      CELL_IDS: ${CELL_IDS}
+    networks:
+      - control
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  console:
+    image: arka:phase3
+    container_name: arka-control-console
+    restart: unless-stopped
+    command: ["pnpm", "--filter", "@arka/console", "run", "start"]
+    environment:
+      NODE_ENV: production
+    depends_on:
+      recovery:
+        condition: service_healthy
+    networks:
+      - control
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3300/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: arka-control-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      CONSOLE_HOST: ${CONSOLE_HOST}
+      API_HOST: ${API_HOST}
+      GATEWAY_HOST: ${GATEWAY_HOST}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - console
+      - recovery
+      - gateway
+    networks:
+      - control
+
+networks:
+  control:
+    driver: bridge
+
+volumes:
+  control-pgdata:
+  caddy-data:
+  caddy-config:

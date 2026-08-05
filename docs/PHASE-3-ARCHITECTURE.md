@@ -58,7 +58,6 @@ graph TB
         R53[Route 53]
         WAF[AWS WAF]
         ALBC[ALB, ACM TLS]
-        WEB["apps/web<br/>customer app"]
         CON["apps/console<br/>Recovery Console UI"]
         GW["apps/gateway<br/>cell router, quarantine flag"]
         REC["apps/recovery<br/>control plane API"]
@@ -67,6 +66,7 @@ graph TB
 
     subgraph cell1vpc["Cell 1 VPC 10.1.0.0/16 - no peering"]
         ALB1[ALB, ACM TLS]
+        WEB1["apps/web<br/>customer app"]
         APP1["apps/identity<br/>CELL_ID=cell-1"]
         DB1[(Postgres cell-1)]
         RD1[(Redis cell-1)]
@@ -74,6 +74,7 @@ graph TB
 
     subgraph cell2vpc["Cell 2 VPC 10.2.0.0/16 - no peering"]
         ALB2[ALB, ACM TLS]
+        WEB2["apps/web<br/>customer app"]
         APP2["apps/identity<br/>CELL_ID=cell-2"]
         DB2[(Postgres cell-2)]
         RD2[(Redis cell-2)]
@@ -81,18 +82,18 @@ graph TB
 
     OBS[CloudWatch logs, metrics, alarms]
 
-    U --> R53 --> WAF --> ALBC
+    U -->|"1. which Cell am I in?"| R53 --> WAF --> ALBC
     OP --> R53
-    ALBC --> WEB & CON
-    WEB --> GW
+    ALBC --> CON & GW
     CON --> REC
-    GW -->|"443 + workload token"| ALB1
-    GW -->|"443 + workload token"| ALB2
+    U -->|"2. everything after that"| ALB1 & ALB2
+    GW -->|"quarantine flag, workload token"| ALB1
+    GW -->|"quarantine flag, workload token"| ALB2
     REC -->|"443 read only"| ALB1
     REC -->|"443 read only"| ALB2
     REC --> CPDB
-    ALB1 --> APP1 --> DB1 & RD1
-    ALB2 --> APP2 --> DB2 & RD2
+    ALB1 --> WEB1 --> APP1 --> DB1 & RD1
+    ALB2 --> WEB2 --> APP2 --> DB2 & RD2
     APP1 & APP2 & GW & REC --> OBS
 
     cell1vpc -.->|"no route exists"| cell2vpc
@@ -105,7 +106,7 @@ is an absence.
 
 | Component | Instances | Owns |
 |---|---|---|
-| `apps/web` | 1, control plane | Customer screens W1 to W4 |
+| `apps/web` | **1 per Cell** | Customer screens W1 to W4. Lives in the Cell because `NEXT_PUBLIC_IDENTITY_API_URL` is fixed at build time, so one build addresses exactly one Cell. Putting it in the Cell turns that constraint into the correct topology instead of a workaround |
 | `apps/console` | 1, control plane | Recovery Console screens W5, W6 |
 | `apps/gateway` | 1, control plane | Customer to Cell routing by stable hash, per-Cell quarantine flag. The only component aware that more than one Cell exists |
 | `apps/recovery` | 1, control plane | Cell health observation, dual-approval quarantine, audit trail |
@@ -122,9 +123,14 @@ stack under Docker Compose behind Caddy for automatic TLS.
 
 | Host | VPC | Type | Runs | Public name |
 |---|---|---|---|---|
-| `arka-control` | 10.10.0.0/16 | t3.large | web, console, gateway, recovery, control Postgres | `arka.<eip>.nip.io` |
-| `arka-cell-1` | 10.1.0.0/16 | t3.medium | identity (CELL_ID=cell-1), Postgres, Redis | `cell-1.<eip>.nip.io` |
-| `arka-cell-2` | 10.2.0.0/16 | t3.medium | identity (CELL_ID=cell-2), Postgres, Redis | `cell-2.<eip>.nip.io` |
+| `arka-control` | 10.10.0.0/16 | t3.medium | console, gateway, recovery, control Postgres | `arka.<eip>.nip.io` |
+| `arka-cell-1` | 10.1.0.0/16 | t3.medium | web, identity (CELL_ID=cell-1), Postgres, Redis | `cell-1.<eip>.nip.io` |
+| `arka-cell-2` | 10.2.0.0/16 | t3.medium | web, identity (CELL_ID=cell-2), Postgres, Redis | `cell-2.<eip>.nip.io` |
+
+The containment demonstration becomes two browser tabs, `cell-1.<eip>.nip.io` and
+`cell-2.<eip>.nip.io`, signed in as `alice` and `chandi` respectively. Quarantine Cell 1 from the
+console and watch one tab lose the ability to move money while the other carries on. That is runbook
+P2's "how you know it worked" performed in front of the panel with nothing hidden offscreen.
 
 `nip.io` resolves `anything.1.2.3.4.nip.io` to `1.2.3.4`, which lets Caddy obtain a real Let's Encrypt
 certificate without owning a domain. Public CA, valid TLS, zero DNS setup, no cost.
@@ -135,11 +141,30 @@ certificate without owning a domain. Public CA, valid TLS, zero DNS setup, no co
 |---|---|---|
 | `arka-control-sg` | 80, 443 | 0.0.0.0/0 |
 | | 22 | operator IP only |
-| `arka-cell-N-sg` | 443 | control plane Elastic IP, /32, **only** |
+| `arka-cell-N-sg` | 80, 443 | 0.0.0.0/0. Customers browse their own Cell directly |
 | | 22 | operator IP only |
+| | 5432, 6379 | **nothing. No rule exists** |
 
-There is no rule anywhere permitting Cell 1 to reach Cell 2. Demonstrate it live by SSHing into the
-Cell 1 host and running `curl https://cell-2.<eip>.nip.io/health`, which hangs and times out.
+Postgres and Redis are bound to the Cell's internal Docker network and are never published to the
+host, so there is no listener for a security group rule to permit or deny. This matters for how the
+isolation claim is worded, below.
+
+### Stating the isolation claim accurately
+
+Because customers reach their own Cell over the public internet, Cell 1's host can send an HTTP request
+to Cell 2's public address. So can any laptop on earth. Reachability of a public web port is not the
+claim and pretending otherwise would not survive the Verification section of the rulebook.
+
+The claim is narrower and stronger: **a compromise of Cell 1 yields no credential, no key, and no
+network position that grants access to Cell 2's data.** Three things demonstrate it, and all three are
+true:
+
+1. **Data layer.** From the Cell 1 host, `psql` to Cell 2's database fails to connect. No public
+   listener exists, and no route into Cell 2's VPC exists to reach the private one.
+2. **Credential layer.** Dump Cell 1's container environment. It contains no Cell 2 database URL, no
+   Cell 2 signing key, no Cell 2 workload token. Ten seconds, and the most persuasive of the three.
+3. **Application layer.** From the Cell 1 host, call Cell 2's API. It answers, exactly as it answers
+   any stranger, with 401. Holding an address is not holding access.
 
 ### What Tier 0 substitutes, and why
 
@@ -224,10 +249,14 @@ Runs after the deployment is live, against Arka's own infrastructure only.
 
 ### Isolation, the claim that matters most
 
-1. From the Cell 1 host, `curl` Cell 2's hostname on 443. Must time out.
-2. From the Cell 1 host, attempt a Postgres connection to Cell 2's database. Must fail to route.
-3. Dump the Cell 1 container environment. It must contain no credential, hostname, or key belonging to
-   Cell 2. This is a ten second demonstration and it is the most persuasive one available.
+The three checks from section 3, run and captured as evidence:
+
+1. From the Cell 1 host, `psql` to Cell 2's database. Must fail to connect.
+2. Dump the Cell 1 container environment. Must contain no Cell 2 credential, key, or database URL.
+3. From the Cell 1 host, call Cell 2's API without a workload token. Must return 401.
+
+Capture the terminal output of all three tonight. Evidence gathered calmly beats evidence gathered
+while a judge watches.
 
 ### Security
 

@@ -37,10 +37,19 @@ function cellEndpoints(): CellEndpoint[] {
     const redisPassword = process.env[`${prefix}_REDIS_PASSWORD`] ?? `change-me-${cellId}-redis`
     const redisPort = process.env[`${prefix}_REDIS_PORT`] ?? '6379'
 
+    // Defaults to localhost, which is every existing path: docker compose
+    // publishes each Cell's Postgres and Redis on the host, so the control
+    // plane observes them there. Phase 3 puts each Cell on its own EC2 host in
+    // its own VPC, where the control plane needs an address rather than a port.
+    // Set per Cell, the same `CELL1_*` / `CELL2_*` naming as everything else,
+    // so adding a Cell stays a block of variables and never a code change.
+    const postgresHost = process.env[`${prefix}_POSTGRES_HOST`] ?? 'localhost'
+    const redisHost = process.env[`${prefix}_REDIS_HOST`] ?? 'localhost'
+
     return {
       cellId,
-      postgresUrl: `postgres://${postgresUser}:${postgresPassword}@localhost:${postgresPort}/${postgresDb}`,
-      redisUrl: `redis://:${redisPassword}@localhost:${redisPort}`,
+      postgresUrl: `postgres://${postgresUser}:${postgresPassword}@${postgresHost}:${postgresPort}/${postgresDb}`,
+      redisUrl: `redis://:${redisPassword}@${redisHost}:${redisPort}`,
     }
   })
 }
