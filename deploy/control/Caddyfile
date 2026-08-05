@@ -13,6 +13,22 @@
 
 {$CONSOLE_HOST} {
 	encode gzip
+
+	# The Recovery Console has no operator login of its own. `operatorId` is
+	# free text, which the console's own source comments state plainly and
+	# USER-GUIDE repeats: RBAC exists as a real capability in @arka/identity
+	# and wiring it into the console is unfinished work, not something to
+	# pretend about. On a laptop that is a documented gap. On a public host it
+	# means anyone who finds the URL can approve a quarantine as any operator.
+	#
+	# Wiring real auth into the app the night before a live demonstration is
+	# how you break the demo. This closes the hole at the edge instead, where
+	# it cannot affect application behaviour at all. It is not a substitute
+	# for the real thing and it is not presented as one.
+	basicauth {
+		{$CONSOLE_USER} {$CONSOLE_PASSWORD_HASH}
+	}
+
 	reverse_proxy console:3300
 
 	header {

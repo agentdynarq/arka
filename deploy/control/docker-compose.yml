@@ -117,6 +117,8 @@ services:
       API_HOST: ${API_HOST}
       GATEWAY_HOST: ${GATEWAY_HOST}
       ACME_EMAIL: ${ACME_EMAIL}
+      CONSOLE_USER: ${CONSOLE_USER}
+      CONSOLE_PASSWORD_HASH: ${CONSOLE_PASSWORD_HASH}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

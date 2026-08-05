@@ -4,7 +4,19 @@ import type { QuarantineStatus } from '@arka/contracts'
 import { RecoveryService, RecoveryError } from '@arka/recovery'
 import type { QuarantineStatus as ServiceQuarantineStatus } from '@arka/recovery'
 
+/**
+ * A malformed body is the caller's fault and must read as 400, not 500.
+ * Matched by name rather than importing `ZodError`, because zod reaches this
+ * app transitively through `@arka/contracts` and is not a direct dependency.
+ */
+function isValidationError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'ZodError'
+}
+
 function toHttpException(error: unknown): HttpException {
+  if (isValidationError(error)) {
+    return new HttpException({ code: 'INVALID_REQUEST', message: 'Request body failed validation' }, HttpStatus.BAD_REQUEST)
+  }
   if (error instanceof RecoveryError) {
     return new HttpException({ code: error.code, message: error.message }, HttpStatus.CONFLICT)
   }
@@ -41,8 +53,8 @@ export class QuarantineController {
 
   @Post('request')
   async request(@Body() body: unknown): Promise<QuarantineStatus> {
-    const { cellId, reason, requestedBy } = quarantineRequest.parse(body)
     try {
+      const { cellId, reason, requestedBy } = quarantineRequest.parse(body)
       return toWireStatus(await this.recovery.requestQuarantine(cellId, reason, requestedBy))
     } catch (error) {
       throw toHttpException(error)
@@ -51,8 +63,8 @@ export class QuarantineController {
 
   @Post('approve')
   async approve(@Body() body: unknown): Promise<QuarantineStatus> {
-    const { cellId, approvedBy } = quarantineApproval.parse(body)
     try {
+      const { cellId, approvedBy } = quarantineApproval.parse(body)
       return toWireStatus(await this.recovery.approveQuarantine(cellId, approvedBy))
     } catch (error) {
       throw toHttpException(error)
@@ -72,8 +84,8 @@ export class QuarantineController {
 
   @Post('lift/approve')
   async liftApprove(@Body() body: unknown): Promise<QuarantineStatus> {
-    const { cellId, approvedBy } = quarantineApproval.parse(body)
     try {
+      const { cellId, approvedBy } = quarantineApproval.parse(body)
       return toWireStatus(await this.recovery.approveLiftQuarantine(cellId, approvedBy))
     } catch (error) {
       throw toHttpException(error)

@@ -21,7 +21,19 @@ function toSessionResponse(session: IssuedSession): SessionResponse {
   }
 }
 
+/**
+ * A malformed body is the caller's fault, not ours, and must read as 400.
+ * Matched by name rather than importing `ZodError`, because zod reaches this
+ * app transitively through `@arka/contracts` and is not a direct dependency.
+ */
+function isValidationError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'ZodError'
+}
+
 function toHttpException(error: unknown): HttpException {
+  if (isValidationError(error)) {
+    return new HttpException({ code: 'INVALID_REQUEST', message: 'Request body failed validation' }, HttpStatus.BAD_REQUEST)
+  }
   if (error instanceof IdentityError) {
     const status =
       error.code === 'RATE_LIMITED'
@@ -41,8 +53,8 @@ export class AuthController {
   /** FR-03: a login never completes to a session. It always returns an MFA challenge. */
   @Post('login')
   async login(@Body() body: unknown): Promise<LoginChallengeResponse> {
-    const { username, password } = loginRequest.parse(body)
     try {
+      const { username, password } = loginRequest.parse(body)
       return await this.identity.login(username, password)
     } catch (error) {
       throw toHttpException(error)
@@ -51,8 +63,8 @@ export class AuthController {
 
   @Post('mfa/verify')
   async verifyMfa(@Body() body: unknown): Promise<SessionResponse> {
-    const { mfaToken, totpCode } = mfaVerifyRequest.parse(body)
     try {
+      const { mfaToken, totpCode } = mfaVerifyRequest.parse(body)
       return toSessionResponse(await this.identity.verifyMfa(mfaToken, totpCode))
     } catch (error) {
       throw toHttpException(error)
