@@ -34,7 +34,18 @@ COPY . .
 # connection and considerably more on a slow one.
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-RUN pnpm install --frozen-lockfile
+# pnpm's defaults assume a healthy link and give up on a large tarball well
+# before a poor one delivers it. next, @next/swc, sharp-libvips and turbo are
+# each tens of megabytes and are the ones that fail first. A build that has to
+# work on competition day, on whatever network is available, should wait rather
+# than abort. Lower concurrency because parallel streams on a saturated link
+# make every one of them time out instead of just being slow.
+RUN pnpm config set fetch-retries 6 \
+	&& pnpm config set fetch-retry-mintimeout 20000 \
+	&& pnpm config set fetch-retry-maxtimeout 180000 \
+	&& pnpm config set fetch-timeout 600000
+
+RUN pnpm install --frozen-lockfile --network-concurrency 4
 
 # turbo builds every app: tsc to dist for the Nest apps, next build for the
 # two Next.js apps. NEXT_PUBLIC_* values are inlined by Next at build time, so
