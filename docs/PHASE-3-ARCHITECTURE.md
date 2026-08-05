@@ -123,9 +123,18 @@ stack under Docker Compose behind Caddy for automatic TLS.
 
 | Host | VPC | Type | Runs | Public name |
 |---|---|---|---|---|
-| `arka-control` | 10.10.0.0/16 | t3.medium | console, gateway, recovery, control Postgres | `arka.<eip>.nip.io` |
-| `arka-cell-1` | 10.1.0.0/16 | t3.medium | web, identity (CELL_ID=cell-1), Postgres, Redis | `cell-1.<eip>.nip.io` |
-| `arka-cell-2` | 10.2.0.0/16 | t3.medium | web, identity (CELL_ID=cell-2), Postgres, Redis | `cell-2.<eip>.nip.io` |
+| `arka-control` | 10.10.0.0/16 | t2.medium | console, gateway, recovery, control Postgres | `arka.<eip>.nip.io` |
+| `arka-cell-1` | 10.1.0.0/16 | t2.small | web, identity (CELL_ID=cell-1), Postgres, Redis | `cell-1.<eip>.nip.io` |
+| `arka-cell-2` | 10.2.0.0/16 | t2.small | web, identity (CELL_ID=cell-2), Postgres, Redis | `cell-2.<eip>.nip.io` |
+
+Sizing note. The blueprint sizing was `t3.medium` everywhere. This account's EC2 vCPU quota is **5**,
+and three `t3.medium` at 2 vCPU each needs 6. So control takes `t2.medium` at 2 vCPU and each Cell
+takes `t2.small` at 1 vCPU, which is 4 vCPU with two Cells and exactly 5 once Cell 3 joins. Reasoning
+in `infra/terraform/README.md`.
+
+The consequence is 2 GiB on a Cell host, which runs the stack but does not build it: `next build`
+peaks above that and gets OOM-killed with an error that looks like anything but memory. `deploy/build.sh`
+provisions 4G of swap before building on any host under 4 GiB.
 
 The containment demonstration becomes two browser tabs, `cell-1.<eip>.nip.io` and
 `cell-2.<eip>.nip.io`, signed in as `alice` and `chandi` respectively. Quarantine Cell 1 from the
@@ -210,7 +219,7 @@ Inputs:
 |---|---|---|
 | `cell_id` | `cell-1` | Becomes `CELL_ID` in the container environment |
 | `vpc_cidr` | `10.1.0.0/16` | Must not overlap another Cell, though nothing routes between them anyway |
-| `instance_type` | `t3.medium` | |
+| `instance_type` | `t2.small` | |
 | `control_plane_ip` | `13.x.x.x/32` | The only address permitted inbound on 443 |
 | `operator_ip` | `x.x.x.x/32` | The only address permitted inbound on 22 |
 | `key_name` | `arka-phase3` | |
