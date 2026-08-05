@@ -28,6 +28,12 @@ WORKDIR /app
 # copy of a 20 package workspace is its own source of mistakes.
 COPY . .
 
+# Playwright is a devDependency of the e2e suite and of scripts/, and its
+# postinstall downloads a headless Chromium of roughly 150MB. Nothing that runs
+# in this image drives a browser, so skip it. Worth minutes on a fast
+# connection and considerably more on a slow one.
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
 RUN pnpm install --frozen-lockfile
 
 # turbo builds every app: tsc to dist for the Nest apps, next build for the
