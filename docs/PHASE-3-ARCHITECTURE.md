@@ -278,7 +278,9 @@ once.
 
 ### Load
 
-`k6` or `autocannon` against the Gateway, ramping to the point where the anomaly rate limiter engages.
+`k6` or `autocannon` against the Gateway, ramping to the point where the rate limiter engages. Rate
+limiting, not anomaly detection: there is no anomaly service, it is deferred and `docs/ARCHITECTURE.md`
+says so. Do not let the demo narration promote one into the other.
 The result to capture is not a throughput number, it is the behaviour: load against Cell 1 must leave
 Cell 2's latency unchanged. Record both series on the same time axis. Isolation under load is a
 different and better claim than isolation at rest.
