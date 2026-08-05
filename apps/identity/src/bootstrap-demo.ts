@@ -25,7 +25,18 @@ const DEMO_LOGIN_BY_CELL: Record<string, { username: string; customerId: string;
 }
 
 export async function bootstrapDemoData(identity: IdentityService): Promise<void> {
-  if (process.env.NODE_ENV === 'production') return
+  // NODE_ENV is genuinely `production` in the deployed image, because the apps
+  // really are running in production mode there. The demo logins are still
+  // needed on that deployment: a bank nobody can sign into demonstrates
+  // nothing. So the guard is an explicit flag rather than an inference from
+  // NODE_ENV, and a real deployment leaves it unset.
+  //
+  // This creates an account with a published password, which is deliberate and
+  // is not the same class of thing as DEMO_MFA_ENDPOINT_ENABLED. The password
+  // is in USER-GUIDE.md for judges to use. MFA still stands between that
+  // password and a session, which is exactly why the endpoint that hands out
+  // TOTP codes is off by default on a deployed Cell.
+  if (process.env.NODE_ENV === 'production' && process.env.DEMO_LOGINS_ENABLED !== 'true') return
 
   const cellId = process.env.CELL_ID ?? 'cell-1'
   const demoLogin = DEMO_LOGIN_BY_CELL[cellId]

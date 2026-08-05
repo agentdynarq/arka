@@ -63,7 +63,11 @@ services:
       # The judge-convenience TOTP endpoint the sign-in screen's "Check your
       # phone for the code" button calls. Documented as demo-only in
       # apps/identity/src/auth/demo-mfa.controller.ts.
-      DEMO_MFA_ENDPOINT_ENABLED: ${DEMO_MFA_ENDPOINT_ENABLED:-true}
+      DEMO_MFA_ENDPOINT_ENABLED: ${DEMO_MFA_ENDPOINT_ENABLED:-false}
+      # Creates this Cell's seeded login (alice on cell-1, chandi on cell-2).
+      # The image runs with NODE_ENV=production, which otherwise skips it, and
+      # a deployment nobody can sign into demonstrates nothing.
+      DEMO_LOGINS_ENABLED: ${DEMO_LOGINS_ENABLED:-true}
     depends_on:
       postgres:
         condition: service_healthy
