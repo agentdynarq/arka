@@ -24,5 +24,15 @@ dist
 .git
 .github
 docs/media
-e2e
 **/*.log
+
+# NOT excluded, deliberately: e2e/
+#
+# pnpm-workspace.yaml lists `e2e` as a workspace package, so pnpm-lock.yaml
+# carries an importer entry for it. Excluding the directory leaves the lockfile
+# describing a workspace that does not exist in the build context, and
+# `pnpm install --frozen-lockfile` correctly refuses. Nothing in the image runs
+# the e2e suite; its dependencies come along so the lockfile stays honest, and
+# PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD in the Dockerfile keeps the browser binary
+# out. Removing e2e from the workspace to slim the image would change what
+# `pnpm test` means outside Docker, which is not a trade worth making.
