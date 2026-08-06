@@ -152,11 +152,21 @@ certificate without owning a domain. Public CA, valid TLS, zero DNS setup, no co
 | | 22 | operator IP only |
 | `arka-cell-N-sg` | 80, 443 | 0.0.0.0/0. Customers browse their own Cell directly |
 | | 22 | operator IP only |
-| | 5432, 6379 | **nothing. No rule exists** |
+| | 5432, 6379 | **control plane private address, /32, and nothing else** |
 
-Postgres and Redis are bound to the Cell's internal Docker network and are never published to the
-host, so there is no listener for a security group rule to permit or deny. This matters for how the
-isolation claim is worded, below.
+Postgres and Redis are published on the Cell host's **private** VPC address, never on `0.0.0.0`, so
+they are absent from the public interface. The single security group rule permitting them names the
+control plane and no one else.
+
+They have to be reachable at all because the Recovery Console observes each Cell at the data layer:
+`apps/recovery` connects directly to every Cell's Postgres and Redis to build the health map and to
+run the integrity audit. Without this rule the console reports both Cells down and screen W6 cannot
+run. An earlier draft of this section said no rule existed, which was true of the first design and
+became false once the control plane's observation path was settled. It is corrected here.
+
+This does not weaken the isolation claim. The control plane already holds read credentials for every
+Cell by design, and it is the only component that does. **No Cell holds a credential or a route for
+another Cell**, which is the property that matters and is unaffected.
 
 ### Stating the isolation claim accurately
 
