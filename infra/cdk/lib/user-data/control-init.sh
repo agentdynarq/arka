@@ -60,7 +60,10 @@ chown -R ubuntu:ubuntu /opt/arka
 sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
 sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
 sed -i 's/^#\?X11Forwarding.*/X11Forwarding no/' /etc/ssh/sshd_config
-systemctl restart sshd
+# Ubuntu 24.04 names the OpenSSH daemon unit "ssh", not "sshd". Using the
+# wrong name here aborts the rest of cloud-init under "set -e", which would
+# skip the firewall block below.
+systemctl restart ssh
 
 # ---------------------------------------------------------------
 # UFW: host-level firewall as defense-in-depth
