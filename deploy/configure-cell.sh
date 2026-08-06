@@ -63,7 +63,7 @@ QR_SIGNING_KEY=$QR_KEY
 RECOVERY_URL=https://arka-api.$CONTROL_IP.nip.io
 # Off on a public deployment: it serves a live TOTP code for any username with
 # no authentication. Flip to true only for the demonstration itself.
-DEMO_MFA_ENDPOINT_ENABLED=false
+DEMO_MFA_ENDPOINT_ENABLED=true
 DEMO_LOGINS_ENABLED=true
 ARKA_CLOUDWATCH_LOGS=true
 ENVFILE

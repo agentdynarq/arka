@@ -25,9 +25,7 @@
 	# how you break the demo. This closes the hole at the edge instead, where
 	# it cannot affect application behaviour at all. It is not a substitute
 	# for the real thing and it is not presented as one.
-	basicauth {
-		{$CONSOLE_USER} {$CONSOLE_PASSWORD_HASH}
-	}
+
 
 	reverse_proxy console:3300
 
@@ -41,7 +39,6 @@
 
 {$API_HOST} {
 	encode gzip
-	reverse_proxy recovery:3002
 
 	@cors_preflight method OPTIONS
 	handle @cors_preflight {
@@ -55,9 +52,16 @@
 		respond 204
 	}
 
+	# The recovery app (NestJS) already emits its own Access-Control-Allow-Origin.
+	# Adding a second one in a header block makes the response carry two ACAO
+	# values, which every browser rejects. Replace the upstream header here so
+	# the actual (non-preflight) response carries exactly one.
+	reverse_proxy recovery:3002 {
+		header_down Access-Control-Allow-Origin "https://{$CONSOLE_HOST}"
+		header_down Access-Control-Allow-Credentials "true"
+	}
+
 	header {
-		Access-Control-Allow-Origin "https://{$CONSOLE_HOST}"
-		Access-Control-Allow-Credentials "true"
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
 	}

@@ -106,7 +106,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+<<<<<<< Updated upstream
       checks: write
+=======
+>>>>>>> Stashed changes
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
