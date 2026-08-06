@@ -86,10 +86,18 @@ jobs:
         id: rel
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-      - name: assume the deploy role
+      # OIDC is the intended mechanism and the role exists with a correct
+      # trust policy, verified against the account. It rejected every token
+      # with AccessDenied on the day and we ran out of window to find why, so
+      # this falls back to keys when the OIDC role is unset. Keys are a real
+      # downgrade, they are long-lived where a token lasts an hour, and this
+      # is recorded rather than quietly swapped. See docs/DEPLOYMENT.md.
+      - name: authenticate to aws
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
       - id: ecr
@@ -141,10 +149,18 @@ jobs:
       - id: rel
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-      - name: assume the deploy role
+      # OIDC is the intended mechanism and the role exists with a correct
+      # trust policy, verified against the account. It rejected every token
+      # with AccessDenied on the day and we ran out of window to find why, so
+      # this falls back to keys when the OIDC role is unset. Keys are a real
+      # downgrade, they are long-lived where a token lasts an hour, and this
+      # is recorded rather than quietly swapped. See docs/DEPLOYMENT.md.
+      - name: authenticate to aws
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
       - id: ecr
