@@ -3,7 +3,7 @@
 #
 #   deploy/verify/load.sh <cell-under-load-host> <control-host> [seconds] [concurrency]
 #
-# The number this produces is not the point. Throughput on a 1 vCPU t2.small is
+# The number this produces is not the point. Throughput on a 2 GiB t3.small is
 # not a claim worth making and we do not make it. The point is the comparison:
 # while one Cell is saturated, does the other one's latency move at all?
 #
@@ -49,9 +49,9 @@ sample_other_cell() {
 	echo "cell under load: $TARGET"
 	echo "duration: ${DURATION}s at ${VUS} concurrent"
 	echo
-	echo "NOTE: hosts are t2.small, 1 vCPU and 2 GiB, sized to fit a 5 vCPU"
-	echo "account quota. Absolute throughput here is a property of that sizing"
-	echo "and is not presented as a capacity claim."
+	echo "NOTE: hosts are t3.small, 2 vCPU and 2 GiB, the largest free-tier"
+	echo "eligible type this account permits. Absolute throughput here is a"
+	echo "property of that sizing and is not presented as a capacity claim."
 	echo
 } | tee "$OUT"
 

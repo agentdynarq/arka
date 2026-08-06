@@ -70,8 +70,8 @@ Roughly four minutes from dispatch to a Cell serving customers.
 `deploy/verify/load.sh` saturates one Cell while sampling another surface once a
 second throughout.
 
-**The throughput number is not the claim.** These hosts are `t2.small`, 1 vCPU
-and 2 GiB, sized to fit a 5 vCPU account quota. Any requests-per-second figure
+**The throughput number is not the claim.** These hosts are `t3.small`, 2 vCPU
+and 2 GiB. Any requests-per-second figure
 is a property of that sizing and would be dishonest to present as capacity.
 
 The claim is the comparison: **while one Cell is saturated, does anything else

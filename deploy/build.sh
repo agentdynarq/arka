@@ -42,8 +42,8 @@ else
 	RECOVERY_API_URL="https://$API_HOST"
 fi
 
-# A Cell host is a t2.small: 1 vCPU and 2 GiB, because this account's EC2 vCPU
-# quota is 5 and three t3.medium would need 6. See infra/terraform/README.md.
+# Hosts are t3.small: 2 vCPU and 2 GiB. The account is restricted to
+# free-tier-eligible instance types, and t3.medium is not one.
 #
 # 2 GiB is enough to RUN the stack. It is not enough to BUILD it: `next build`
 # alone routinely peaks above that, and the OOM killer takes the build with a

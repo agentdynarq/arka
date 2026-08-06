@@ -16,9 +16,9 @@ peering connection and no transit gateway between them.
 
 | Host | VPC | Type | Runs | Public entry point |
 |---|---|---|---|---|
-| `arka-control` | 10.10.0.0/16 | t2.medium | Recovery Console, control plane API, Gateway, control Postgres | `https://arka.<ip>.nip.io` |
-| `arka-cell-1` | 10.1.0.0/16 | t2.small | Customer app, identity API, Postgres, Redis | `https://cell-1.<ip>.nip.io` |
-| `arka-cell-2` | 10.2.0.0/16 | t2.small | Same image, different `CELL_ID`, own database and keys | `https://cell-2.<ip>.nip.io` |
+| `arka-control` | 10.10.0.0/16 | t3.small | Recovery Console, control plane API, Gateway, control Postgres | `https://arka.<ip>.nip.io` |
+| `arka-cell-1` | 10.1.0.0/16 | t3.small | Customer app, identity API, Postgres, Redis | `https://cell-1.<ip>.nip.io` |
+| `arka-cell-2` | 10.2.0.0/16 | t3.small | Same image, different `CELL_ID`, own database and keys | `https://cell-2.<ip>.nip.io` |
 
 **Live URLs**
 
@@ -195,7 +195,7 @@ deploy/verify/load.sh <cell-1-host> <control-host> 60 30
 ```
 
 Saturates one Cell while sampling another surface every second. The throughput
-figure is not a capacity claim on 1 vCPU hosts and is not presented as one. The
+figure is not a capacity claim on 2 GiB hosts and is not presented as one. The
 result is whether anything else moved.
 
 ### Continuous
