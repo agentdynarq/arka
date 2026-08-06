@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
 import { Construct } from 'constructs';
 
 /**
@@ -32,14 +34,21 @@ export interface CellProps {
   readonly operatorIp: string;
 
   /**
-   * Control plane's Elastic IP address (e.g. "13.x.x.x").
-   * Passed for tagging and documentation. Per PHASE-3-ARCHITECTURE.md,
-   * no SG rule opens 5432/6379 (Docker-internal only, no host listener).
+   * Control plane's public Elastic IP address (e.g. "13.x.x.x").
+   * Used to construct /32 SG ingress rules for Postgres (5432) and
+   * Redis (6379), so the Recovery Console can reach Cell databases.
+   * Also used for instance tagging.
    */
   readonly controlPlaneIp: string;
 
   /** Machine image to use for the EC2 instance (Ubuntu 24.04 LTS recommended) */
   readonly machineImage: ec2.IMachineImage;
+
+  /**
+   * The shared ECR repository the host pulls its application image from.
+   * The instance role is granted pull access scoped to this repository.
+   */
+  readonly ecrRepository: ecr.IRepository;
 }
 
 /**
@@ -68,6 +77,9 @@ export class CellConstruct extends Construct {
 
   /** The security group governing this Cell's traffic. */
   public readonly securityGroup: ec2.SecurityGroup;
+
+  /** The IAM role attached to the instance via its instance profile. */
+  public readonly instanceRole: iam.Role;
 
   /** The Cell identifier passed through from props. */
   public readonly cellId: string;
@@ -100,14 +112,14 @@ export class CellConstruct extends Construct {
     // Security Group
     // Inbound: 80, 443 from anywhere (customers browse their own Cell).
     //          22 from operator IP only.
-    //          5432, 6379: NO RULES. Postgres and Redis are bound to the
-    //          Cell's internal Docker network and are never published to
-    //          the host, so there is no listener for a rule to reach.
+    //          5432, 6379 from control plane EIP only (Recovery Console
+    //          connects directly to Cell Postgres and Redis for health
+    //          checks and ledger integrity audits).
     // Outbound: all (Docker Hub, apt, Let's Encrypt).
     // -----------------------------------------------------------------
     this.securityGroup = new ec2.SecurityGroup(this, 'SG', {
       vpc: this.vpc,
-      description: `Arka ${props.cellId}: 80/443 public, 22 operator-only, no DB ports`,
+      description: `Arka ${props.cellId}: 80/443 public, 22 operator-only, DB from control only`,
       allowAllOutbound: true,
     });
 
@@ -129,8 +141,38 @@ export class CellConstruct extends Construct {
       'SSH from operator IP only',
     );
 
-    // No rules for 5432, 6379. This is intentional. See:
-    // PHASE-3-ARCHITECTURE.md section 3, "Security groups" table.
+    // controlPlaneIp is a CloudFormation token (not yet resolved at synth).
+    // Construct the /32 CIDR using Fn.join so CloudFormation resolves it.
+    const controlCidr = cdk.Fn.join('', [props.controlPlaneIp, '/32']);
+
+    this.securityGroup.addIngressRule(
+      ec2.Peer.ipv4(controlCidr as unknown as string),
+      ec2.Port.tcp(5432),
+      'Postgres: control plane Recovery Console direct DB access',
+    );
+
+    this.securityGroup.addIngressRule(
+      ec2.Peer.ipv4(controlCidr as unknown as string),
+      ec2.Port.tcp(6379),
+      'Redis: control plane Recovery Console direct DB access',
+    );
+
+    // -----------------------------------------------------------------
+    // Instance role and profile
+    // The release pipeline reaches this host over AWS Systems Manager, not
+    // SSH, so a release needs no inbound port and no private key. SSM needs
+    // AmazonSSMManagedInstanceCore. The host also pulls its application
+    // image from the shared ECR repository, so grant pull scoped to it.
+    // Passing a role to ec2.Instance creates the instance profile.
+    // -----------------------------------------------------------------
+    this.instanceRole = new iam.Role(this, 'InstanceRole', {
+      assumedBy: new iam.ServicePrincipal('ec2.amazonaws.com'),
+      description: `Arka ${props.cellId} host: SSM managed + ECR pull`,
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMManagedInstanceCore'),
+      ],
+    });
+    props.ecrRepository.grantPull(this.instanceRole);
 
     // -----------------------------------------------------------------
     // EC2 Instance
@@ -144,6 +186,7 @@ export class CellConstruct extends Construct {
       instanceType: new ec2.InstanceType(props.instanceType),
       machineImage: props.machineImage,
       securityGroup: this.securityGroup,
+      role: this.instanceRole,
       keyPair: ec2.KeyPair.fromKeyPairName(this, 'KeyPair', props.keyName),
       requireImdsv2: true,
       blockDevices: [
@@ -157,9 +200,11 @@ export class CellConstruct extends Construct {
       ],
     });
 
-    // Inject CELL_ID as a shell variable before the cloud-init script body.
-    // The cell-init.sh script references ${CELL_ID} to write the marker file.
+    // Inject CELL_ID and the control plane IP as shell variables before the
+    // cloud-init script body. cell-init.sh references ${CELL_ID} for the
+    // marker file and ${CONTROL_PLANE_IP} for the DB port firewall rules.
     this.instance.addUserData(`export CELL_ID="${props.cellId}"`);
+    this.instance.addUserData(`export CONTROL_PLANE_IP="${props.controlPlaneIp}"`);
 
     const userDataScript = fs.readFileSync(
       path.join(__dirname, '..', 'user-data', 'cell-init.sh'),

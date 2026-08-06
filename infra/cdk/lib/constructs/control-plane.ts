@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
 import { Construct } from 'constructs';
 
 /**
@@ -23,6 +25,12 @@ export interface ControlPlaneProps {
 
   /** Machine image to use for the EC2 instance (Ubuntu 24.04 LTS recommended) */
   readonly machineImage: ec2.IMachineImage;
+
+  /**
+   * The shared ECR repository the host pulls its application image from.
+   * The instance role is granted pull access scoped to this repository.
+   */
+  readonly ecrRepository: ecr.IRepository;
 }
 
 /**
@@ -47,6 +55,9 @@ export class ControlPlaneConstruct extends Construct {
 
   /** The security group governing inbound/outbound traffic. */
   public readonly securityGroup: ec2.SecurityGroup;
+
+  /** The IAM role attached to the instance via its instance profile. */
+  public readonly instanceRole: iam.Role;
 
   constructor(scope: Construct, id: string, props: ControlPlaneProps) {
     super(scope, id);
@@ -99,6 +110,23 @@ export class ControlPlaneConstruct extends Construct {
     );
 
     // -----------------------------------------------------------------
+    // Instance role and profile
+    // The release pipeline reaches this host over AWS Systems Manager, not
+    // SSH, so a release needs no inbound port and no private key. SSM needs
+    // AmazonSSMManagedInstanceCore. The host also pulls its application
+    // image from the shared ECR repository, so grant pull scoped to it.
+    // Passing a role to ec2.Instance creates the instance profile.
+    // -----------------------------------------------------------------
+    this.instanceRole = new iam.Role(this, 'InstanceRole', {
+      assumedBy: new iam.ServicePrincipal('ec2.amazonaws.com'),
+      description: 'Arka control plane host: SSM managed + ECR pull',
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMManagedInstanceCore'),
+      ],
+    });
+    props.ecrRepository.grantPull(this.instanceRole);
+
+    // -----------------------------------------------------------------
     // EC2 Instance
     // - IMDSv2 enforced: prevents SSRF-based metadata credential theft
     // - EBS root volume: 8GB gp3, encrypted at rest with default KMS key
@@ -110,6 +138,7 @@ export class ControlPlaneConstruct extends Construct {
       instanceType: new ec2.InstanceType(props.instanceType),
       machineImage: props.machineImage,
       securityGroup: this.securityGroup,
+      role: this.instanceRole,
       keyPair: ec2.KeyPair.fromKeyPairName(this, 'KeyPair', props.keyName),
       requireImdsv2: true,
       blockDevices: [

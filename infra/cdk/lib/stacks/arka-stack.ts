@@ -1,8 +1,10 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
 import { Construct } from 'constructs';
 import { ControlPlaneConstruct } from '../constructs/control-plane';
 import { CellConstruct } from '../constructs/cell';
+import { GitHubOidcConstruct } from '../constructs/github-oidc';
 
 /**
  * Configuration for a single Cell, read from cdk.json context.
@@ -21,8 +23,11 @@ export interface ArkaStackProps extends cdk.StackProps {
   /** Pre-existing EC2 key pair name */
   readonly keyName: string;
 
-  /** EC2 instance type for all hosts */
-  readonly instanceType: string;
+  /** EC2 instance type for the control plane host (e.g. "t2.medium") */
+  readonly controlInstanceType: string;
+
+  /** EC2 instance type for each Cell host (e.g. "t2.small") */
+  readonly cellInstanceType: string;
 
   /** Control plane VPC CIDR */
   readonly controlPlaneVpcCidr: string;
@@ -80,16 +85,29 @@ export class ArkaStack extends cdk.Stack {
     });
 
     // -----------------------------------------------------------------
+    // ECR repository
+    // The release pipeline builds the application image in GitHub Actions
+    // and pushes it here; hosts pull it. One repository named "arka",
+    // shared by control plane and every Cell (the image is the same, the
+    // build args differ). Image scanning on push is enabled.
+    // -----------------------------------------------------------------
+    const ecrRepository = new ecr.Repository(this, 'Repo', {
+      repositoryName: 'arka',
+      imageScanOnPush: true,
+    });
+
+    // -----------------------------------------------------------------
     // Control Plane
     // Instantiated once. The EIP is allocated here and its address is
-    // passed to Cell constructs for tagging/documentation.
+    // passed to Cell constructs so their SG can allow DB access from it.
     // -----------------------------------------------------------------
     const controlPlane = new ControlPlaneConstruct(this, 'Control', {
       vpcCidr: props.controlPlaneVpcCidr,
-      instanceType: props.instanceType,
+      instanceType: props.controlInstanceType,
       keyName: props.keyName,
       operatorIp: props.operatorIp,
       machineImage,
+      ecrRepository,
     });
 
     // -----------------------------------------------------------------
@@ -104,11 +122,12 @@ export class ArkaStack extends cdk.Stack {
       const cell = new CellConstruct(this, `Cell-${cellId}`, {
         cellId,
         vpcCidr: cellConfig.vpcCidr,
-        instanceType: props.instanceType,
+        instanceType: props.cellInstanceType,
         keyName: props.keyName,
         operatorIp: props.operatorIp,
         controlPlaneIp: controlPlane.eip.attrPublicIp,
         machineImage,
+        ecrRepository,
       });
 
       cellConstructs[cellId] = cell;
@@ -174,6 +193,30 @@ export class ArkaStack extends cdk.Stack {
         description: `SSH command for the ${cellId} host`,
       });
     }
+
+    // -----------------------------------------------------------------
+    // GitHub OIDC for CI/CD
+    // Creates an IAM OIDC provider and a least-privilege release role
+    // restricted to the agentdynarq/arka repository. The role can push
+    // to the ECR repository and run the release over SSM, scoped to
+    // exactly these instances and the AWS-RunShellScript document.
+    // -----------------------------------------------------------------
+    const instanceArns = [
+      controlPlane.instance,
+      ...Object.values(cellConstructs).map((c) => c.instance),
+    ].map((instance) =>
+      this.formatArn({
+        service: 'ec2',
+        resource: 'instance',
+        resourceName: instance.instanceId,
+      }),
+    );
+
+    new GitHubOidcConstruct(this, 'GitHubOidc', {
+      repository: 'agentdynarq/arka',
+      ecrRepository,
+      instanceArns,
+    });
 
     // -----------------------------------------------------------------
     // Default tags applied to every resource in the stack
