@@ -1,0 +1,8 @@
+{
+  "availability-zones:account=785013739418:region=ap-south-1": [
+    "ap-south-1a",
+    "ap-south-1b",
+    "ap-south-1c"
+  ],
+  "ami:account=785013739418:filters.image-type.0=machine:filters.name.0=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*:filters.state.0=available:owners.0=099720109477:region=ap-south-1": "ami-07e5ce642bbc48c0d"
+}

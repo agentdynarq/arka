@@ -16,11 +16,13 @@
   "context": {
     "@aws-cdk/aws-ec2:restrictDefaultSecurityGroup": true,
     "@aws-cdk/core:stackRelativeExports": true,
+    "@aws-cdk/aws-ec2:uniqueImdsv2TemplateName": true,
 
     "awsRegion": "ap-south-1",
-    "operatorIp": "111.223.190.71/32",
+    "operatorIp": "203.115.31.111/32",
     "keyName": "arkakeypair",
-    "instanceType": "t3.small",
+    "controlInstanceType": "t3.small",
+    "cellInstanceType": "t3.small",
 
     "controlPlane": {
       "vpcCidr": "10.10.0.0/16"

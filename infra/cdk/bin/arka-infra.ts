@@ -22,7 +22,8 @@ const app = new cdk.App();
 const awsRegion = app.node.tryGetContext('awsRegion') as string;
 const operatorIp = app.node.tryGetContext('operatorIp') as string;
 const keyName = app.node.tryGetContext('keyName') as string;
-const instanceType = app.node.tryGetContext('instanceType') as string;
+const controlInstanceType = app.node.tryGetContext('controlInstanceType') as string;
+const cellInstanceType = app.node.tryGetContext('cellInstanceType') as string;
 const controlPlane = app.node.tryGetContext('controlPlane') as { vpcCidr: string };
 const cells = app.node.tryGetContext('cells') as Record<string, { vpcCidr: string }>;
 
@@ -34,7 +35,8 @@ new ArkaStack(app, 'ArkaStack', {
   description: 'Arka Phase 3 Tier 0: control plane + cell-isolated VPCs (Duothan 6.0)',
   operatorIp,
   keyName,
-  instanceType,
+  controlInstanceType,
+  cellInstanceType,
   controlPlaneVpcCidr: controlPlane.vpcCidr,
   cells,
 });
