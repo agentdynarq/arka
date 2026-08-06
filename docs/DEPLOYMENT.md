@@ -16,19 +16,19 @@ peering connection and no transit gateway between them.
 
 | Host | VPC | Type | Runs | Public entry point |
 |---|---|---|---|---|
-| `arka-control` | 10.10.0.0/16 | t3.small | Recovery Console, control plane API, Gateway, control Postgres | `https://arka.<ip>.nip.io` |
-| `arka-cell-1` | 10.1.0.0/16 | t3.small | Customer app, identity API, Postgres, Redis | `https://cell-1.<ip>.nip.io` |
-| `arka-cell-2` | 10.2.0.0/16 | t3.small | Same image, different `CELL_ID`, own database and keys | `https://cell-2.<ip>.nip.io` |
+| `arka-control` | 10.10.0.0/16 | t3.small | Recovery Console, control plane API, Gateway, control Postgres | `https://arka.13.127.6.146.nip.io` |
+| `arka-cell-1` | 10.1.0.0/16 | t3.small | Customer app, identity API, Postgres, Redis | `https://cell-1.13.203.248.243.nip.io` |
+| `arka-cell-2` | 10.2.0.0/16 | t3.small | Same image, different `CELL_ID`, own database and keys | `https://cell-2.13.234.216.65.nip.io` |
 
 **Live URLs**
 
 | Surface | URL |
 |---|---|
-| Customer app, Cell 1 | `https://cell-1.<CELL_1_IP>.nip.io` |
-| Customer app, Cell 2 | `https://cell-2.<CELL_2_IP>.nip.io` |
-| Recovery Console | `https://arka.<CONTROL_IP>.nip.io` |
-| Control plane API | `https://arka-api.<CONTROL_IP>.nip.io` |
-| Gateway | `https://arka-gw.<CONTROL_IP>.nip.io` |
+| Customer app, Cell 1 | https://cell-1.13.203.248.243.nip.io |
+| Customer app, Cell 2 | https://cell-2.13.234.216.65.nip.io |
+| Recovery Console | https://arka.13.127.6.146.nip.io |
+| Control plane API | https://arka-api.13.127.6.146.nip.io |
+| Gateway | https://arka-gw.13.127.6.146.nip.io |
 
 `nip.io` resolves `anything.1.2.3.4.nip.io` to `1.2.3.4`, which lets Caddy obtain
 real Let's Encrypt certificates without owning a domain. Public CA, valid TLS,
