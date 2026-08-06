@@ -38,9 +38,21 @@ usermod -aG docker ubuntu
 # Install Git
 apt-get install -y git
 
-# Create application directory
-mkdir -p /opt/arka
-chown ubuntu:ubuntu /opt/arka
+# ---------------------------------------------------------------
+# Application repository.
+# /opt/arka is a git checkout so deploy/host-release.sh can run
+# "git fetch && git checkout <sha>" to pick up the compose files,
+# Caddyfile and env file. The repo is public, so no credential is
+# embedded here. It is cloned as root then handed to the ubuntu
+# user, which is the identity the release pipeline uses over SSM.
+# The clone is best effort: on a transient failure cloud-init still
+# finishes host hardening and the checkout is redone by hand.
+# ---------------------------------------------------------------
+git clone --branch phase3/deploy https://github.com/agentdynarq/arka.git /opt/arka || {
+  echo "git clone failed; leaving an empty /opt/arka for a manual clone" >&2
+  mkdir -p /opt/arka
+}
+chown -R ubuntu:ubuntu /opt/arka
 
 # ---------------------------------------------------------------
 # Write Cell ID for deploy scripts to reference.
@@ -66,6 +78,19 @@ ufw default allow outgoing
 ufw allow 22/tcp
 ufw allow 80/tcp
 ufw allow 443/tcp
+
+# Postgres and Redis: reachable only from the control plane public IP.
+# The Recovery Console connects directly to the Cell data layer to build
+# the health map and run the ledger integrity audit. Traffic arrives via
+# this Cell's Elastic IP carrying the control plane's public address as
+# its source, because the two VPCs have no peering and private addresses
+# do not route between them. The security group already restricts these
+# ports to the same /32; this host firewall rule matches it so the
+# packets are not dropped before they reach the listener.
+# CONTROL_PLANE_IP is injected by CDK addUserData() before this script.
+ufw allow from "${CONTROL_PLANE_IP}" to any port 5432 proto tcp
+ufw allow from "${CONTROL_PLANE_IP}" to any port 6379 proto tcp
+
 ufw --force enable
 
 echo "arka-${CELL_ID} cloud-init complete" | tee /opt/arka/.cloud-init-done

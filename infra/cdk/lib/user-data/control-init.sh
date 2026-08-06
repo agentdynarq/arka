@@ -38,9 +38,21 @@ usermod -aG docker ubuntu
 # Install Git
 apt-get install -y git
 
-# Create application directory
-mkdir -p /opt/arka
-chown ubuntu:ubuntu /opt/arka
+# ---------------------------------------------------------------
+# Application repository.
+# /opt/arka is a git checkout so deploy/host-release.sh can run
+# "git fetch && git checkout <sha>" to pick up the compose files,
+# Caddyfile and env file. The repo is public, so no credential is
+# embedded here. It is cloned as root then handed to the ubuntu
+# user, which is the identity the release pipeline uses over SSM.
+# The clone is best effort: on a transient failure cloud-init still
+# finishes host hardening and the checkout is redone by hand.
+# ---------------------------------------------------------------
+git clone --branch phase3/deploy https://github.com/agentdynarq/arka.git /opt/arka || {
+  echo "git clone failed; leaving an empty /opt/arka for a manual clone" >&2
+  mkdir -p /opt/arka
+}
+chown -R ubuntu:ubuntu /opt/arka
 
 # ---------------------------------------------------------------
 # SSH hardening
