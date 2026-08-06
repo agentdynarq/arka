@@ -31,6 +31,17 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE="$REPO_ROOT/deploy/$ROLE/docker-compose.yml"
 ENV_FILE="$REPO_ROOT/deploy/$ROLE/.env"
 
+# Container logs go to CloudWatch when the host is configured for it, via an
+# overlay file rather than the base compose, so the same compose file still
+# runs on a laptop with no AWS account. Set ARKA_CLOUDWATCH_LOGS=true in the
+# host's .env once the instance profile grants logs:PutLogEvents.
+CW_OVERLAY="$REPO_ROOT/deploy/$ROLE/docker-compose.cloudwatch.yml"
+COMPOSE_FILES=(-f "$COMPOSE")
+if grep -qs '^ARKA_CLOUDWATCH_LOGS=true' "$ENV_FILE" && [[ -f "$CW_OVERLAY" ]]; then
+	COMPOSE_FILES+=(-f "$CW_OVERLAY")
+	echo "==> container logs will ship to CloudWatch"
+fi
+
 if [[ ! -f "$ENV_FILE" ]]; then
 	echo "missing $ENV_FILE. It holds this host's secrets and is created once, by hand, and never committed." >&2
 	exit 1
@@ -48,16 +59,16 @@ echo "==> pulling"
 docker pull "$IMAGE"
 
 echo "==> starting"
-ARKA_IMAGE="$IMAGE" docker compose -f "$COMPOSE" --env-file "$ENV_FILE" up -d --remove-orphans
+ARKA_IMAGE="$IMAGE" docker compose "${COMPOSE_FILES[@]}" --env-file "$ENV_FILE" up -d --remove-orphans
 
 echo "==> waiting for health"
 DEADLINE=$((SECONDS + 240))
 while (( SECONDS < DEADLINE )); do
-	UNHEALTHY=$(docker compose -f "$COMPOSE" --env-file "$ENV_FILE" ps --format json 2>/dev/null \
+	UNHEALTHY=$(docker compose "${COMPOSE_FILES[@]}" --env-file "$ENV_FILE" ps --format json 2>/dev/null \
 		| grep -c '"Health":"starting"\|"Health":"unhealthy"' || true)
 	if [[ "$UNHEALTHY" == "0" ]]; then
 		echo "==> all services healthy"
-		ARKA_IMAGE="$IMAGE" docker compose -f "$COMPOSE" --env-file "$ENV_FILE" ps
+		ARKA_IMAGE="$IMAGE" docker compose "${COMPOSE_FILES[@]}" --env-file "$ENV_FILE" ps
 		# Keep one previous image so a rollback does not depend on the network.
 		docker image prune -f --filter "until=72h" > /dev/null 2>&1 || true
 		echo "==> released $IMAGE"
@@ -67,6 +78,6 @@ while (( SECONDS < DEADLINE )); do
 done
 
 echo "!! services did not reach healthy within 240s" >&2
-docker compose -f "$COMPOSE" --env-file "$ENV_FILE" ps >&2
-docker compose -f "$COMPOSE" --env-file "$ENV_FILE" logs --tail 40 >&2
+docker compose "${COMPOSE_FILES[@]}" --env-file "$ENV_FILE" ps >&2
+docker compose "${COMPOSE_FILES[@]}" --env-file "$ENV_FILE" logs --tail 40 >&2
 exit 1
