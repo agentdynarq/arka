@@ -159,28 +159,11 @@ jobs:
         run: |
           set -euo pipefail
           IMAGE="$REGISTRY/$ECR_REPOSITORY:$TAG"
-          echo "releasing $IMAGE to $INSTANCE_ID"
-
-          CMD_ID=$(aws ssm send-command \
-            --instance-ids "$INSTANCE_ID" \
-            --document-name "AWS-RunShellScript" \
-            --comment "arka release ${{ steps.rel.outputs.sha }}" \
-            --parameters commands="[\"cd /opt/arka && sudo -u ubuntu git fetch --all --prune && sudo -u ubuntu git checkout --force ${{ steps.rel.outputs.sha }} && sudo -u ubuntu deploy/host-release.sh $ROLE $IMAGE\"]" \
-            --timeout-seconds 900 \
-            --query "Command.CommandId" --output text)
-
-          echo "ssm command $CMD_ID"
-          aws ssm wait command-executed --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" || true
-
-          STATUS=$(aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" --query Status --output text)
-          echo "--- stdout ---"
-          aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" --query StandardOutputContent --output text
-          if [ "$STATUS" != "Success" ]; then
-            echo "--- stderr ---"
-            aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" --query StandardErrorContent --output text
-            echo "release failed on $INSTANCE_ID with status $STATUS"
-            exit 1
-          fi
+          chmod +x .github/scripts/ssm-run.sh
+          .github/scripts/ssm-run.sh \
+            "$INSTANCE_ID" \
+            "release ${{ steps.rel.outputs.sha }}" \
+            "cd /opt/arka && sudo -u ubuntu git fetch --all --prune && sudo -u ubuntu git checkout --force ${{ steps.rel.outputs.sha }} && sudo -u ubuntu -E deploy/host-release.sh $ROLE $IMAGE"
 
   # ---------------------------------------------------------------------
   # A release is not finished because the containers started. It is finished

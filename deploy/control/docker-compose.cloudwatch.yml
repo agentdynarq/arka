@@ -1,0 +1,56 @@
+# Ship the control plane's container logs to CloudWatch Logs.
+#
+# An overlay rather than part of the base file, so `docker compose up` on a
+# laptop still works with no AWS account. deploy/host-release.sh applies it
+# when ARKA_CLOUDWATCH_LOGS=true.
+#
+# The control plane gets its own log group, separate from every Cell's. It is
+# the only component that touches more than one Cell, so its logs are the
+# operator audit surface and are read by different people for different
+# reasons than a Cell's application logs.
+
+services:
+  postgres:
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-south-1}
+        awslogs-group: /arka/control
+        awslogs-stream: postgres
+        awslogs-create-group: "true"
+
+  recovery:
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-south-1}
+        awslogs-group: /arka/control
+        awslogs-stream: recovery
+        awslogs-create-group: "true"
+
+  gateway:
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-south-1}
+        awslogs-group: /arka/control
+        awslogs-stream: gateway
+        awslogs-create-group: "true"
+
+  console:
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-south-1}
+        awslogs-group: /arka/control
+        awslogs-stream: console
+        awslogs-create-group: "true"
+
+  caddy:
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-south-1}
+        awslogs-group: /arka/control
+        awslogs-stream: caddy
+        awslogs-create-group: "true"

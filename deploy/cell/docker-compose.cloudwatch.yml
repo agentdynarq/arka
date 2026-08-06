@@ -1,0 +1,60 @@
+# Ship this Cell's container logs to CloudWatch Logs.
+#
+# An overlay rather than part of the base file, so `docker compose up` on a
+# laptop still works with no AWS account and no credentials. The host applies
+# it with -f docker-compose.yml -f docker-compose.cloudwatch.yml, which
+# deploy/host-release.sh does automatically when ARKA_CLOUDWATCH_LOGS=true.
+#
+# One log group per Cell, one stream per service. That grouping is the point:
+# a Cell's logs are as separate as everything else about a Cell, so reading
+# Cell 1's logs never means reading Cell 2's, and an operator who is given
+# access to one incident is not handed the whole bank.
+#
+# The instance profile grants logs:CreateLogGroup, CreateLogStream and
+# PutLogEvents. No credential is stored on the host.
+
+services:
+  postgres:
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-south-1}
+        awslogs-group: /arka/${CELL_ID}
+        awslogs-stream: postgres
+        awslogs-create-group: "true"
+
+  redis:
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-south-1}
+        awslogs-group: /arka/${CELL_ID}
+        awslogs-stream: redis
+        awslogs-create-group: "true"
+
+  identity:
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-south-1}
+        awslogs-group: /arka/${CELL_ID}
+        awslogs-stream: identity
+        awslogs-create-group: "true"
+
+  web:
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-south-1}
+        awslogs-group: /arka/${CELL_ID}
+        awslogs-stream: web
+        awslogs-create-group: "true"
+
+  caddy:
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-south-1}
+        awslogs-group: /arka/${CELL_ID}
+        awslogs-stream: caddy
+        awslogs-create-group: "true"

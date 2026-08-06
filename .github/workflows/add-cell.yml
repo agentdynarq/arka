@@ -1,0 +1,214 @@
+# Add a Cell to the running platform, end to end, with one dispatch.
+#
+# This is the scaling mechanism. Arka does not grow a Cell under load, it adds
+# another one: a Cell owns its own database and its customers are pinned to it,
+# so scaling one up would mean either a second database or moving customers
+# between Cells, and moving customers breaks the pinning that the isolation
+# guarantee rests on. Capacity is added by adding a blast-radius boundary, not
+# by widening an existing one.
+#
+# What this does, in order: provisions the Cell's own VPC and host, generates
+# its own credentials, releases the application to it, tells the control plane
+# it exists, and commits the config change that caused all of it. Roughly four
+# minutes from dispatch to a Cell serving customers.
+#
+# Every secret it generates is written to SSM Parameter Store as a SecureString
+# and read back by the hosts. Nothing sensitive passes through a workflow log,
+# a command history, or the repository.
+name: add-cell
+
+on:
+  workflow_dispatch:
+    inputs:
+      cell_id:
+        description: "New Cell id, for example cell-3"
+        required: true
+        type: string
+      vpc_cidr:
+        description: "VPC CIDR for the new Cell, must not overlap an existing one, for example 10.3.0.0/16"
+        required: true
+        type: string
+
+concurrency:
+  # Adding two Cells at once would race on cdk.json and on the control plane's
+  # environment file.
+  group: infrastructure
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: write
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: arka
+
+jobs:
+  add:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: validate the inputs
+        run: |
+          set -euo pipefail
+          CELL="${{ inputs.cell_id }}"
+          CIDR="${{ inputs.vpc_cidr }}"
+          echo "$CELL" | grep -Eq '^cell-[0-9]+$' || { echo "cell_id must look like cell-3"; exit 1; }
+          echo "$CIDR" | grep -Eq '^10\.[0-9]+\.0\.0/16$' || { echo "vpc_cidr must look like 10.3.0.0/16"; exit 1; }
+          if grep -q "\"$CELL\"" infra/cdk/cdk.json; then
+            echo "$CELL already exists in cdk.json. Adding a Cell is not how you redeploy one."
+            exit 1
+          fi
+          if grep -q "$CIDR" infra/cdk/cdk.json; then
+            echo "$CIDR is already in use. Cells must not overlap."
+            exit 1
+          fi
+
+      - name: make the helpers executable
+        run: chmod +x .github/scripts/ssm-run.sh deploy/*.sh deploy/verify/*.sh
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: assume the deploy role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # ---------------------------------------------------------------
+      # 1. Credentials for the new Cell, generated here and never printed.
+      #    Every Cell's credentials differ from every other Cell's. That is
+      #    not hygiene, it is the isolation claim: Cell 1's password must be
+      #    worthless against Cell 3.
+      # ---------------------------------------------------------------
+      - name: generate and store this Cell's credentials
+        run: |
+          set -euo pipefail
+          CELL="${{ inputs.cell_id }}"
+          for name in postgres_password redis_password qr_signing_key; do
+            VALUE="$(openssl rand -hex 32)"
+            aws ssm put-parameter \
+              --name "/arka/$CELL/$name" \
+              --value "$VALUE" \
+              --type SecureString \
+              --overwrite > /dev/null
+          done
+          echo "stored three SecureString parameters under /arka/$CELL/"
+
+      # ---------------------------------------------------------------
+      # 2. Provision. One config entry, one construct instantiation. No code
+      #    changes, which is the property being demonstrated.
+      # ---------------------------------------------------------------
+      - name: add the Cell to the infrastructure config
+        run: |
+          set -euo pipefail
+          node -e '
+            const fs = require("fs");
+            const p = "infra/cdk/cdk.json";
+            const c = JSON.parse(fs.readFileSync(p, "utf8"));
+            c.context.cells[process.env.CELL] = { vpcCidr: process.env.CIDR };
+            fs.writeFileSync(p, JSON.stringify(c, null, 2) + "\n");
+          '
+        env:
+          CELL: ${{ inputs.cell_id }}
+          CIDR: ${{ inputs.vpc_cidr }}
+
+      - name: deploy the infrastructure
+        working-directory: infra/cdk
+        run: |
+          set -euo pipefail
+          npm ci
+          npx cdk deploy --require-approval never --outputs-file /tmp/cdk-outputs.json
+
+      - name: read the new Cell's addresses
+        id: host
+        run: |
+          set -euo pipefail
+          CELL="${{ inputs.cell_id }}"
+          SAFE="$(echo "$CELL" | tr -d '-')"
+          PUB=$(node -e 'const o=require("/tmp/cdk-outputs.json").ArkaStack;const k=Object.keys(o).find(k=>k.toLowerCase()===(process.env.SAFE+"publicip").toLowerCase());console.log(o[k]||"")' )
+          PRIV=$(node -e 'const o=require("/tmp/cdk-outputs.json").ArkaStack;const k=Object.keys(o).find(k=>k.toLowerCase()===(process.env.SAFE+"privateip").toLowerCase());console.log(o[k]||"")')
+          test -n "$PUB" || { echo "could not read the new Cell's public IP from the stack outputs"; exit 1; }
+          INSTANCE=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=arka-$CELL" "Name=instance-state-name,Values=running" \
+            --query "Reservations[0].Instances[0].InstanceId" --output text)
+          echo "public=$PUB"   >> "$GITHUB_OUTPUT"
+          echo "private=$PRIV" >> "$GITHUB_OUTPUT"
+          echo "instance=$INSTANCE" >> "$GITHUB_OUTPUT"
+          echo "provisioned $CELL at $PUB (instance $INSTANCE)"
+        env:
+          SAFE: ${{ inputs.cell_id }}
+
+      # ---------------------------------------------------------------
+      # 3. Build this Cell's image. One per Cell, because Next.js inlines
+      #    NEXT_PUBLIC_* at build time, so a customer app can only address
+      #    the Cell it was built for.
+      # ---------------------------------------------------------------
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: build and push the image
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          PUB: ${{ steps.host.outputs.public }}
+        run: |
+          set -euo pipefail
+          IMAGE="$REGISTRY/$ECR_REPOSITORY:${{ inputs.cell_id }}-${{ github.sha }}"
+          docker build \
+            --build-arg "NEXT_PUBLIC_IDENTITY_API_URL=https://${{ inputs.cell_id }}-api.$PUB.nip.io" \
+            --build-arg "NEXT_PUBLIC_RECOVERY_API_URL=" \
+            --tag "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      # ---------------------------------------------------------------
+      # 4. Configure and release the Cell. The host reads its own secrets
+      #    from Parameter Store; they are never passed in a command.
+      # ---------------------------------------------------------------
+      - name: configure and release the new Cell
+        run: |
+          set -euo pipefail
+          .github/scripts/ssm-run.sh \
+            "${{ steps.host.outputs.instance }}" \
+            "add-cell ${{ inputs.cell_id }}" \
+            "cd /opt/arka && git fetch --all --prune && git checkout --force ${{ github.sha }} && sudo -u ubuntu -E deploy/configure-cell.sh '${{ inputs.cell_id }}' '${{ steps.host.outputs.public }}' '${{ steps.host.outputs.private }}' '${{ secrets.CONTROL_HOST }}' '$IMAGE'"
+
+      # ---------------------------------------------------------------
+      # 5. Tell the control plane the Cell exists. This is the only place in
+      #    the whole system that learns about more than one Cell, which is
+      #    exactly the design.
+      # ---------------------------------------------------------------
+      - name: register the Cell with the control plane
+        run: |
+          set -euo pipefail
+          .github/scripts/ssm-run.sh \
+            "${{ secrets.CONTROL_INSTANCE_ID }}" \
+            "register ${{ inputs.cell_id }}" \
+            "cd /opt/arka && git fetch --all --prune && git checkout --force ${{ github.sha }} && sudo -u ubuntu -E deploy/register-cell.sh '${{ inputs.cell_id }}' '${{ steps.host.outputs.public }}'"
+
+      - name: confirm the Cell is serving and visible
+        run: |
+          set -euo pipefail
+          PUB="${{ steps.host.outputs.public }}"
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 "https://${{ inputs.cell_id }}.$PUB.nip.io/" || true)
+            [ "$code" = "200" ] && { echo "customer app answering"; break; }
+            sleep 10
+          done
+          curl -sf --max-time 15 "https://arka-api.${{ secrets.CONTROL_HOST }}.nip.io/v1/recovery/health-map" \
+            | grep -q "${{ inputs.cell_id }}" && echo "control plane sees ${{ inputs.cell_id }}"
+
+      - name: commit the config change that caused all of this
+        run: |
+          set -euo pipefail
+          git config user.name "Hasitha Bandara"
+          git config user.email "hasitha@dynarq.com"
+          git add infra/cdk/cdk.json
+          git commit -m "add ${{ inputs.cell_id }} at ${{ inputs.vpc_cidr }}
+
+          Provisioned, released and registered by the add-cell workflow. The
+          only source change required to add capacity is this config entry."
+          git push
