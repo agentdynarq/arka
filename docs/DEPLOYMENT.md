@@ -103,9 +103,30 @@ against, not a rebuild of it.
 **Nothing compiles on a target host.** Cell hosts are 2 GiB. Building there would
 be fragile even if it fit.
 
-**No long-lived credentials exist.** GitHub exchanges an OIDC token for a
-short-lived IAM role. Hosts are reached over Systems Manager, so a release needs
-neither an inbound SSH port nor a private key anywhere.
+**Hosts are reached over Systems Manager**, so a release needs neither an
+inbound SSH port nor a private key anywhere.
+
+**Credentials, and an honest note.** The pipeline is built for OIDC: GitHub
+exchanges a short-lived token for an IAM role, so no long-lived key exists. The
+role, the identity provider, and both trust conditions were deployed and verified
+correct against the account:
+
+```
+Federated  arn:aws:iam::785013739418:oidc-provider/token.actions.githubusercontent.com
+aud        StringEquals  sts.amazonaws.com
+sub        StringLike    repo:agentdynarq/arka:*
+```
+
+Every token was still refused with `Not authorized to perform
+sts:AssumeRoleWithWebIdentity`, and we ran out of competition window to find
+why. The workflow therefore falls back to an access key pair when the OIDC role
+is unset, and it still attempts OIDC first.
+
+This is a real downgrade and it is written down rather than swapped quietly: a
+key is long-lived where a token lasts an hour. Restoring the intended path is
+deleting two secrets once the cause is found. Nothing else in the pipeline
+changes, because authentication is one step and the build, release and
+verification stages never knew the difference.
 
 **Rollback is the same workflow with an older SHA.** No rebuild, no improvisation
 during an incident.
