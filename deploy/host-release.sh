@@ -64,8 +64,18 @@ ARKA_IMAGE="$IMAGE" docker compose "${COMPOSE_FILES[@]}" --env-file "$ENV_FILE" 
 echo "==> waiting for health"
 DEADLINE=$((SECONDS + 240))
 while (( SECONDS < DEADLINE )); do
-	UNHEALTHY=$(docker compose "${COMPOSE_FILES[@]}" --env-file "$ENV_FILE" ps --format json 2>/dev/null \
-		| grep -c '"Health":"starting"\|"Health":"unhealthy"' || true)
+	# Ask Docker directly rather than parsing `compose ps --format json`, whose
+	# shape has changed between Compose versions (one object, then one object
+	# per line). A container with no healthcheck reports an empty string, which
+	# must not count as unhealthy.
+	UNHEALTHY=0
+	for cid in $(docker compose "${COMPOSE_FILES[@]}" --env-file "$ENV_FILE" ps -q 2>/dev/null); do
+		state=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$cid" 2>/dev/null || echo unknown)
+		case "$state" in
+			healthy|running) ;;
+			*) UNHEALTHY=$((UNHEALTHY + 1)) ;;
+		esac
+	done
 	if [[ "$UNHEALTHY" == "0" ]]; then
 		echo "==> all services healthy"
 		ARKA_IMAGE="$IMAGE" docker compose "${COMPOSE_FILES[@]}" --env-file "$ENV_FILE" ps
