@@ -30,7 +30,7 @@ services:
       retries: 10
 
   recovery:
-    image: arka:phase3
+    image: ${ARKA_IMAGE:-arka:phase3}
     container_name: arka-control-recovery
     restart: unless-stopped
     command: ["pnpm", "--filter", "@arka/recovery-app", "run", "start"]
@@ -70,7 +70,7 @@ services:
       start_period: 30s
 
   gateway:
-    image: arka:phase3
+    image: ${ARKA_IMAGE:-arka:phase3}
     container_name: arka-control-gateway
     restart: unless-stopped
     command: ["pnpm", "--filter", "@arka/gateway", "run", "start"]
@@ -87,7 +87,7 @@ services:
       start_period: 30s
 
   console:
-    image: arka:phase3
+    image: ${ARKA_IMAGE:-arka:phase3}
     container_name: arka-control-console
     restart: unless-stopped
     command: ["pnpm", "--filter", "@arka/console", "run", "start"]

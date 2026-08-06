@@ -1,0 +1,200 @@
+# Build once, release everywhere, by SHA.
+#
+# The shape of this pipeline is the argument: an image is built exactly once
+# from a commit, tagged with that commit's SHA, and every host runs that
+# artefact. Nothing is compiled on a target host, so what reaches production is
+# what the tests ran against, and a rollback is this same workflow with an
+# older SHA rather than a rebuild and a hope.
+#
+# No long-lived AWS credentials exist anywhere. GitHub exchanges an OIDC token
+# for a short-lived role, and hosts are reached over Systems Manager rather
+# than SSH, so no inbound port and no private key is involved in a release.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit SHA to release. Leave blank for this commit. Set it to roll back."
+        required: false
+        type: string
+
+concurrency:
+  # One release at a time. A queued release supersedes a waiting one, but never
+  # interrupts one already touching a host.
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: arka
+
+jobs:
+  # ---------------------------------------------------------------------
+  # Nothing is built until the commit has passed the same gates as any pull
+  # request. A release is not a reason to skip them.
+  # ---------------------------------------------------------------------
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.17.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: typecheck
+        run: pnpm typecheck
+      - name: test
+        run: pnpm test
+      - name: ledger-core coverage gate
+        run: pnpm coverage
+      - name: dependency audit
+        run: pnpm audit --audit-level high
+
+  # ---------------------------------------------------------------------
+  # One image per role, because Next.js inlines NEXT_PUBLIC_* at build time, so
+  # a customer app can only ever address the Cell it was built for. Same
+  # Dockerfile, same commit, different build arguments. Built on a GitHub
+  # runner rather than on the 2 GiB Cell hosts, which cannot compile it.
+  # ---------------------------------------------------------------------
+  build:
+    needs: verify
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        target:
+          - { role: control, host_var: CONTROL_HOST }
+          - { role: cell, host_var: CELL_1_HOST, cell: cell-1 }
+          - { role: cell, host_var: CELL_2_HOST, cell: cell-2 }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+
+      - name: resolve the release sha
+        id: rel
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: assume the deploy role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: build and push
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ matrix.target.cell || matrix.target.role }}-${{ steps.rel.outputs.sha }}
+          PUBLIC_HOST: ${{ secrets[matrix.target.host_var] }}
+        run: |
+          set -euo pipefail
+          IMAGE="$REGISTRY/$ECR_REPOSITORY:$TAG"
+          if [ "${{ matrix.target.role }}" = "cell" ]; then
+            IDENTITY_URL="https://${{ matrix.target.cell }}-api.$PUBLIC_HOST.nip.io"
+            RECOVERY_URL=""
+          else
+            IDENTITY_URL=""
+            RECOVERY_URL="https://arka-api.$PUBLIC_HOST.nip.io"
+          fi
+          docker build \
+            --build-arg "NEXT_PUBLIC_IDENTITY_API_URL=$IDENTITY_URL" \
+            --build-arg "NEXT_PUBLIC_RECOVERY_API_URL=$RECOVERY_URL" \
+            --tag "$IMAGE" .
+          docker push "$IMAGE"
+          echo "pushed $IMAGE"
+
+  # ---------------------------------------------------------------------
+  # Cells first, control plane last. The control plane reads every Cell's data
+  # layer to build its health map, so releasing it against Cells that are still
+  # restarting shows false alarms.
+  # ---------------------------------------------------------------------
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        target:
+          - { role: cell, cell: cell-1, instance_var: CELL_1_INSTANCE_ID }
+          - { role: cell, cell: cell-2, instance_var: CELL_2_INSTANCE_ID }
+          - { role: control, instance_var: CONTROL_INSTANCE_ID }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+
+      - id: rel
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: assume the deploy role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: release over ssm
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ matrix.target.cell || matrix.target.role }}-${{ steps.rel.outputs.sha }}
+          INSTANCE_ID: ${{ secrets[matrix.target.instance_var] }}
+          ROLE: ${{ matrix.target.role }}
+        run: |
+          set -euo pipefail
+          IMAGE="$REGISTRY/$ECR_REPOSITORY:$TAG"
+          echo "releasing $IMAGE to $INSTANCE_ID"
+
+          CMD_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --comment "arka release ${{ steps.rel.outputs.sha }}" \
+            --parameters commands="[\"cd /opt/arka && sudo -u ubuntu git fetch --all --prune && sudo -u ubuntu git checkout --force ${{ steps.rel.outputs.sha }} && sudo -u ubuntu deploy/host-release.sh $ROLE $IMAGE\"]" \
+            --timeout-seconds 900 \
+            --query "Command.CommandId" --output text)
+
+          echo "ssm command $CMD_ID"
+          aws ssm wait command-executed --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" || true
+
+          STATUS=$(aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" --query Status --output text)
+          echo "--- stdout ---"
+          aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" --query StandardOutputContent --output text
+          if [ "$STATUS" != "Success" ]; then
+            echo "--- stderr ---"
+            aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" --query StandardErrorContent --output text
+            echo "release failed on $INSTANCE_ID with status $STATUS"
+            exit 1
+          fi
+
+  # ---------------------------------------------------------------------
+  # A release is not finished because the containers started. It is finished
+  # when the public surface answers and the databases are still not exposed.
+  # ---------------------------------------------------------------------
+  smoke:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: smoke test the public surface
+        run: |
+          chmod +x deploy/verify/smoke.sh
+          deploy/verify/smoke.sh \
+            "${{ secrets.CONTROL_HOST }}" \
+            "${{ secrets.CELL_1_HOST }}" \
+            "${{ secrets.CELL_2_HOST }}"

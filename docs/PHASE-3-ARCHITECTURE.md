@@ -152,11 +152,21 @@ certificate without owning a domain. Public CA, valid TLS, zero DNS setup, no co
 | | 22 | operator IP only |
 | `arka-cell-N-sg` | 80, 443 | 0.0.0.0/0. Customers browse their own Cell directly |
 | | 22 | operator IP only |
-| | 5432, 6379 | **control plane private address, /32, and nothing else** |
+| | 5432, 6379 | **control plane public Elastic IP, /32, and nothing else** |
 
-Postgres and Redis are published on the Cell host's **private** VPC address, never on `0.0.0.0`, so
-they are absent from the public interface. The single security group rule permitting them names the
-control plane and no one else.
+Postgres and Redis bind to the Cell host's **private** VPC address rather than `0.0.0.0`, so they are
+not offered on every interface. The single security group rule permitting them names the control plane
+and no one else.
+
+The rule's source is the control plane's **public** Elastic IP, not its private one, and the reason is
+a direct consequence of the architecture. Cells and the control plane sit in separate VPCs with no
+peering, so **private addresses are not routable between them**. The control plane reaches a Cell via
+that Cell's public Elastic IP, and the packet arrives carrying the control plane's public address as
+its source. Binding the databases to the private interface still works, because an Elastic IP is
+one-to-one NAT onto it.
+
+If a private address ever appears to work here, something has created a route between VPCs, and that is
+a defect to investigate rather than a convenience to keep.
 
 They have to be reachable at all because the Recovery Console observes each Cell at the data layer:
 `apps/recovery` connects directly to every Cell's Postgres and Redis to build the health map and to

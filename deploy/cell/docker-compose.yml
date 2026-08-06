@@ -48,7 +48,7 @@ services:
       retries: 10
 
   identity:
-    image: arka:phase3
+    image: ${ARKA_IMAGE:-arka:phase3}
     container_name: arka-cell-identity
     restart: unless-stopped
     command: ["pnpm", "--filter", "@arka/identity-app", "run", "start"]
@@ -83,7 +83,7 @@ services:
       start_period: 30s
 
   web:
-    image: arka:phase3
+    image: ${ARKA_IMAGE:-arka:phase3}
     container_name: arka-cell-web
     restart: unless-stopped
     command: ["pnpm", "--filter", "@arka/web", "run", "start"]
