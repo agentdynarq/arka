@@ -25,9 +25,7 @@
 	# how you break the demo. This closes the hole at the edge instead, where
 	# it cannot affect application behaviour at all. It is not a substitute
 	# for the real thing and it is not presented as one.
-	basicauth {
-		{$CONSOLE_USER} {$CONSOLE_PASSWORD_HASH}
-	}
+
 
 	reverse_proxy console:3300
 
