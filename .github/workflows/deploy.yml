@@ -13,10 +13,7 @@ name: deploy
 
 on:
   push:
-    # phase3/deploy as well as main, because that is the branch each host's
-    # cloud-init clones, so it is the branch a host is actually running. A
-    # pipeline that cannot fire on the branch under deployment is decoration.
-    branches: [main, phase3/deploy]
+    branches: [main]
   workflow_dispatch:
     inputs:
       sha:

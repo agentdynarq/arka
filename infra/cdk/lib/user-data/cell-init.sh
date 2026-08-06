@@ -48,7 +48,7 @@ apt-get install -y git
 # The clone is best effort: on a transient failure cloud-init still
 # finishes host hardening and the checkout is redone by hand.
 # ---------------------------------------------------------------
-git clone --branch phase3/deploy https://github.com/agentdynarq/arka.git /opt/arka || {
+git clone --branch main https://github.com/agentdynarq/arka.git /opt/arka || {
   echo "git clone failed; leaving an empty /opt/arka for a manual clone" >&2
   mkdir -p /opt/arka
 }
