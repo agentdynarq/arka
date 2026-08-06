@@ -9,5 +9,5 @@
 
 cell_3 = {
   vpc_cidr      = "10.3.0.0/16"
-  instance_type = "t2.small"
+  instance_type = "t3.small"
 }

@@ -1,0 +1,34 @@
+{
+  "app": "npx ts-node --prefer-ts-exts bin/arka-infra.ts",
+  "watch": {
+    "include": ["**"],
+    "exclude": [
+      "README.md",
+      "cdk*.json",
+      "**/*.d.ts",
+      "**/*.js",
+      "tsconfig.json",
+      "package*.json",
+      "node_modules",
+      "test"
+    ]
+  },
+  "context": {
+    "@aws-cdk/aws-ec2:restrictDefaultSecurityGroup": true,
+    "@aws-cdk/core:stackRelativeExports": true,
+
+    "awsRegion": "ap-south-1",
+    "operatorIp": "111.223.190.71/32",
+    "keyName": "arkakeypair",
+    "instanceType": "t3.small",
+
+    "controlPlane": {
+      "vpcCidr": "10.10.0.0/16"
+    },
+
+    "cells": {
+      "cell-1": { "vpcCidr": "10.1.0.0/16" },
+      "cell-2": { "vpcCidr": "10.2.0.0/16" }
+    }
+  }
+}

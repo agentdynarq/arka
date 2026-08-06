@@ -1,0 +1,18 @@
+# CDK build output
+cdk.out/
+
+# Compiled JS (TypeScript source is the truth)
+*.js
+*.d.ts
+*.js.map
+!jest.config.js
+
+# Dependencies
+node_modules/
+
+# SSH keys
+*.pem
+
+# OS
+.DS_Store
+Thumbs.db

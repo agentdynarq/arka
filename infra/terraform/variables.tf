@@ -16,9 +16,9 @@ variable "control_vpc_cidr" {
 }
 
 variable "control_instance_type" {
-  description = "Control plane runs console, gateway, recovery and the control Postgres, so it gets more headroom than a Cell."
+  description = "Control plane runs console, gateway, recovery and the control Postgres. t2.medium is not Free-Tier-eligible on this account (confirmed live: RunInstances rejects it with InvalidParameterCombination), and every Free-Tier-eligible type this account can launch in ap-south-1 is 2 vCPU regardless of size, so there is no larger-but-still-eligible option to give control extra headroom over a Cell the way t2.medium once did."
   type        = string
-  default     = "t2.medium"
+  default     = "t3.small"
 }
 
 variable "ubuntu_ami_name_filter" {
